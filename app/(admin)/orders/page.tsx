@@ -58,7 +58,6 @@ const mockData = [{
   categories:"ORD-32QQ",
   total_amount: "61.00",
   status:"Pickup",
-
 }]
 export default function Orders() {
     const [loading, setLoading] = useState<boolean>(true);
@@ -161,7 +160,7 @@ export default function Orders() {
                                         <tr key={row.id || index} className="hover:bg-slate-50 transition-colors">
                                         {orderHeadings.map((heading)=>(
                                             <td key={heading.id}
-                                            className={`px-6 py-4 text-sm text-slate-700`}>
+                                            className={`px-6 py-3 text-sm text-slate-700`}>
                                                 {renderCellContent(heading, row[heading.id])}
                                             </td>
                                         ))}

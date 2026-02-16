@@ -125,7 +125,7 @@ export default function Dashboard() {
                       data.map((row, index) => (
                         <tr key={row.id || index} className="hover:bg-slate-50 transition-colors">
                           {tableHeadings.map((heading) => (
-                            <td key={heading.id} className="px-6 py-4 text-sm text-slate-700">
+                            <td key={heading.id} className="px-6 py-3 text-sm text-slate-700">
                               {row[heading.id] || "-"}
                             </td>
                           ))}
