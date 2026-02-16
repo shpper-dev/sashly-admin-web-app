@@ -20,7 +20,7 @@ export default function TableSkeleton({
             {tableHeadings.map((heading) => (
               <th
                 key={heading.id}
-                className="px-6 py-3 text-left text-sm font-semibold text-slate-700 first:rounded-tl-lg last:rounded-tr-lg"
+                className="px-6 py-3 text-left text-sm text-slate-700 first:rounded-tl-lg last:rounded-tr-lg"
               >
                 {heading.title}
               </th>
