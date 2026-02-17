@@ -47,7 +47,7 @@ const navItems = [
 
 export default function SideBar() {
   return (
-    <div className="absolute top-0 left-0 flex flex-col bg-white text-sm h-screen w-60 border-r border-r-blue-500/30 ">
+    <div className="fixed top-0 left-0 flex flex-col bg-white text-sm min-h-screen w-60 border-r border-r-blue-500/30 ">
         <div className="flex mt-3 ml-6 w-full justify-center">
             <img src="/images/logo.png" alt="sashly logo" className="h-14"  />
         </div>
