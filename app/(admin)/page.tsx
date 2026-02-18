@@ -2,31 +2,11 @@
 import Header from "@/components/Header";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import StatsCard from "@/components/StatsCard";
+import { dashboardHeadings } from "@/constants/headings";
 import { TableHeading } from "@/lib/types";
 import { Banknote, Flag, Megaphone, Radio } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const tableHeadings : TableHeading[]= [{
-    id: "issue_id",
-    title: "ISSUE ID"
-},
-{
-    id: "order_id",
-    title: "ORDER ID"
-},
-{
-    id: "flag_reason",
-    title: "FLAG REASON"
-},
-{
-    id: "time_elapsed",
-    title: "TIME ELAPSED"
-},
-{
-    id: "action",
-    title: ""
-}
-]
 const mockData = [{
   id:1,
   issue_id: "#4627",
@@ -96,12 +76,12 @@ export default function Dashboard() {
             {/* Left: Table Section (8 columns) */}
             <div className="lg:col-span-9 overflow-x-auto rounded-lg border border-slate-200 bg-white">
               {isLoading ? (
-                <TableSkeleton tableHeadings={tableHeadings} />
+                <TableSkeleton tableHeadings={dashboardHeadings} />
               ) : (
                 <table className="w-full">
                   <thead className="bg-slate-200/50">
                     <tr>
-                      {tableHeadings.map((heading) => (
+                      {dashboardHeadings.map((heading) => (
                         <th
                           className="px-6 py-3 text-left text-sm font-semibold text-slate-700 first:rounded-tl-lg last:rounded-tr-lg"
                           key={heading.id}
@@ -115,7 +95,7 @@ export default function Dashboard() {
                     {data.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={tableHeadings.length}
+                          colSpan={dashboardHeadings.length}
                           className="px-6 py-12 text-center text-sm text-slate-500"
                         >
                           No data available
@@ -124,7 +104,7 @@ export default function Dashboard() {
                     ) : (
                       data.map((row, index) => (
                         <tr key={row.id || index} className="hover:bg-slate-50 transition-colors">
-                          {tableHeadings.map((heading) => (
+                          {dashboardHeadings.map((heading) => (
                             <td key={heading.id} className="px-6 py-3 text-sm text-slate-700">
                               {row[heading.id] || "-"}
                             </td>
@@ -136,7 +116,7 @@ export default function Dashboard() {
                   <tfoot className="bg-slate-200/50">
                     <tr>
                       <td
-                        colSpan={tableHeadings.length}
+                        colSpan={dashboardHeadings.length}
                         className="px-6 py-3 text-left text-sm text-slate-600 first:rounded-bl-lg last:rounded-br-lg"
                       >
                         {data.length} {data.length === 1 ? "item" : "items"} requires attention

@@ -6,37 +6,9 @@ import SimpleStatsCard from '@/components/SimpleStatsCard';
 import TableSkeleton from '@/components/skeleton/TableSkeleton';
 import { TableHeading } from '@/lib/types';
 import BroadcastBanner from '@/components/BroadcastBanner';
+import { driverHeadings } from '@/constants/headings';
 
-const driverHeadings : TableHeading[]= [
-{
-    id: "driver_id",
-    title: "DRIVER ID"
-},
-{
-    id: "name",
-    title: "NAME"
-},
-{
-    id: "contact",
-    title: "CONTACT"
-},
-{
-    id: "status",
-    title: "STATUS"
-},
-{
-    id:"active_orders",
-    title:"ACTIVE ORDERS"
-},
-{
-  id:"pending_payout",
-  title:"PENDING PAYOUT"
-},
-{
-  id:"actions",
-  title:""
-}
-]
+
 const mockData = [
 {
   id:1,

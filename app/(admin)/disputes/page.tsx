@@ -1,32 +1,12 @@
 "use client";
 import Header from '@/components/Header'
 import TableSkeleton from '@/components/skeleton/TableSkeleton';
+import { disputeHeadings } from '@/constants/headings';
 import { TableHeading } from '@/lib/types';
 import { ChevronLeft, ChevronRight, CircleAlert, Download, ListFilter, MessagesSquare, Timer, UserRoundX } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
 
-const disputeHeadings : TableHeading[]= [
-{
-    id: "order_id",
-    title: "ORDER ID"
-},
-{
-    id: "issue_category",
-    title: "ISSUE CATEGORY"
-},
-{
-    id: "wait_time",
-    title: "WAIT TIME"
-},
-{
-    id: "last_activity",
-    title: "LAST ACTIVITY"
-},
-{
-    id:"status_disputes",
-    title:"STATUS"
-},
-]
+
 const mockData = [
 {
   id:1,

@@ -1,39 +1,13 @@
 "use client";
-
 import Header from "@/components/Header";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { broadcastHeadings } from "@/constants/headings";
 import { TableHeading } from "@/lib/types";
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-import { Engagement } from "next/font/google";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const broadcastHeadings : TableHeading[]= [
-{
-    id: "date_time",
-    title: "DATE & TIME"
-},
-{
-    id: "msg_details",
-    title: "MESSAGE DETAILS"
-},
-{
-    id: "target",
-    title: "TARGET"
-},
-{
-    id: "reach",
-    title: "REACH"
-},
-{
-    id:"engagement",
-    title:"ENGAGEMENT"
-},
-{
-  id:"actions",
-  title:""
-}
-]
+
 const mockData = [
 {
   id:1,
