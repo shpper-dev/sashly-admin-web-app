@@ -1,15 +1,15 @@
 import { OrderData, TableHeading } from '@/lib/types';
-import { FileText, Pencil, Search } from 'lucide-react';
+import { FileText, Pencil, Printer, ReceiptText, Search } from 'lucide-react';
 import React from 'react'
 import { TabKey } from '../page';
 import FilterButton from '@/components/buttons/FilterButton';
-import OrderPaymentDialog from '@/components/orders/OrderPaymentDialog';
+import ConfirmDeliveryDialog from '@/components/orders/ConfirmDeliveryDialog';
 /* ---------------- TABLE HEADINGS ---------------- */
 const orderHeadings: TableHeading[] = [
   { id: "id", title: "ID" },
-  { id: "ready_by", title: "READY BY" },
   { id: "placed", title: "PLACED" },
   { id: "customer", title: "CUSTOMER" },
+  { id:"route", title: "Route#"},
   { id: "contact", title: "CONTACT" },
   { id: "order_details", title: "ORDER DETAILS" },
   { id: "pcs", title: "PCS" },
@@ -22,10 +22,10 @@ const orderHeadings: TableHeading[] = [
 
 const baseRows = Array.from({ length: 5 }).map((_, i) => ({
   id: 3861 + i,
-  ready_by: {date:"15/01/26", time: "8PM-10PM"},
   placed: "10/01/26",
   placed_badge: "1st",
   customer: "Abdullah Q",
+  route: 6,
   contact: {
     type: "DELIVERY",
     address: "24.805430307392644 // 46.76628251224954",
@@ -34,8 +34,8 @@ const baseRows = Array.from({ length: 5 }).map((_, i) => ({
 
   order_details: ["Laundry Bag x1", "Trousers x2", "T-Shirt x2","T-Shirt x1"],
   pcs: 6,
-  paid: "NO",
-  total: 84.0,
+  paid: {date:"15/01/26", time: "8PM-10PM"},
+  total: 584.0,
 }));
 
 const dataByTab: Record<TabKey, any[]> = {
@@ -46,25 +46,13 @@ const dataByTab: Record<TabKey, any[]> = {
   all: baseRows,
 };
 
-export default function OrderReady() {
-    const rows = dataByTab["ready"];
+export default function OrderPickups() {
+    const rows = dataByTab["pickups"];
     
       // Helper function to render cell content
       const renderCellContent = (heading: TableHeading, row: any) : React.ReactNode => {
     
         switch (heading.id) {
-          case "ready_by":
-            return(
-            <div className="flex flex-col items-start justify-start">
-              <span className="text-left w-full text-xs font-semibold">
-               {row.ready_by.date}
-              </span>
-              <span className="text-slate-500 text-xs font-medium whitespace-nowrap">
-               {row.ready_by.time}
-              </span>
-             </div>
-            )
-    
           case "placed":
             return (
               <div className="flex flex-col items-start justify-start">
@@ -130,7 +118,18 @@ export default function OrderReady() {
                 <button className='flex w-full items-center justify-center bg-white text-[#02D0FF]'>
                     <FileText className="h-5 w-5" />
                 </button>
-            ) 
+            ) ;
+          case "paid":
+            return(
+            <div className="flex flex-col items-start justify-start">
+              <span className="text-left w-full text-xs font-semibold">
+               {row.paid.date}
+              </span>
+              <span className="text-slate-500 text-xs font-medium whitespace-nowrap">
+               {row.paid.time}
+              </span>
+             </div>
+            )
           case "total":
             return (
               <div>
@@ -143,15 +142,15 @@ export default function OrderReady() {
     
           case "actions":
             return (
-              <div className="flex items-center gap-1 justify-end">
+              <div className="flex items-center gap-0.5 justify-end">
                 <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
                   <Pencil className="w-5 h-5 text-slate-400 hover:text-slate-600" />
                 </button>
-                <OrderPaymentDialog total={row.total}>
-                  <button className="px-3 py-1.5 text-xs font-medium text-white bg-[#02D0FF] rounded-lg hover:bg-blue-200 transition-colors">
-                  PAYMENT
+                <ConfirmDeliveryDialog   >
+                    <button className="px-2 py-1.5 text-xs font-medium bg-blue-200/50 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
+                  COLLECTED
                 </button>
-                </OrderPaymentDialog>
+                </ConfirmDeliveryDialog>
               </div>
             );
     
@@ -168,8 +167,15 @@ export default function OrderReady() {
      <div>
         <div className="flex justify-between items-center mb-4 px-8">
           <div className="flex gap-3">
-            <FilterButton label="Reports" />
-            <FilterButton label="Order Type" />
+            <FilterButton label="Filter Route(s)" />
+            <button className="flex items-center gap-2 px-4 py-2 border border-puple-600 rounded-lg bg-white text-sm font-medium text-purple-600 hover:bg-slate-50 transition-colors">
+                <Printer className="h-4 w-4" />
+                Delivery Printout
+            </button>
+            <button className="flex items-center gap-2 px-4 py-2 border border-[#02D0FF] rounded-lg bg-white text-sm font-medium text-[#02D0FF] hover:bg-slate-50 transition-colors">
+                <ReceiptText className="h-4 w-4" />
+                 Print Receipts
+            </button>
           </div>
 
           <div className="relative">

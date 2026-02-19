@@ -5,6 +5,7 @@ import StatsCard from "@/components/StatsCard";
 import { dashboardHeadings } from "@/constants/headings";
 import { TableHeading } from "@/lib/types";
 import { Banknote, Flag, Megaphone, Radio } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const mockData = [{
@@ -130,29 +131,28 @@ export default function Dashboard() {
             {/* Broadcasting card */}
             <div className="lg:col-span-3 space-y-6">
               <div className="flex flex-col items-center justify-center bg-white rounded-lg border border-blue-500/30 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      {/* Icon and Title */}
-      <div className={`flex  items-center justify-center gap-4  p-4  border-b border-slate-200`}>
-          <Radio className="h-6 w-6 text-purple-600" />
-        <h3 className={`font-bold text-center text-sm`}>
-          Quick Broadcast
-        </h3>
-      </div>
+            {/* Icon and Title */}
+            <div className={`flex  items-center justify-center gap-4 p-4 `}>
+                <Radio className="h-6 w-6 text-purple-600" />
+              <h3 className={`font-bold text-center text-sm`}>
+                Quick Broadcast
+              </h3>
+            </div>
 
-      {/* Button */}
-      <button
-        onClick={()=>{}}
-        className=" px-8 py-3 bg-purple-600 text-white rounded-md font-medium transition-colors text-sm"
-      >
-        + New Broadcast
-      </button>
+            {/* Button */}
+            <Link href={"/broadcast"}
+              className="px-5 py-3 bg-purple-600 text-white rounded-md font-medium transition-colors text-sm"
+            >
+              + New Broadcast
+            </Link>
 
-      {/* Description */}
-      <div className={`p-3 bg-white w-[90%]`}>
-        <p className={`text-slate-600 text-left text-xs`}>
-          Send quick alerts to users and drivers
-        </p>
-      </div>
-    </div>
+            {/* Description */}
+            <div className={`px-6 py-3 bg-white w-[90%]`}>
+              <p className={`text-slate-600 text-center lg:text-left text-xs`}>
+                Send quick alerts to users and drivers
+              </p>
+            </div>
+            </div>
               
             </div>
           </div>

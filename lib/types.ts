@@ -9,7 +9,7 @@ export interface OrderData {
   placed: string;
   placed_badge?: string;
   customer: string;
-  order_details: string[];
+  order_details: {item_en:string,item_ar:string,qty:number,}[];
   pcs: number;
   total: number;
 }

@@ -1,12 +1,13 @@
 "use client";
 
 import Header from "@/components/Header";
-import { Search, ChevronDown, Pencil, Heading } from "lucide-react";
 import { useState } from "react";
-import { TableHeading } from "@/lib/types";
 import OrderDetails from "./components/OrderDetails";
 import OrderCleaning from "./components/OrderCleaning";
 import OrderReady from "./components/OrderReady";
+import OrderPickups from "./components/OrderPickups";
+import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
+;
 
 /* ---------------- TAB TYPES ---------------- */
 export type TabKey = "detail" | "cleaning" | "ready" | "pickups" | "all";
@@ -44,7 +45,7 @@ export default function OrdersPage() {
 
   pickups: {
     main: "Pickups",
-    sub: "Orders scheduled for pickup",
+    sub: "All the pickups are listed here",
   },
 
   all: {
@@ -107,9 +108,13 @@ export default function OrdersPage() {
         
           {/* Update Button */}
           <div className="mb-2">
-            <button className="bg-[#02D0FF] text-xs font-medium text-white rounded-lg px-4 py-2 transition-colors shadow-sm">
-              Update Order
-            </button>
+            <UpdateOrderDialog orderId={3261} >
+              <button className="bg-[#02D0FF] text-xs font-medium text-white rounded-lg px-4 py-2 transition-colors shadow-sm cursor-pointer">
+                 Update Order
+              </button>
+
+            </UpdateOrderDialog>
+            
           </div>
         </div>
         </div>
@@ -125,6 +130,12 @@ export default function OrdersPage() {
         )}
         {activeTab === "ready" &&(
             <OrderReady />
+        )}
+        {activeTab === "pickups" &&(
+            <OrderPickups />
+        )}
+        {activeTab === "all" &&(
+            <OrderDetails />
         )}
        
         </section>

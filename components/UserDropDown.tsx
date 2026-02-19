@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { KeyRound, User } from "lucide-react";
+import { ChevronDown, KeyRound, User } from "lucide-react";
 
 interface UserDropDownProps{
     user: string;
@@ -21,8 +21,9 @@ export default function UserDropDown({user}:UserDropDownProps) {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          className="flex gap-3 w-full justify-start px-3 py-5 items-center text-slate-500 hover:text-indigo-600 hover:bg-slate-200/50 focus:text-indigo-600 focus:bg-slate-200/50 rounded-lg transition-all duration-200"
+          className="flex w-full justify-between px-3 py-5 items-center text-slate-500 hover:text-indigo-600 hover:bg-slate-200/50 focus:text-indigo-600 focus:bg-slate-200/50 rounded-lg transition-all duration-200 cursor-pointer"
         >
+        <div className="flex gap-3 w-full justify-start items-center">
           <Avatar className="h-6 w-6">
             <AvatarImage src="/" />
             <AvatarFallback className="bg-blue-500 text-white text-xs font-bold">
@@ -30,12 +31,14 @@ export default function UserDropDown({user}:UserDropDownProps) {
             </AvatarFallback>
           </Avatar>
           <span className="text-sm">{user}</span>
+        </div>
+        <ChevronDown className="text-slate-500 h-5 w-5" />
         </Button>
       </DropdownMenuTrigger>
       
       <DropdownMenuContent 
         align="start" 
-        side="right"
+        side="top"
         className="w-48 ml-2"
       >
         <DropdownMenuLabel className="text-slate-500">My Account</DropdownMenuLabel>

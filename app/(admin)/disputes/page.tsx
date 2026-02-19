@@ -40,6 +40,12 @@ export default function Disputes() {
 
     // helper function 
     const renderCellContent = (heading: TableHeading, value: any) => {
+      const iconColors: Record<string,string>= {
+        yellow : "text-yellow-600",
+        purple : "text-purple-600",
+        red : "text-red-600",
+        blue: "text-blue-600"
+      }
   if (!value || value === "-") {
     return <span className="text-slate-400">-</span>;
   }
@@ -51,7 +57,7 @@ export default function Disputes() {
       const Icon = value.icon;
       return (
         <div className="flex items-center gap-2">
-          <Icon className={`h-4 w-4 text-${value.color}-600`}  />
+          <Icon className={`h-4 w-4 ${iconColors[value.color]}`}  />
           <span>{value.text}</span>
         </div>
       );
@@ -61,8 +67,8 @@ export default function Disputes() {
     case "wait_time": {
       return (
         <div className="flex items-center">
-          <Timer className={`h-4 w-4 text-${value.color}-600`} />
-          <span className={`px-2 py-0.5 rounded-md text-xs font-medium text-${value.color}-600`}>
+          <Timer className={`h-4 w-4 ${iconColors[value.color]}`} />
+          <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${iconColors[value.color]}`}>
             {value.time}
           </span>
         </div>

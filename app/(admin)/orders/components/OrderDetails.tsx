@@ -3,6 +3,7 @@ import { Pencil, Search } from 'lucide-react';
 import React from 'react'
 import { TabKey } from '../page';
 import FilterButton from '@/components/buttons/FilterButton';
+import OrderDetailsDrawer from '@/components/orders/OrderDetailsDrawer';
 /* ---------------- TABLE HEADINGS ---------------- */
 const orderHeadings: TableHeading[] = [
   { id: "id", title: "ID" },
@@ -22,7 +23,11 @@ const baseRows: OrderData[] = Array.from({ length: 5 }).map((_, i) => ({
   placed: "10/01/26",
   placed_badge: "1st",
   customer: "Abdullah Q",
-  order_details: ["Laundry Bag x1", "Trousers x2", "T-Shirt x3"],
+  order_details: [
+    {item_en:"Laundry Bag",item_ar:"كيس الغسيل",qty:1}, 
+    {item_en:"Trousers",item_ar:"بنطلون",qty:2}, 
+    {item_en:"T-shirt",item_ar:"قميص",qty:3}
+  ],
   pcs: 5,
   total: 84.0,
 }));
@@ -72,7 +77,7 @@ export default function OrderDetails() {
           case "order_details": {
             const visibleCount = 3;
             const items = row.order_details ;
-            const hiddenCount = 4 - visibleCount;
+            const hiddenCount = items.length - visibleCount;
     
             return (
               <div className="flex flex-wrap gap-2">
@@ -81,7 +86,7 @@ export default function OrderDetails() {
                     key={i}
                     className="px-3 py-1 rounded-full bg-white text-xs text-slate-700 shadow-sm border border-slate-200"
                   >
-                    {item}
+                    {item.item_en} x{item.qty}
                   </span>
                 ))}
          
@@ -110,9 +115,11 @@ export default function OrderDetails() {
                 <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
                   <Pencil className="w-5 h-5 text-slate-400 hover:text-slate-600" />
                 </button>
-                <button className="px-3 py-1.5 text-xs font-medium bg-blue-200/30 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors">
-                  DETAILS
-                </button>
+                <OrderDetailsDrawer order={row}>
+                  <button className="px-3 py-1.5 text-xs font-medium bg-blue-200/30 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
+                    DETAILS
+                  </button>
+                </OrderDetailsDrawer>
               </div>
             );
     
