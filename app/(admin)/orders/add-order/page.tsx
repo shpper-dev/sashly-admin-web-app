@@ -23,10 +23,7 @@ interface BasketEntry {
   damages?: string[];
 }
 
-interface StainTagType {
-  label: string;
-  color: string;
-}
+
 
 interface Customer {
   id: string;
@@ -56,122 +53,7 @@ const MOCK_CUSTOMERS: Customer[] = [
   { id: "c-004", name: "Omar K",      phone: "+966 56 321 0987", avatarColor: "#4F39F6" },
 ];
 
-const STAIN_TAGS: Record<string, StainTagType[]> = {
-  "Formal Shirt": [
-    { label: "ALCOHOL",        color: "#F87171" },
-    { label: "DRINK SPILL",    color: "#7F50F4" },
-    { label: "COFFEE",         color: "#7F50F4" },
-    { label: "MISSING COLLAR", color: "#F87171" },
-  ],
-};
 
-// ─── Helper components ────────────────────────────────────────────────────────
-const StainTag: React.FC<StainTagType> = ({ label, color }) => (
-  <span
-    className="inline-flex items-center justify-center px-2 py-0.5 rounded text-white font-semibold whitespace-nowrap"
-    style={{ background: color, fontSize: 10 }}
-  >
-    {label}
-  </span>
-);
-
-const ClothingCard: React.FC<{
-  item: ClothingItem;
-  onClick: () => void;
-}> = ({ item, onClick }) => (
-  <button
-    onClick={onClick}
-    className="flex flex-col items-center p-3 gap-3 bg-white border border-gray-100 rounded-2xl shadow-sm
-               hover:shadow-md hover:-translate-y-0.5 transition-all duration-150"
-  >
-    <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-         style={{ background: "linear-gradient(135deg,#EEF2FF,#F3E8FF)" }}>
-      <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
-        <path d="M8 3L5 6v3h2v10h8V9h2V6l-3-3-2 2-2-2z" fill="#7F50F4" opacity="0.75" />
-      </svg>
-    </div>
-    <div className="flex flex-col items-center gap-1 w-full">
-      <span className="text-[13px] font-bold text-[#1D293D] text-center leading-tight">{item.name}</span>
-      <span className="text-[10px] font-medium text-[#90A1B9] text-center">{item.nameAr}</span>
-      <span className="text-[13px] font-bold text-[#4F39F6] text-center">{item.price}</span>
-    </div>
-  </button>
-);
-
-const BasketItem: React.FC<{
-  entry: BasketEntry;
-  onIncrement: (id: number) => void;
-  onDecrement: (id: number) => void;
-  onDelete: (id: number) => void;
-}> = ({ entry, onIncrement, onDecrement, onDelete }) => {
-  const stains = entry.stains ?? [];
-  const damages = entry.damages ?? [];
-  return (
-    <div className="flex justify-between items-start p-4 gap-3 w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl ">
-      {/* Left */}
-      <div className="flex flex-col gap-2 flex-1 min-w-0">
-        <span className="font-extrabold text-[#101828] text-base leading-tight">{entry.item.name}</span>
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-sm text-[#101828]">QTY {entry.qty}</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-[#02D0FF] inline-block shrink-0" />
-          <span className="font-semibold text-sm text-[#7F50F4]">SAR {entry.item.price}</span>
-        </div>
-        {/* STAIN TAGS (Purple) */} 
-        {stains.length  > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {stains.map(stain => (
-              <span
-                key={stain}
-                className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] rounded bg-[#7F50F4] text-white font-semibold whitespace-nowrap"
-              >
-                {stain}
-              </span>
-            ))}
-          </div>
-        )}
-         {/* DAMAGE TAGS (Red) */}
-        {damages.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {damages.map(damage => (
-              <span
-                key={damage}
-                className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded bg-[#F87171] text-white"
-              >
-                {damage}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Qty controls */}
-      <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white border border-gray-100 rounded-2xl shrink-0">
-        <button
-          onClick={() => onIncrement(entry.item.id)}
-          className="flex items-center justify-center hover:opacity-70 transition-opacity"
-        >
-          <Plus size={18} color="#02D0FF" strokeWidth={2.5} />
-        </button>
-        <span className="font-bold text-[#101828] text-sm min-w-4.5 text-center">{entry.qty}</span>
-        {entry.qty === 1 ? (
-          <button
-            onClick={() => onDelete(entry.item.id)}
-            className="flex items-center justify-center hover:opacity-70 transition-opacity"
-          >
-            <Trash2 size={16} color="#F87171" strokeWidth={2} />
-          </button>
-        ) : (
-          <button
-            onClick={() => onDecrement(entry.item.id)}
-            className="flex items-center justify-center hover:opacity-70 transition-opacity"
-          >
-            <Minus size={18} color="#02D0FF" strokeWidth={2.5} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AddOrder() {
@@ -503,3 +385,103 @@ export default function AddOrder() {
     </div>
   );
 }
+
+// ─── Helper components ────────────────────────────────────────────────────────
+
+const ClothingCard: React.FC<{
+  item: ClothingItem;
+  onClick: () => void;
+}> = ({ item, onClick }) => (
+  <button
+    onClick={onClick}
+    className="flex flex-col items-center p-3 gap-3 bg-white border border-gray-100 rounded-2xl shadow-sm
+               hover:shadow-md hover:-translate-y-0.5 transition-all duration-150"
+  >
+    <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+         style={{ background: "linear-gradient(135deg,#EEF2FF,#F3E8FF)" }}>
+      <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
+        <path d="M8 3L5 6v3h2v10h8V9h2V6l-3-3-2 2-2-2z" fill="#7F50F4" opacity="0.75" />
+      </svg>
+    </div>
+    <div className="flex flex-col items-center gap-1 w-full">
+      <span className="text-[13px] font-bold text-[#1D293D] text-center leading-tight">{item.name}</span>
+      <span className="text-[10px] font-medium text-[#90A1B9] text-center">{item.nameAr}</span>
+      <span className="text-[13px] font-bold text-[#4F39F6] text-center">{item.price}</span>
+    </div>
+  </button>
+);
+
+const BasketItem: React.FC<{
+  entry: BasketEntry;
+  onIncrement: (id: number) => void;
+  onDecrement: (id: number) => void;
+  onDelete: (id: number) => void;
+}> = ({ entry, onIncrement, onDecrement, onDelete }) => {
+  const stains = entry.stains ?? [];
+  const damages = entry.damages ?? [];
+  return (
+    <div className="flex justify-between items-start p-4 gap-3 w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl ">
+      {/* Left */}
+      <div className="flex flex-col gap-2 flex-1 min-w-0">
+        <span className="font-extrabold text-[#101828] text-base leading-tight">{entry.item.name}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-sm text-[#101828]">QTY {entry.qty}</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#02D0FF] inline-block shrink-0" />
+          <span className="font-semibold text-sm text-[#7F50F4]">SAR {entry.item.price}</span>
+        </div>
+        {/* STAIN TAGS (Purple) */} 
+        {stains.length  > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {stains.map(stain => (
+              <span
+                key={stain}
+                className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] rounded bg-[#7F50F4] text-white font-semibold whitespace-nowrap"
+              >
+                {stain}
+              </span>
+            ))}
+          </div>
+        )}
+         {/* DAMAGE TAGS (Red) */}
+        {damages.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {damages.map(damage => (
+              <span
+                key={damage}
+                className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded bg-[#F87171] text-white"
+              >
+                {damage}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Qty controls */}
+      <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white border border-gray-100 rounded-2xl shrink-0">
+        <button
+          onClick={() => onIncrement(entry.item.id)}
+          className="flex items-center justify-center hover:opacity-70 transition-opacity"
+        >
+          <Plus size={18} color="#02D0FF" strokeWidth={2.5} />
+        </button>
+        <span className="font-bold text-[#101828] text-sm min-w-4.5 text-center">{entry.qty}</span>
+        {entry.qty === 1 ? (
+          <button
+            onClick={() => onDelete(entry.item.id)}
+            className="flex items-center justify-center hover:opacity-70 transition-opacity"
+          >
+            <Trash2 size={16} color="#F87171" strokeWidth={2} />
+          </button>
+        ) : (
+          <button
+            onClick={() => onDecrement(entry.item.id)}
+            className="flex items-center justify-center hover:opacity-70 transition-opacity"
+          >
+            <Minus size={18} color="#02D0FF" strokeWidth={2.5} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
