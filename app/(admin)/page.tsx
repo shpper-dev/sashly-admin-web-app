@@ -56,7 +56,7 @@ export default function Dashboard() {
   },[])
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header title="Dashboard Overview" />
+      <Header/>
       <main className="flex flex-col pt-12 pl-60 min-h-screen gap-3">
         {/* Stats Cards */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
