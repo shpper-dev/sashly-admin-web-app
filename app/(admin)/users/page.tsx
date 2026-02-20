@@ -109,7 +109,7 @@ export default function Users() {
   },[]);
   return (
     <div className='min-h-screen bg-slate-50'>
-        <Header title='Users' />
+        <Header />
         <main className='flex flex-col pt-16 pl-60 min-h-screen'>
             {/* cards to display stats */}
             <section className='flex flex-col gap-4 px-8 pb-6'>

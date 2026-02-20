@@ -7,6 +7,7 @@ import OrderCleaning from "./components/OrderCleaning";
 import OrderReady from "./components/OrderReady";
 import OrderPickups from "./components/OrderPickups";
 import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
+import Link from "next/link";
 ;
 
 /* ---------------- TAB TYPES ---------------- */
@@ -55,7 +56,7 @@ export default function OrdersPage() {
   
   return (
     <div className="min-h-screen bg-white">
-      <Header title="Orders" />
+      <Header />
 
       <main className="pt-16 pl-60 pb-10">
         {/* PAGE HEADER */}
@@ -77,9 +78,9 @@ export default function OrdersPage() {
 
             <div className="w-px h-7 bg-slate-300" />
             
-            <button className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors shadow-md">
+            <Link href={"/orders/add-order"} className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors shadow-md">
               + New Order
-            </button>
+            </Link>
           </div>
         </div>
         </section>

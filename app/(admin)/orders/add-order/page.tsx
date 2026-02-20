@@ -122,7 +122,7 @@ const BasketItem: React.FC<{
             {stains.map(stain => (
               <span
                 key={stain}
-                className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded bg-[#F3E8FF] text-[#7F50F4]"
+                className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] rounded bg-[#7F50F4] text-white font-semibold whitespace-nowrap"
               >
                 {stain}
               </span>
@@ -135,14 +135,13 @@ const BasketItem: React.FC<{
             {damages.map(damage => (
               <span
                 key={damage}
-                className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded bg-[#FEE2E2] text-[#F87171]"
+                className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded bg-[#F87171] text-white"
               >
                 {damage}
               </span>
             ))}
           </div>
         )}
-        
       </div>
 
       {/* Qty controls */}
