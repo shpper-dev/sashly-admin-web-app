@@ -63,7 +63,7 @@ export default function SideBar() {
                         <Link href={(item.name === "Finance" || item.name==="Reports") ? "" : item.href} key={item.name} 
                         className={`flex gap-3 mb-0.5 px-3 py-3 rounded-lg transition-all duration-200
                             ${
-                                pathname === item.href
+                                (pathname === item.href)
                                 ? "bg-slate-200/70 text-indigo-600 font-medium"
                                 : "text-slate-500 hover:text-indigo-600 hover:bg-slate-200/50"
                                 }`}
@@ -79,7 +79,7 @@ export default function SideBar() {
             <div className="flex flex-col w-50 space-y-1">
                 <hr className="border-slate-200 mb-2" />
 
-                <Link href="/settings" className="flex gap-3  px-3 py-3 rounded-lg text-slate-500 hover:text-indigo-600 focus:text-indigo-600 hover:bg-slate-200/50 focus:bg-slate-200/50 transition-all duration-200">
+                <Link href="" className="flex gap-3  px-3 py-3 rounded-lg text-slate-500 hover:text-indigo-600 focus:text-indigo-600 hover:bg-slate-200/50 focus:bg-slate-200/50 transition-all duration-200">
                     <Settings className="h-5 w-5" />
                     <span>Settings</span>
                 </Link>

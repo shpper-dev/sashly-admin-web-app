@@ -50,6 +50,7 @@ export default function BroadcastClient({initialTarget}:BroadcastClientProps) {
   const [data, setData] = useState<any[]>([]);
 
   useEffect(()=>{
+    console.log(initialTarget??"")
     setLoading(true);
     setTimeout(()=>{
       setData(mockData);
@@ -97,7 +98,7 @@ export default function BroadcastClient({initialTarget}:BroadcastClientProps) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header title="Broadcast Center" />
+      <Header  />
 
       <main className="flex flex-col min-h-screen pt-18 pl-60">
         <section className="px-8 pb-6">

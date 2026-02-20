@@ -3,7 +3,7 @@ import { Bell, MessageSquare, Search } from "lucide-react"
 interface HeaderProps{
     title: string
 }
-export default function Header({title = "Dashboard"}: HeaderProps) {
+export default function Header() {
   return (
     <div className="fixed bg-white top-0 h-12 left-60 right-0 border-b border-b-blue-500/30 z-10">
         <div className="flex items-center justify-between h-full px-6">

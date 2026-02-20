@@ -1,9 +1,10 @@
 import BroadcastClient from "@/components/broadcast/BroadcastClient"
 
-export default function BroadcastPage({
+export default async function BroadcastPage({
   searchParams,
 }: {
-  searchParams: { target?: string }
+  searchParams: Promise<{ target?: string }>
 }) {
-  return <BroadcastClient initialTarget={searchParams.target} />
+  const initialTarget = await searchParams
+  return <BroadcastClient initialTarget={initialTarget.target} />
 }
