@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { broadcastHeadings } from "@/constants/headings";
 import { TableHeading } from "@/lib/types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 
@@ -40,7 +41,9 @@ const mockData = [
 
 export default function Broadcast() {
   const [priority, setPriority] = useState<"normal" | "urgent">("normal");
-  const [target, setTarget] = useState("ALL USERS");
+  const searchParams = useSearchParams()
+  const selectedTarget = searchParams.get('target');
+  const [target, setTarget] = useState(selectedTarget ?? "ALL USERS");
   const [heading, setHeading] = useState<string>("");
   const [body, setBody] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);

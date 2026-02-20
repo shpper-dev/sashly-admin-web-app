@@ -148,7 +148,7 @@ export default function OrderReady() {
                   <Pencil className="w-5 h-5 text-slate-400 hover:text-slate-600" />
                 </button>
                 <OrderPaymentDialog total={row.total}>
-                  <button className="px-3 py-1.5 text-xs font-medium text-white bg-[#02D0FF] rounded-lg hover:bg-blue-200 transition-colors">
+                  <button className="px-3 py-1.5 text-xs font-medium text-white bg-[#02D0FF] rounded-lg hover:bg-blue-200 transition-colors cursor-pointer">
                   PAYMENT
                 </button>
                 </OrderPaymentDialog>
