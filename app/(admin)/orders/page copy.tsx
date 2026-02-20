@@ -113,7 +113,7 @@ export default function Orders() {
   },[])
   return (
     <div className='min-h-screen bg-slate-50'>
-        <Header title="Orders" />
+        <Header/>
         <main className='flex flex-col pt-16 pl-60 min-h-screen gap-3'>
             <section className='px-6 pb-6'>
                 <div className='flex gap-3 mb-4 justify-between'>
