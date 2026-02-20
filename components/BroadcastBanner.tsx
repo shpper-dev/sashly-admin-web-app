@@ -23,7 +23,7 @@ export default function BroadcastBanner({target}:BroadcastBannerProps) {
         </div>
         <button className="px-3 py-3 bg-[#7F50F4] text-white font-medium rounded-lg cursor-pointer"
         onClick={()=>{
-          router.push(`/broadcast?target=${target}`);
+          router.push(`/broadcast`);
         }}>Create New Broadcast</button>
     </div>
   )
