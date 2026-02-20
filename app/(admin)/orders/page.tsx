@@ -10,7 +10,7 @@ import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
 ;
 
 /* ---------------- TAB TYPES ---------------- */
-export type TabKey = "detail" | "cleaning" | "ready" | "pickups" | "all";
+export type TabKey = "detail" | "cleaning" | "ready" | "pickups" | "all" ;
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: "detail", label: "Detail" },
@@ -19,8 +19,6 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: "pickups", label: "Pickups" },
   { key: "all", label: "All" },
 ];
-
-
 
 
 

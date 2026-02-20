@@ -60,14 +60,16 @@ export default function SideBar() {
                 {navItems.map((item)=>{
                     const Icon = item.icon;
                     return (
-                        <Link href={item.href} key={item.name} className={`flex gap-3 mb-0.5 px-3 py-3 rounded-lg transition-all duration-200
+                        <Link href={(item.name === "Finance" || item.name==="Reports") ? "" : item.href} key={item.name} 
+                        className={`flex gap-3 mb-0.5 px-3 py-3 rounded-lg transition-all duration-200
                             ${
                                 pathname === item.href
                                 ? "bg-slate-200/70 text-indigo-600 font-medium"
                                 : "text-slate-500 hover:text-indigo-600 hover:bg-slate-200/50"
-                                }`}>
+                                }`}
+                                >
                             <Icon className="h-5 w-5" />
-                            <span>{item.name}</span>
+                            <span >{item.name}</span>
                         </Link>
                     );
                 })}

@@ -189,7 +189,7 @@ export default function Users() {
             </section>
             {/* broadcasting banner */}
             <section className='px-8 pb-6' >
-              <BroadcastBanner />
+              <BroadcastBanner target='ALL USERS' />
             </section>
         </main>
     </div>

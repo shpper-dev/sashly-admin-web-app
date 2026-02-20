@@ -194,7 +194,7 @@ export default function Drivers() {
             </section>
             {/* broadcasting banner */}
             <section className='px-8 pb-6' >
-              <BroadcastBanner />
+              <BroadcastBanner target='DRIVERS' />
             </section>
         </main>
     </div>
