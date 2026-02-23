@@ -6,6 +6,8 @@ import Header from "@/components/Header";
 import { Select, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { ItemDetailsDialog } from "@/components/orders/ItemDetailsDialog";
+import { ReviewRecordDialog } from "@/components/orders/ReviewRecordDialog";
+import OrderSuccessDialog from "@/components/orders/OrderSuccessDialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface ClothingItem {
@@ -61,8 +63,10 @@ export default function AddOrder() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>(MOCK_CUSTOMERS[0]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [itemSearch, setItemSearch] = useState("");
-  const [selectedItem, setSelectedItem] = useState<ClothingItem | null>(null)
-  const [itemDetailsOpen, setItemDetailsOpen] = useState(false)
+  const [selectedItem, setSelectedItem] = useState<ClothingItem | null>(null);
+  const [itemDetailsOpen, setItemDetailsOpen] = useState(false);
+  const [reviewRecordOpen, setReviewRecordOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
   const [basket, setBasket] = useState<BasketEntry[]>([
     { item: { id: 101, name: "Formal Shirt", nameAr: "قميص رسمي", price: "7.00" }, qty: 4 },
     { item: { id: 102, name: "Formal Shirt", nameAr: "قميص رسمي", price: "7.00" }, qty: 1 },
@@ -157,7 +161,7 @@ export default function AddOrder() {
         </div>
 
         {/* ── Two-column body ── */}
-        <div className="flex flex-1 gap-0 px-8 py-6 overflow-hidden">
+        <div className="flex flex-1 gap-0 px-8 py-6 items-start overflow-hidden">
 
           {/* ════ Left column ════ */}
           <div className="flex flex-col gap-6 w-150 shrink-0 overflow-y-auto pr-4">
@@ -352,7 +356,10 @@ export default function AddOrder() {
               </div>
 
               {/* Checkout */}
-              <button
+                <button
+                onClick={()=>{
+                  setReviewRecordOpen(true);
+                }}
                 disabled={!canCheckout}
                 className="w-full py-4 text-white font-extrabold text-sm rounded-2xl tracking-widest uppercase transition-all duration-200"
                 style={{
@@ -363,6 +370,10 @@ export default function AddOrder() {
               >
                 CHECKOUT
               </button>
+              <ReviewRecordDialog open={reviewRecordOpen} onOpenChange={setReviewRecordOpen} subtotal={subtotal} setSuccessOpen={setSuccessOpen} />
+
+              {/* success order */}
+              <OrderSuccessDialog open={successOpen} onOpenChange={setSuccessOpen} />
 
               {/* Validation hint */}
               {!canCheckout && (
