@@ -4,6 +4,8 @@ import React from 'react'
 import { TabKey } from '../page';
 import FilterButton from '@/components/buttons/FilterButton';
 import ConfirmDeliveryDialog from '@/components/orders/ConfirmDeliveryDialog';
+import Link from 'next/link';
+import { CustomerDetailsDialog } from '@/components/orders/CustomerDetailsDialog';
 /* ---------------- TABLE HEADINGS ---------------- */
 const orderHeadings: TableHeading[] = [
   { id: "id", title: "ID" },
@@ -66,7 +68,13 @@ export default function OrderPickups() {
             );
     
           case "customer":
-            return <span className="font-medium text-slate-800">{row.customer}</span>;
+            return (
+              <div>
+                <CustomerDetailsDialog customer={row.customer}>
+                  <span className="font-medium text-slate-800 cursor-pointer">{row.customer}</span>
+                </CustomerDetailsDialog>
+              </div>
+            );
           
           case "contact":
              return (
@@ -168,11 +176,11 @@ export default function OrderPickups() {
         <div className="flex justify-between items-center mb-4 px-8">
           <div className="flex gap-3">
             <FilterButton label="Filter Route(s)" />
-            <button className="flex items-center gap-2 px-4 py-2 border border-puple-600 rounded-lg bg-white text-sm font-medium text-purple-600 hover:bg-slate-50 transition-colors">
+            <Link href={"orders/delivery-manifest"} className="flex items-center gap-2 px-4 py-2 border border-[#02D0FF] rounded-lg bg-white text-sm font-medium text-[#02D0FF]  hover:bg-slate-50 transition-colors">
                 <Printer className="h-4 w-4" />
                 Delivery Printout
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-[#02D0FF] rounded-lg bg-white text-sm font-medium text-[#02D0FF] hover:bg-slate-50 transition-colors">
+            </Link>
+            <button className="flex items-center gap-2 px-4 py-2 border border-purple-600 rounded-lg bg-white text-sm font-medium text-purple-600 hover:bg-slate-50 transition-colors">
                 <ReceiptText className="h-4 w-4" />
                  Print Receipts
             </button>

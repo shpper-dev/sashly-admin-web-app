@@ -157,7 +157,7 @@ export default function AddOrder() {
               <SelectTrigger className="w-80 flex items-center gap-2 px-4 py-2.5 bg-white border border-cyan-200 rounded-lg text-[#45556C] font-bold text-xs hover:border-cyan-400 transition-colors [&>span]:text-cyan-400 [&>svg]:text-cyan-400">
               <SelectValue placeholder="Default Prices" />
                </SelectTrigger>
-                </Select>
+          </Select>
         </div>
 
         {/* ── Two-column body ── */}
