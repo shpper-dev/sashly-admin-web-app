@@ -1,5 +1,6 @@
 "use client";
 import Header from "@/components/Header";
+import AddProductDialog from "@/components/products/AddProductDialog";
 import ProductCard from "@/components/products/ProductCard";
 import { Select, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
@@ -17,56 +18,56 @@ const filters = [
 
 const products = [
   {
-    image: "/images/thob.png",
+    image: "/images/products/thob.png",
     name_en: "Thob",
     name_ar: "ثوب",
     category: "WASH & IRON",
     price: 6.0,
   },
   {
-    image: "/images/sderiyah.png",
+    image: "/images/products/sderiyah.png",
     name_en: "Sderiyah",
     name_ar: "سديرية",
     category: "WASH & IRON",
     price: 6.0,
   },
   {
-    image: "/images/taqiyah.png",
+    image: "/images/products/taqiyah.png",
     name_en: "Taqiyah",
     name_ar: "طاقية",
     category: "IRON",
     price: 6.0,
   },
   {
-    image: "/images/undershirt.png",
+    image: "/images/products/undershirt.png",
     name_en: "Undershirt",
     name_ar: "فانيلة داخلية",
     category: "IRON",
     price: 6.0,
   },
   {
-    image: "/images/shemagh.png",
+    image: "/images/products/shemagh.png",
     name_en: "Shemagh",
     name_ar: "شماغ",
     category: "WASH & IRON",
     price: 6.0,
   },
   {
-    image: "/images/thob-colored.png",
+    image: "/images/products/thob-colored.png",
     name_en: "Thob Colored",
     name_ar: "ثوب ملون",
     category: "STEAM & SPECIAL CARE",
     price: 6.0,
   },
   {
-    image: "/images/shorts.png",
+    image: "/images/products/shorts.png",
     name_en: "Shorts",
     name_ar: "شورت",
     category: "WASH & IRON",
     price: 6.0,
   },
   {
-    image: "/images/serwal.png",
+    image: "/images/products/serwal.png",
     name_en: "Serwal",
     name_ar: "سروال طويل داخلي",
     category: "WASH & IRON",
@@ -116,12 +117,13 @@ export default function Products() {
               </SelectTrigger>
             </Select>
 
-            <Link
-              href={"/products"}
-              className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold transition-colors shadow-md"
+            <AddProductDialog>
+              <button
+              className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold transition-colors shadow-md cursor-pointer"
             >
               + Add Product
-            </Link>
+            </button>
+            </AddProductDialog>
           </div>
         </section>
 

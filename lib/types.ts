@@ -45,3 +45,9 @@ export interface ReportGroup {
   date: string
   items: ReportItem[]
 }
+
+// users page (toast)
+export interface Toast {
+  id: number
+  name: string
+}
