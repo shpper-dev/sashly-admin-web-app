@@ -1,12 +1,13 @@
 "use client";
 import Header from '@/components/Header'
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, EllipsisVertical, Mail, Phone, Search, } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, EllipsisVertical, Mail, Phone, Search, User, } from "lucide-react";
 import TableSkeleton from '@/components/skeleton/TableSkeleton';
 import { TableHeading } from '@/lib/types';
 import { ActionsDropdown } from '@/components/ActionsDropdown';
 import { useDeleteToast } from '@/hooks/useDeleteToast';
 import { DeleteToastContainer } from '@/components/users/DeleteToast';
+import UserInfoDialog from '@/components/users/UserInfoDialog';
 
 
 const userHeadings : TableHeading[]= [
@@ -128,6 +129,7 @@ export default function Users() {
   switch (heading.id) {
     case "customer":
       return (
+        <UserInfoDialog user={row} >
         <div className="flex items-center gap-4">
           {/* Avatar */}
           <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-semibold">
@@ -144,6 +146,7 @@ export default function Users() {
             </span>
           </div>
         </div>
+        </UserInfoDialog>
       )
 
     case "contact":
@@ -313,7 +316,7 @@ export default function Users() {
                                     <div className='flex items-center justify-between'>
                                         {/* left : showing text */}
                                         <div className='text-left text-sm text-slate-600'>
-                                            showing <b>1</b>-<b>3</b> of <b>{data.length}</b> orders
+                                            showing <b>1</b>-<b>4</b> of <b>{data.length}</b> orders
                                         </div>
                                         {/* Right: pagination controls */}
                                         <div className='flex items-center gap-2'>

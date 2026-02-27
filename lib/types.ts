@@ -51,3 +51,19 @@ export interface Toast {
   id: number
   name: string
 }
+
+export interface User {
+  id: number;
+  customer: {
+  first_name: string;
+  last_name: string;
+  id: string;
+};
+ contact: {
+  email: string;
+  phone: string;
+ };
+  orders: number;
+  total_spent: number;
+  status: "active" | "inactive" | "blocked";
+}
