@@ -1,5 +1,5 @@
 "use client";
-import {LayoutDashboard, LogOut, Megaphone, OctagonAlert, Package, Settings, TriangleAlert, Truck, Users, Wallet} from "lucide-react";
+import {LayoutDashboard, LogOut, Megaphone, OctagonAlert, Package, Settings, Shirt, TriangleAlert, Truck, Users, Wallet} from "lucide-react";
 import Link from "next/link";
 import UserDropDown from "./UserDropDown";
 import { usePathname } from "next/navigation";
@@ -30,6 +30,11 @@ const navItems = [
         href:"/drivers"
     },
     {
+        name:"Products",
+        icon: Shirt,
+        href:"/products"
+    },
+    {
         name:"Broadcast",
         icon: Megaphone,
         href:"/broadcast"
@@ -50,18 +55,18 @@ const navItems = [
 export default function SideBar() {
     const pathname = usePathname()
   return (
-    <div className="fixed top-0 left-0 flex flex-col bg-white text-sm h-full w-60 border-r border-r-blue-500/30 ">
+    <div className={`fixed top-0 left-0 flex flex-col bg-white text-sm h-full w-60 border-r border-r-blue-500/30 ${(pathname === "/orders/delivery-manifest" || pathname.startsWith("/orders/reports")) ? "hidden" : "flex"}`}>
         <div className="flex mt-3 ml-6 w-full justify-center">
             <img src="/images/logo.png" alt="sashly logo" className="h-14"  />
         </div>
-        <div className="w-full flex flex-col justify-between h-full px-2 mt-6">
+        <div className="w-full flex flex-col justify-between h-full px-2 mt-4">
             {/* top section */}
             <nav className="space-y-1">
                 {navItems.map((item)=>{
                     const Icon = item.icon;
                     return (
                         <Link href={(item.name === "Finance" || item.name==="Reports") ? "" : item.href} key={item.name} 
-                        className={`flex gap-3 mb-0.5 px-3 py-3 rounded-lg transition-all duration-200
+                        className={`flex gap-3 mb-0.5 px-3 py-2 rounded-lg transition-all duration-200
                             ${
                                 (pathname === item.href)
                                 ? "bg-slate-200/70 text-indigo-600 font-medium"
@@ -76,16 +81,16 @@ export default function SideBar() {
 
             </nav>
             {/* Bottom section */}
-            <div className="flex flex-col w-50 space-y-1">
+            <div className="flex flex-col w-50 ">
                 <hr className="border-slate-200 mb-2" />
 
-                <Link href="" className="flex gap-3  px-3 py-3 rounded-lg text-slate-500 hover:text-indigo-600 focus:text-indigo-600 hover:bg-slate-200/50 focus:bg-slate-200/50 transition-all duration-200">
+                <Link href="" className="flex gap-2 px-3 py-2 rounded-lg text-slate-500 hover:text-indigo-600 focus:text-indigo-600 hover:bg-slate-200/50 focus:bg-slate-200/50 transition-all duration-200">
                     <Settings className="h-5 w-5" />
                     <span>Settings</span>
                 </Link>
 
                 <UserDropDown user="John"/>
-                <button className="flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 text-red-500  hover:bg-slate-200/50 cursor-pointer w-full text-left">
+                <button className="flex items-center gap-3 px-3 py-2 mb-2 rounded-lg transition-all duration-200 text-red-500  hover:bg-slate-200/50 cursor-pointer w-full text-left">
                 <LogOut className="h-5 w-5 text-red-500" /> <span className="">Sign Out</span>
                 </button>
 

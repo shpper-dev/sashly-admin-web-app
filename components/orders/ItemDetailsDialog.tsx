@@ -163,7 +163,7 @@ export function ItemDetailsDialog({
                 >
                   <Minus size={18} color="#62748E" strokeWidth={2} />
                 </button>
-                <span className="text-2xl font-bold text-[#101828] min-w-[24px] text-center">
+                <span className="text-2xl font-bold text-[#101828] min-w-6 text-center">
                   {count}
                 </span>
                 <button
@@ -204,7 +204,7 @@ export function ItemDetailsDialog({
 
             {/* Stain logs */}
             <div className="flex flex-col gap-2.5 flex-1 min-h-0">
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 <Zap size={14} color="#7F50F4" strokeWidth={2} />
                 <p className="text-[10px] font-bold text-[#101828] uppercase tracking-widest">
                   Stain Logs
@@ -225,7 +225,7 @@ export function ItemDetailsDialog({
 
             {/* Damage logs */}
             <div className="flex flex-col gap-2.5 flex-1 min-h-0">
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 <AlertTriangle size={14} color="#F87171" strokeWidth={2} />
                 <p className="text-[10px] font-bold text-[#101828] uppercase tracking-widest">
                   Damage Logs
@@ -248,7 +248,7 @@ export function ItemDetailsDialog({
         </div>
 
         {/* ── FOOTER (fixed height) ───────────────────────────────────── */}
-        <div className="flex items-center justify-end gap-3 px-8 py-4 bg-white border-t border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-end gap-3 px-8 py-4 bg-white border-t border-gray-100 shrink-0">
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}

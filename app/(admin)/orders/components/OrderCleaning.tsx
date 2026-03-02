@@ -3,6 +3,7 @@ import { Pencil, Search } from 'lucide-react';
 import React from 'react'
 import { TabKey } from '../page';
 import FilterButton from '@/components/buttons/FilterButton';
+import { CustomerDetailsDialog } from '@/components/orders/CustomerDetailsDialog';
 /* ---------------- TABLE HEADINGS ---------------- */
 const orderHeadings: TableHeading[] = [
   { id: "id", title: "ID" },
@@ -46,10 +47,17 @@ const dataByTab: Record<TabKey, any[]> = {
   pickups: baseRows,
   all: baseRows,
 };
+const cleaningReportOptions = [
+    { label: "To Clean", value: "to-clean",href:"/orders/reports/to-clean" },
+    { label: "To Clean (No dates)", value: "no-dates",href:"/orders/reports/no-dates" },
+    { label: "Cleaned Today", value: "today",href:"/orders/reports/today" },
+    { label: "Cleaned Yesterday", value: "yesterday",href:"/orders/reports/yesterday" },
+    { label: "Detailed Today", value: "detailed",href:"/orders/reports/detailed" },
+  ]
 
 export default function OrderCleaning() {
     const rows = dataByTab["cleaning"];
-    const activeHeadings = []
+    
     
       // Helper function to render cell content
       const renderCellContent = (heading: TableHeading, row: any) : React.ReactNode => {
@@ -80,7 +88,11 @@ export default function OrderCleaning() {
             );
     
           case "customer":
-            return <span className="font-medium text-slate-800">{row.customer}</span>;
+            return (
+              <CustomerDetailsDialog customer={row.customer}>
+                <span className="font-medium text-slate-800 cursor-pointer">{row.customer}</span>
+              </CustomerDetailsDialog>
+            );
           
           case "contact":
              return (
@@ -166,7 +178,7 @@ export default function OrderCleaning() {
      <div>
         <div className="flex justify-between items-center mb-4 px-8">
           <div className="flex gap-3">
-            <FilterButton label="Reports" />
+            <FilterButton label="Reports" options={cleaningReportOptions}  />
             <FilterButton label="Sections" />
             <FilterButton label="Order Type" />
             <FilterButton label="Date" />

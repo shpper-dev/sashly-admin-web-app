@@ -1,90 +1,226 @@
 "use client";
 import Header from '@/components/Header'
-import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, CircleAlert, Download, Landmark, OctagonAlert, UserPlus, Users2, Zap } from "lucide-react";
-import SimpleStatsCard from '@/components/SimpleStatsCard';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Download, EllipsisVertical, Mail, Phone, Search, User, } from "lucide-react";
 import TableSkeleton from '@/components/skeleton/TableSkeleton';
 import { TableHeading } from '@/lib/types';
-import BroadcastBanner from '@/components/BroadcastBanner';
-import { driverHeadings } from '@/constants/headings';
+import { ActionsDropdown } from '@/components/ActionsDropdown';
+import { useDeleteToast } from '@/hooks/useDeleteToast';
+import { DeleteToastContainer } from '@/components/users/DeleteToast';
+import UserInfoDialog from '@/components/users/UserInfoDialog';
+import FilterButtonWithBadge from '@/components/buttons/FilterButtonWithBadges';
 
 
+const driverHeadings : TableHeading[]= [
+{
+    id: "driver",
+    title: "DRIVER"
+},
+{
+    id: "contact",
+    title: "CONTACT"
+},
+{
+    id: "orders",
+    title: "ORDERS"
+},
+{
+    id:"total_spent",
+    title:"TOTAL SPENT"
+},
+{
+  id:"status",
+  title:"STATUS"
+},
+{
+  id:"actions",
+  title:""
+}
+]
 const mockData = [
 {
   id:1,
-  driver_id: "#4627",
-  name: "Fahad Al-Saud",
-  contact: "fahad@email.com",
-  status:"Suspended",
-  active_orders: 125,
-  pending_payout: "1,246.00",
-  actions: "Manage",
+  driver:{
+    first_name:"Ahmed",
+    last_name:"Khalid",
+    id:"CUST-001"
+  },
+  contact:{
+    email:"ahmed.khalid@email.com",
+    phone:"+966 5 1234 5678"
+  },
+  orders: 7,
+  total_spent: 84,
+  status: "Active"
 },
 {
   id:2,
-  driver_id: "#5251",
-  name: "Mariam Saleh",
-  contact: "mariam@email.com",
-  status:"Active",
-  active_orders: 42,
-  pending_payout: "671.00",
-  actions: "Manage",
+  driver:{
+    first_name:"Sara",
+    last_name:"Mohammed",
+    id:"CUST-002"
+  },
+  contact:{
+    email:"sara.mohammed@email.com",
+    phone:"+966 5 2234 4478"
+  },
+  orders: 5,
+  total_spent: 154,
+  status: "Active"
 },
 {
-  id:3,
-  driver_id: "#4267",
-  name: "Ahmed Khalid",
-  contact: "khalid@email.com",
-  status:"Suspended",
-  active_orders: 611,
-  pending_payout: "1,322.00",
-  actions: "Manage",
-}]
+ id:3,
+  driver:{
+    first_name:"Omar",
+    last_name:"Hassan",
+    id:"CUST-003"
+  },
+  contact:{
+    email:"omar.hassan@email.com",
+    phone:"+966 5 4321 5678"
+  },
+  orders: 67,
+  total_spent: 261,
+  status: "Inactive"
+},
+{
+  id:4,
+  driver:{
+    first_name:"Laila",
+    last_name:"Ali",
+    id:"CUST-004"
+  },
+  contact:{
+    email:"laila.ali@email.com",
+    phone:"+966 5 5225 5998"
+  },
+  orders: 125,
+  total_spent: 627,
+  status: "Blocked"
+},
+]
 
 
 export default function Drivers() {
   const [loading , setLoading] = useState<boolean>(false);
   const [data, setData] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeFilter, setActiveFilter] = useState("All");
+  const filteredData = useMemo(() => {
+      return data.filter((driver) => {
+        // Category filtering
+        const matchesCategory =
+          activeFilter === "All" ||
+          driver.status.toLowerCase() === activeFilter.toLowerCase();
+  
+        // Search filtering (EN + AR)
+        const matchesSearch =
+          driver.driver.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          driver.driver.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          driver.contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          driver.contact.phone.includes(searchTerm);
+  
+        return matchesCategory && matchesSearch;
+      });
+    }, [activeFilter, searchTerm,data]);
 
-  const renderCellContent = (Heading:TableHeading, value:any)=>{
-    if(!value || value === "-"){
+  const {toasts, showDeleteToast } = useDeleteToast();
+
+  const renderCellContent = (heading: TableHeading, row: any) => {
+  switch (heading.id) {
+    case "driver":
       return (
-        <span className='text-slate-400'>-</span>
-      );
-    }
+        // <UserInfoDialog user={row} >
+        <div className="flex items-center gap-4">
+          {/* Avatar */}
+          <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-semibold">
+            {row.driver.first_name[0]}
+            {row.driver.last_name[0]}
+          </div>
 
-    switch (Heading.id){
-      case "status":
-        let isRed = value.toLowerCase() === "suspended" || value.toLowerCase() === "blocked"
-        return(
-          <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium ${
-                        isRed  ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
-                    }`}>{value}</span>
-        )
-      case "active_orders":
-        return(
-          <span className='bg-slate-200/50 rounded-full px-2 py-1'>{value}</span>
-        );
-      case "pending_payout":
-        return(
-          <span className='text-purple-800 font-medium'>SAR {value}</span>
-        )
-      case "actions":
-        return(
-          <div className="flex items-center justify-between">
-              <span
-                className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium`}>
-                {value}
-              </span>
-          
-              <ChevronRight className="h-4 w-4 text-slate-400" />
-            </div>
-        )
-      default:
-        return value;
-    }
+          <div className="flex flex-col">
+            <span className="font-bold text-slate-900 tracking-wide">
+              {row.driver.first_name} {row.driver.last_name}
+            </span>
+            <span className="text-xs text-slate-500">
+              ID: {row.driver.id}
+            </span>
+          </div>
+        </div>
+        // </UserInfoDialog>
+      )
 
+    case "contact":
+      return (
+        <div className="flex flex-col gap-1 text-sm">
+          <div className='flex items-center whitespace-nowrap gap-2'>
+            <Mail className='h-3 w-3' />
+            <span className="text-slate-700">
+               {row.contact.email}
+            </span>
+          </div>
+          <div className='flex items-center whitespace-nowrap gap-2'>
+            <Phone className='h-3 w-3' />
+            <span className="text-slate-700">
+               {row.contact.phone}
+            </span>
+          </div>
+        </div>
+      )
+
+    case "orders":
+      return (
+        <span className="font-semibold text-slate-900">
+          {row.orders}
+        </span>
+      )
+
+    case "total_spent":
+      return (
+        <div className="flex flex-col">
+          <span className="text-xs text-cyan-500 font-semibold">
+            SAR
+          </span>
+          <span className="font-semibold text-slate-900">
+            {row.total_spent.toFixed(2)}
+          </span>
+        </div>
+      )
+
+    case "status":
+      return (
+        <span
+          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+            row.status === "Active"
+              ? "bg-green-100 text-green-700"
+              : row.status === "Inactive"
+              ? "bg-yellow-100 text-yellow-600"
+              : "bg-red-100 text-red-600"
+              
+          }`}
+        >
+          {row.status.toUpperCase()}
+        </span>
+      )
+
+    case "actions":
+      return (
+        <div className="flex justify-end">
+           <ActionsDropdown
+             onView={() => console.log("View", row.id)}
+             onEdit={() => console.log("Edit", row.id)}
+             onDelete={() => {
+              setData((prevData) => prevData.filter((user) => user.id !== row.id));
+              showDeleteToast(`Deleted ${row.driver.first_name} ${row.driver.last_name}`)
+             }}
+            />
+        </div>
+      )
+
+    default:
+      return "-"
   }
+}
 
   useEffect(()=>{
     setLoading(true);
@@ -94,57 +230,68 @@ export default function Drivers() {
     },2000)
   },[]);
   return (
-    <div className='min-h-screen bg-slate-50'>
-        <Header  />
+    <div className='min-h-screen bg-white'>
+        <Header />
         <main className='flex flex-col pt-16 pl-60 min-h-screen'>
             {/* cards to display stats */}
-            <section className='flex flex-col gap-4 px-8 pb-6'>
+            <section className='flex  justify-between px-8 pb-6'>
               <div className='flex flex-col gap-1'>
-                <h2 className='text-xl font-semibold'>Drivers Management</h2>
-                <p className='text-sm text-slate-700'>Manage sashly driver directory and account status</p>
+                <h2 className='text-xl font-semibold'>Drivers</h2>
+                <p className='text-sm text-slate-700'>Manage your drivers</p>
               </div>
-              <div className='flex items-center justify-between'>
-                <SimpleStatsCard title={'TOTAL DRIVERS'} value={'1,456'} icon={Users2} />  
-                <SimpleStatsCard title={'ACTIVE TODAY'} value={'965'} icon={Zap} color='green' />
-                <SimpleStatsCard title={'SUSPENDED'} value={'12'} icon={OctagonAlert} color='red'/>
-                <SimpleStatsCard title={'PENDING PAYOUTS'} value={'12,456'} icon={Landmark} color="purple" />
-              </div>
-            </section>
-            {/* drivers table and categories */}
-            <section className='flex flex-col px-8 gap-3'>
-              <div className='flex justify-between '>
-                <div className='flex items-center gap-2'>
-                  <button className='px-3 py-1 bg-white text-sm font-medium border border-blue-500/30 rounded-full cursor-pointer focus:bg-[#7F50F4] focus:text-white'>All Driver</button>
-                  <button className='px-3 py-1 bg-white text-sm font-medium border border-blue-500/30 rounded-full cursor-pointer focus:bg-[#7F50F4] focus:text-white'>Active</button>
-                  <button className='px-3 py-1 bg-white text-sm font-medium border border-blue-500/30 rounded-full cursor-pointer focus:bg-[#7F50F4] focus:text-white'>Suspended</button>
-                  <button className='px-3 py-1 bg-white text-sm font-medium border border-blue-500/30 rounded-full cursor-pointer focus:bg-[#7F50F4] focus:text-white'>Blocked</button>
-                </div>
-                <div className='flex gap-2'>
-                  <button className='flex gap-2 items-center bg-white px-3 py-2 border border-slate-500/30 text-sm font-medium rounded-md '>
+              <div className='flex gap-3 items-center'>
+                  <button className='flex gap-2 items-center bg-white px-5 py-3 border border-slate-500/30 text-sm font-medium rounded-md '>
                     <Download className='h-3 w-3' />
                       Export CSV
                   </button>
-                  <button className='flex gap-2 items-center bg-[#7F50F4] px-3 py-2 text-white text-sm font-medium rounded-md'>
-                    <UserPlus className='h-3 w-3'/>
-                        Add New Driver
+                  <button className='flex gap-2 items-center bg-[#7F50F4] px-5 py-3 text-white text-sm font-medium rounded-md'>
+                        + Add New Driver
                   </button>
                 </div>
-
+                <DeleteToastContainer toasts={toasts} />
+            </section>
+            <section className='flex justify-between px-8 pb-6'>
+              <div className='flex bg-slate-50 border border-slate-100 shadow-inner items-center gap-3 rounded-lg p-1'>
+                    {["All", "Active", "Inactive", "Blocked"].map((filter) => (
+                      <FilterButtonWithBadge
+                        key={filter}
+                        label={filter}
+                        count={
+                          filter === "All"
+                            ? data.length
+                            : data.filter((driver) => driver.status === filter).length
+                        }
+                        active={activeFilter === filter}
+                        onClick={() => setActiveFilter(filter)}
+                      />
+                    ))}
               </div>
-              <div className='pb-6'>
+              <div className="flex items-center gap-3 px-4 py-2 bg-white border border-[#E2E8F0] rounded-lg shadow-sm w-100">
+              <Search size={16} className="text-slate-400" />
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by name, email, or phone..."
+                className="bg-transparent outline-none text-xs text-slate-600 placeholder:text-[#94A3B8] placeholder:font-semibold w-full"
+              />
+            </div>
+            </section>
+            {/* drivers table */}
+            <section>
+              <div className='px-8 pb-6'>
                    {loading ? (
                     <TableSkeleton tableHeadings={driverHeadings} />
                    ):(
                     <table className='w-full'>
-                        <thead className='bg-slate-200/50'>
+                        <thead className='bg-slate-100'>
                             <tr>
                                 {driverHeadings.map((heading)=>(
-                                    <th key={heading.id} className='px-6 py-3 text-left text-sm font-semibold text-slate-700 first:rounded-tl-lg last:rounded-tr-lg'>{heading.title} </th>
+                                    <th key={heading.id} className='px-6 py-4 text-left text-sm font-bold text-slate-500 first:rounded-tl-lg last:rounded-tr-lg'>{heading.title} </th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-slate-200">
-                            {data.length === 0 ? (
+                            {filteredData.length === 0 ? (
                                     <tr>
                                         <td colSpan={driverHeadings.length}
                                         className="px-6 py-12 text-center text-sm text-slate-500 ">
@@ -152,12 +299,12 @@ export default function Drivers() {
                                         </td>
                                     </tr>
                                 ):(
-                                    data.map((row,index)=>(
+                                    filteredData.map((row,index)=>(
                                         <tr key={row.id || index} className="hover:bg-slate-50 transition-colors">
                                         {driverHeadings.map((heading)=>(
                                             <td key={heading.id}
                                             className={`px-6 py-3 text-sm text-slate-700`}>
-                                                {renderCellContent(heading, row[heading.id])}
+                                                {renderCellContent(heading, row)}
                                             </td>
                                         ))}
                                         </tr>
@@ -170,7 +317,7 @@ export default function Drivers() {
                                     <div className='flex items-center justify-between'>
                                         {/* left : showing text */}
                                         <div className='text-left text-sm text-slate-600'>
-                                            showing <b>1</b>-<b>3</b> of <b>{data.length}</b> orders
+                                            showing <b>1</b>-<b>4</b> of <b>{data.length}</b> orders
                                         </div>
                                         {/* Right: pagination controls */}
                                         <div className='flex items-center gap-2'>
@@ -192,11 +339,9 @@ export default function Drivers() {
                 </div>
 
             </section>
-            {/* broadcasting banner */}
-            <section className='px-8 pb-6' >
-              <BroadcastBanner target='DRIVERS' />
-            </section>
         </main>
     </div>
   )
 }   
+
+

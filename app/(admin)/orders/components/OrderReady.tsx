@@ -4,6 +4,7 @@ import React from 'react'
 import { TabKey } from '../page';
 import FilterButton from '@/components/buttons/FilterButton';
 import OrderPaymentDialog from '@/components/orders/OrderPaymentDialog';
+import { CustomerDetailsDialog } from '@/components/orders/CustomerDetailsDialog';
 /* ---------------- TABLE HEADINGS ---------------- */
 const orderHeadings: TableHeading[] = [
   { id: "id", title: "ID" },
@@ -78,7 +79,13 @@ export default function OrderReady() {
             );
     
           case "customer":
-            return <span className="font-medium text-slate-800">{row.customer}</span>;
+              return (
+                <div>
+                  <CustomerDetailsDialog customer={row.customer}>
+                    <span className="font-medium text-slate-800 cursor-pointer">{row.customer}</span>
+                  </CustomerDetailsDialog>
+                </div>
+              );
           
           case "contact":
              return (
