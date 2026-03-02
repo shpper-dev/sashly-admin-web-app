@@ -8,6 +8,7 @@ import { ActionsDropdown } from '@/components/ActionsDropdown';
 import { useDeleteToast } from '@/hooks/useDeleteToast';
 import { DeleteToastContainer } from '@/components/users/DeleteToast';
 import UserInfoDialog from '@/components/users/UserInfoDialog';
+import FilterButtonWithBadge from '@/components/buttons/FilterButtonWithBadges';
 
 
 const userHeadings : TableHeading[]= [
@@ -236,7 +237,7 @@ export default function Users() {
             <section className='flex  justify-between px-8 pb-6'>
               <div className='flex flex-col gap-1'>
                 <h2 className='text-xl font-semibold'>Users</h2>
-                <p className='text-sm text-slate-700'>Manage your user base and their orderhistory</p>
+                <p className='text-sm text-slate-700'>Manage your user base and their order history</p>
               </div>
               <div className='flex gap-3 items-center'>
                   <button className='flex gap-2 items-center bg-white px-5 py-3 border border-slate-500/30 text-sm font-medium rounded-md '>
@@ -343,37 +344,3 @@ export default function Users() {
   )
 }   
 
-// helper
-function FilterButtonWithBadge({
-  label,
-  count,
-  active,
-  onClick,
-}: {
-  label: string
-  count: number
-  active?: boolean
-  onClick?: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition ${
-        active
-          ? "bg-white shadow text-purple-600"
-          : "text-slate-600 hover:bg-white"
-      }`}
-    >
-      {label}
-      <span
-        className={`px-1.5 rounded-full text-xs ${
-          active
-            ? "bg-purple-100 text-purple-600"
-            : "bg-slate-200"
-        }`}
-      >
-        {count}
-      </span>
-    </button>
-  )
-}

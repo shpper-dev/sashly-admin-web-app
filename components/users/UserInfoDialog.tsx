@@ -1,13 +1,15 @@
 "use client";
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
-import { Calendar, Camera, ChartNoAxesColumn, CheckIcon, ClockCheck, ClockIcon, CreditCard, Dot, HelpCircle, LucideIcon, Mail, MessageCircle, PencilLine, Phone, ShoppingBag, Timer, Truck } from 'lucide-react';
-import Users from '@/app/(admin)/users/page';
+import { Calendar, Camera, ChartNoAxesColumn,  CreditCard,LucideIcon, Mail, MessageCircle, PencilLine, Phone, ShoppingBag, Timer, Truck } from 'lucide-react';
 import UsersOrders from './UsersOrders';
 import { User } from '@/lib/types';
 import UsersEditCustomer from './UsersEditCustomer';
 import UsersStats from './UsersStats';
 import UsersPayment from './UsersPayment';
+import UsersMessages from './UsersMessages';
+import UsersPickups from './UsersPickups';
+import UsersPhotos from './UsersPhotos';
 
 type TabName = "orders" | "stats" | "edit customer" | "payments" | "messages" | "pickups" | "photos";
 
@@ -184,6 +186,15 @@ export default function UserInfoDialog({ children, user }: UserInfoDialogProps) 
             )}
             {activeTab === "payments" && (
                 <UsersPayment />
+            )}
+            {activeTab === "messages" &&(
+              <UsersMessages />
+            )}
+            {activeTab === "pickups" &&(
+              <UsersPickups />
+            )}
+            {activeTab === "photos" &&(
+              <UsersPhotos />
             )}
             
         </div>
