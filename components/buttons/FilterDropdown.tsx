@@ -1,5 +1,4 @@
-"use client"
-
+"use client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +42,7 @@ export default function FilterDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+        <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">
           {label}
           <ChevronDown className="w-4 h-4" />
         </button>
@@ -69,10 +68,10 @@ export default function FilterDropdown({
               onClick={() => handleSelect(option)}
               className={`
                 px-4 py-2 text-sm font-medium cursor-pointer
-                rounded-none
+                rounded-none transition-colors
                 ${isSelected
-                  ? "bg-[#1EB4D4] text-white"
-                  : "text-slate-600 hover:bg-[#1EB4D4] hover:text-white"}
+                  ? "bg-[#1EB4D4]! text-white!"
+                  : "text-slate-600 hover:bg-[#1EB4D4]!  hover:text-white!"}
                 ${index !== options.length - 1 ? "border-b border-slate-300/40" : ""}
               `}
             >

@@ -1,7 +1,12 @@
 import { ChevronDown, Copy, LucideIcon, Mail, PencilLine, Phone, Trash2, UserIcon } from 'lucide-react';
-import React from 'react'
+import React from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
-export default function UsersEditCustomer() {
+interface UsersEditCustomerProps{
+  onDelete : () => void;
+}
+
+export default function UsersEditCustomer({onDelete}:UsersEditCustomerProps) {
   return (
   <div className="flex-1 overflow-y-auto bg-white px-8 py-8">
 
@@ -123,7 +128,7 @@ export default function UsersEditCustomer() {
     {/* Bottom Buttons */}
     <div className="flex items-center justify-between mt-10 border-t pt-6">
 
-      <button className="flex items-center gap-2 text-red-500 font-semibold text-sm">
+      <button className="flex items-center gap-2 text-red-500 font-semibold text-sm cursor-pointer" onClick={onDelete}>
         <Trash2 className="h-4 w-4" />
         Delete Customer
       </button>
@@ -207,12 +212,40 @@ function CheckboxCard({ label }: { label: string }) {
   );
 }
 
-function SelectInput({ value }: { value: string }) {
+type Option = {
+  label: string;
+  value: string;
+};
+
+type SelectInputProps = {
+  value?: string;
+  onChange?: (value: string) => void;
+  options?: Option[];
+  placeholder?: string;
+};
+
+export function SelectInput({
+  value,
+  onChange,
+  options = [],
+  placeholder = "Select option",
+}: SelectInputProps) {
   return (
-    <div className="flex items-center justify-between h-11 rounded-xl border border-slate-200 bg-slate-100 px-4 text-sm text-slate-700">
-      {value}
-      <ChevronDown className="h-4 w-4 text-slate-400" />
-    </div>
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="flex items-center justify-between h-11 rounded-xl border border-slate-200 bg-slate-100 px-4 text-sm text-slate-700">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+
+      {options.length > 0 && (
+        <SelectContent>
+          {options.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      )}
+    </Select>
   );
 }
 

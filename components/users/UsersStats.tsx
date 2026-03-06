@@ -87,9 +87,12 @@ export default function UsersStats() {
 
       {/* ================= SERVICE PREF ================= */}
       <div className="space-y-2">
+       <div className="flex items-center gap-2">
+        <ShoppingBag className="w-3 h-3" />
         <h3 className="text-sm font-semibold text-slate-900">
           Service Preferences
         </h3>
+        </div> 
 
         <div className="rounded-2xl bg-slate-100 p-5 space-y-4 text-sm">
           <p className="text-slate-600">

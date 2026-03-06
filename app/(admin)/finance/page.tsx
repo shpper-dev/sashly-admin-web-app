@@ -1,4 +1,6 @@
 "use client";
+import ConfirmDriverPayoutDialog from '@/components/finance/ConfirmDriverPayoutDialog';
+import VerfiyTopupDialog from '@/components/finance/VerifyTopupDialog';
 import Header from '@/components/Header'
 import { Banknote, Clock, RotateCcw, Wallet, ArrowDownToLine, ArrowUpToLine, ArrowRight, WalletIcon } from 'lucide-react'
 import React, { useState } from 'react'
@@ -127,9 +129,20 @@ export default function Finance() {
             <button className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
               Decline
             </button>
-            <button className="px-3 py-1.5 text-xs font-semibold bg-[#7F50F4] text-white rounded-lg hover:bg-[#6B3FD4] transition-colors">
+            {activeTab === "topup" ? (
+              <VerfiyTopupDialog>
+              <button className="px-3 py-1.5 text-xs font-semibold bg-[#7F50F4] text-white rounded-lg hover:bg-[#6B3FD4] transition-colors cursor-pointer">
               Process Payout
             </button>
+            </VerfiyTopupDialog>
+            ):(
+              <ConfirmDriverPayoutDialog>
+              <button className="px-3 py-1.5 text-xs font-semibold bg-[#7F50F4] text-white rounded-lg hover:bg-[#6B3FD4] transition-colors cursor-pointer">
+              Process Payout
+            </button>
+            </ConfirmDriverPayoutDialog>
+            )}
+            
           </div>
         )
       default:
@@ -235,7 +248,7 @@ export default function Finance() {
               {/* Payout tab */}
               <button
                 onClick={() => setActiveTab("payout")}
-                className={`flex flex-1 items-center justify-center gap-2 py-4 text-sm font-semibold relative transition-colors ${
+                className={`flex flex-1 items-center justify-center gap-2 py-4 text-sm font-semibold relative cursor-pointer transition-colors ${
                   activeTab === "payout" ? "text-[#7F50F4]" : "text-slate-400 hover:text-slate-600"
                 }`}
               >
@@ -254,7 +267,7 @@ export default function Finance() {
               {/* Top-up tab */}
               <button
                 onClick={() => setActiveTab("topup")}
-                className={`flex flex-1 items-center justify-center gap-2 py-4 text-sm font-semibold relative transition-colors ${
+                className={`flex flex-1 items-center justify-center gap-2 py-4 text-sm font- cursor-pointer relative transition-colors ${
                   activeTab === "topup" ? "text-[#7F50F4]" : "text-slate-400 hover:text-slate-600"
                 }`}
               >

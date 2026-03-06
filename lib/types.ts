@@ -67,3 +67,19 @@ export interface User {
   total_spent: number;
   status: "active" | "inactive" | "blocked";
 }
+
+export interface Driver {
+  id: number;
+  driver: {
+  first_name: string;
+  last_name: string;
+  id: string;
+};
+ contact: {
+  email: string;
+  phone: string;
+ };
+  orders: number;
+  total_spent: number;
+  status: "active" | "inactive" | "blocked";
+}

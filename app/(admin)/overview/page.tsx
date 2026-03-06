@@ -2,6 +2,7 @@
 
 import Header from "@/components/Header"
 import FinancialTrendChart from "@/components/overview/FinancialTrendChart"
+import { Switch } from "@/components/ui/switch"
 import {
   AlertCircle,
   ChevronDown,
@@ -138,21 +139,21 @@ export default function Overview() {
 
               {/* KPI row */}
               <div className="grid grid-cols-3 gap-4 border-t border-slate-100 pt-5">
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1 border-l-3 border-cyan-600 pl-4">
                   <span className="text-[10px] text-[#90A1B9] font-bold uppercase tracking-wide">Net Sales</span>
                   <span className="text-lg font-bold text-[#101828]">SAR 12,335.32</span>
                   <span className="text-[10px] text-red-500 flex items-center gap-1 font-semibold">
                     <TrendingDown size={10} /> -15% vs LY
                   </span>
                 </div>
-                <div className="border-l border-slate-100 pl-4 flex flex-col gap-1">
+                <div className="border-l-3 border-green-600 pl-4 flex flex-col gap-1">
                   <span className="text-[10px] text-[#90A1B9] font-bold uppercase tracking-wide">Avg Order Value</span>
                   <span className="text-lg font-bold text-[#101828]">SAR 750.76</span>
                   <span className="text-[10px] text-green-500 flex items-center gap-1 font-semibold">
                     <TrendingUp size={10} /> +1% vs Prev
                   </span>
                 </div>
-                <div className="border-l border-slate-100 pl-4 flex flex-col gap-1">
+                <div className="border-l-3 border-purple-600 pl-4 flex flex-col gap-1">
                   <span className="text-[10px] text-[#90A1B9] font-bold uppercase tracking-wide">New Acquisitions</span>
                   <span className="text-lg font-bold text-[#101828]">238</span>
                   <span className="text-[10px] text-green-500 flex items-center gap-1 font-semibold">
@@ -238,14 +239,14 @@ export default function Overview() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100">
-                    {["Order ID", "Customer", "Ready By", "Amount", "Status"].map((h) => (
+                    {["Order ID", "Customer", "Ready By", "Amount", "Status"].map((heading) => (
                       <th
-                        key={h}
+                        key={heading}
                         className={`pb-3 text-[10px] font-bold text-[#90A1B9] uppercase tracking-widest text-left ${
-                          h === "Status" ? "text-right" : ""
+                          heading === "Status" ? "text-right" : ""
                         }`}
                       >
-                        {h}
+                        {heading}
                       </th>
                     ))}
                   </tr>
@@ -299,9 +300,7 @@ export default function Overview() {
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-[#90A1B9] font-semibold">Show Subtotal</span>
-                  <div className="w-9 h-5 bg-slate-200 rounded-full relative cursor-pointer">
-                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm" />
-                  </div>
+                  <Switch className="cursor-pointer data-[state=checked]:bg-cyan-600!" />
                 </div>
                 <button className="flex items-center gap-1.5 text-xs font-semibold border border-slate-200 px-3 py-1.5 rounded-xl text-[#45556C] hover:bg-slate-50 transition-colors">
                   <Download size={13} /> CSV
@@ -312,9 +311,9 @@ export default function Overview() {
             <table className="w-full">
               <thead className="bg-slate-50">
                 <tr>
-                  {["Date", "Revenue", "Paid by Cash", "Paid by Card", "Regular Card", "Paid by Bank"].map((h) => (
-                    <th key={h} className="px-6 py-3.5 text-left text-[10px] font-bold text-[#90A1B9] uppercase tracking-widest">
-                      {h}
+                  {["Date", "Revenue", "Paid by Cash", "Paid by Card", "Regular Card", "Paid by Bank"].map((heading) => (
+                    <th key={heading} className="px-6 py-3.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                      {heading}
                     </th>
                   ))}
                 </tr>

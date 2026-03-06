@@ -4,7 +4,7 @@ import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { broadcastHeadings } from "@/constants/headings";
 import { TableHeading } from "@/lib/types";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Headset, LucideIcon, MapPinX, PackageX } from "lucide-react";
 import { useEffect, useState } from "react";
 
 
@@ -16,7 +16,7 @@ const mockData = [
   target: "4h",
   reach:"Address Issue",
   engagement: "96",
-  actions: "",
+  actions: "action",
 },
 {
   id:2,
@@ -25,7 +25,7 @@ const mockData = [
   target: "1h",
   reach:"Customer Request",
   engagement: "63",
-  actions: "",
+  actions: "action",
 },
 {
   id:3,
@@ -34,7 +34,7 @@ const mockData = [
   target: "2h",
   reach:"Damaged Pkg",
   engagement: "99",
-  actions: "",
+  actions: "action",
 }]
 
 interface BroadcastClientProps{
@@ -58,23 +58,59 @@ export default function BroadcastClient({initialTarget}:BroadcastClientProps) {
     },2000)
   },[]);
 
-  const renderCellContent = (Heading:TableHeading, value:any)=>{
+  const renderCellContent = (heading:TableHeading, value:any)=>{
     if(!value || value === "-"){
       return (
         <span className='text-slate-400'>-</span>
       );
     }
 
-    switch (Heading.id){
+    switch (heading.id){
+      case "date_time":
+        return(
+          <span className="font-bold">{value}</span>
+        )
       case "actions":
         return(
-          <div className="flex items-center justify-between">
-              <span
+          <div className="flex items-center justify-end px-3">
+              {/* <span
                 className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium`}>
                 {value}
-              </span>
+              </span> */}
           
               <ChevronRight className="h-4 w-4 text-slate-400" />
+            </div>
+        );
+      case "reach":
+        type ReachKey = "address issue" | "customer request" | "damaged pkg"
+
+        const REACH_CONFIG: Record<ReachKey, { icon: LucideIcon; style: string }> = {
+          "address issue":    { icon: MapPinX,  style: "text-amber-700 "  },
+          "customer request": { icon: Headset,  style: "text-blue-700 "   },
+          "damaged pkg":      { icon: PackageX, style: "text-red-700"    },
+        }
+        const key = value.toLowerCase().trim() as ReachKey
+        const config = REACH_CONFIG[key]
+        const Icon = config?.icon
+      
+        return (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold`}>
+            {Icon && <Icon className={`h-3.5 w-3.5 ${config?.style ?? "text-slate-600"}`}  />}
+            {value}
+          </span>
+        );
+      case "target":
+        return (
+          <span className="px-2 py-1 bg-slate-100 rounded-lg text-xs font-medium">{value} ago</span>
+        );
+      case "engagement":
+        return(
+          <div className="flex items-center gap-2 px-3">
+            <Eye className="h-4 w-4 text-green-700" strokeWidth={3} />
+              <span
+                className={`inline-flex items-center  py-1 text-xs font-bold`}>
+                {value} %
+              </span>
             </div>
         )
       default:

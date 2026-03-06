@@ -1,8 +1,8 @@
 import { OrderData, TableHeading } from '@/lib/types';
-import { Pencil, Search } from 'lucide-react';
+import { Pencil, PencilLine, Search } from 'lucide-react';
 import React from 'react'
 import { TabKey } from '../page';
-import FilterButton from '@/components/buttons/FilterButton';
+import FilterButton from '@/components/buttons/FilterDropdown';
 import OrderDetailsDrawer from '@/components/orders/OrderDetailsDrawer';
 import { CustomerDetailsDialog } from '@/components/orders/CustomerDetailsDialog';
 /* ---------------- TABLE HEADINGS ---------------- */
@@ -76,7 +76,7 @@ export default function OrderDetails() {
             return (
               <div>
                 <CustomerDetailsDialog customer={row.customer}>
-                  <span className="font-medium text-slate-800 cursor-pointer">{row.customer}</span>
+                  <span className="font-medium text-slate-800 cursor-pointer hover:text-purple-600 hover:underline">{row.customer}</span>
                 </CustomerDetailsDialog>
               </div>
             );
@@ -120,7 +120,7 @@ export default function OrderDetails() {
             return (
               <div className="flex items-center gap-1 justify-end">
                 <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
-                  <Pencil className="w-5 h-5 text-slate-400 hover:text-slate-600" />
+                  <PencilLine className="w-5 h-5 text-slate-400 hover:text-slate-600" />
                 </button>
                 <OrderDetailsDrawer order={row}>
                   <button className="px-3 py-1.5 text-xs font-medium bg-blue-200/30 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
@@ -163,7 +163,7 @@ export default function OrderDetails() {
                 {orderHeadings.map((heading) => (
                   <th
                     key={heading.id}
-                    className="text-left first:pl-4 px-8 py-3 text-sm font-semibold text-slate-500 "
+                    className="text-left first:pl-4 px-8 py-3 text-sm font-semibold text-slate-500 whitespace-nowrap "
                   >
                     {heading.title}
                   </th>

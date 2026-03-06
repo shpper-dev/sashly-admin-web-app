@@ -9,6 +9,7 @@ import { useDeleteToast } from '@/hooks/useDeleteToast';
 import { DeleteToastContainer } from '@/components/users/DeleteToast';
 import UserInfoDialog from '@/components/users/UserInfoDialog';
 import FilterButtonWithBadge from '@/components/buttons/FilterButtonWithBadges';
+import DriverInfoDialog from '@/components/drivers/DriverInfoDialog';
 
 
 const driverHeadings : TableHeading[]= [
@@ -130,7 +131,7 @@ export default function Drivers() {
   switch (heading.id) {
     case "driver":
       return (
-        // <UserInfoDialog user={row} >
+        <DriverInfoDialog user={row} >
         <div className="flex items-center gap-4">
           {/* Avatar */}
           <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-semibold">
@@ -139,7 +140,7 @@ export default function Drivers() {
           </div>
 
           <div className="flex flex-col">
-            <span className="font-bold text-slate-900 tracking-wide">
+            <span className="font-bold text-slate-900 tracking-wide cursor-pointer">
               {row.driver.first_name} {row.driver.last_name}
             </span>
             <span className="text-xs text-slate-500">
@@ -147,7 +148,7 @@ export default function Drivers() {
             </span>
           </div>
         </div>
-        // </UserInfoDialog>
+        </DriverInfoDialog>
       )
 
     case "contact":
@@ -178,7 +179,7 @@ export default function Drivers() {
     case "total_spent":
       return (
         <div className="flex flex-col">
-          <span className="text-xs text-cyan-500 font-semibold">
+          <span className="text-xs text-[#02D0FF] font-bold">
             SAR
           </span>
           <span className="font-semibold text-slate-900">

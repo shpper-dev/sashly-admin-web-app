@@ -2,16 +2,17 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Calendar, Camera, ChartNoAxesColumn,  CreditCard,LucideIcon, Mail, MessageCircle, PencilLine, Phone, ShoppingBag, Timer, Truck } from 'lucide-react';
-import UsersOrders from './UsersOrders';
-import { User } from '@/lib/types';
-import UsersEditCustomer from './UsersEditCustomer';
-import UsersStats from './UsersStats';
-import UsersPayment from './UsersPayment';
-import UsersMessages from './UsersMessages';
-import UsersPickups from './UsersPickups';
-import UsersPhotos from './UsersPhotos';
 
-type TabName = "orders" | "stats" | "edit customer" | "payments" | "messages" | "pickups" | "photos";
+import { Driver, User } from '@/lib/types';
+import UsersStats from '../users/UsersStats';
+import UsersMessages from '../users/UsersMessages';
+import UsersPhotos from '../users/UsersPhotos';
+import DriversOrders from './DriversOrders';
+import DriversEditProfile from './DriversEditProfile';
+import DriversPayouts from './DriversPayouts';
+
+
+type TabName = "orders" | "stats" | "edit profile" | "payouts" | "messages" | "photos";
 
 interface HeaderTabDef {
   name: string;
@@ -21,23 +22,21 @@ interface HeaderTabDef {
 
 
 const HEADER_TABS: HeaderTabDef[] = [
-  { name: "Orders",          key: "orders",         icon: ShoppingBag       },
+  { name: "Orders",          key: "orders",          icon: ShoppingBag       },
   { name: "Stats",           key: "stats",           icon: ChartNoAxesColumn },
-  { name: "Edit Customer",   key: "edit customer",   icon: PencilLine        },
-  { name: "Payments",        key: "payments",        icon: CreditCard        },
+  { name: "Edit Profile",    key: "edit profile",    icon: PencilLine        },
+  { name: "Payouts",         key: "payouts",         icon: CreditCard        },
   { name: "Messages",        key: "messages",        icon: MessageCircle     },
-  { name: "Pickups",         key: "pickups",         icon: Truck             },
   { name: "Photos",          key: "photos",          icon: Camera            },
 ];
 
 
 interface UserInfoDialogProps {
   children: React.ReactNode;
-  user: User;
-  onDelete: () => void;
+  user: Driver;
 }
 
-export default function UserInfoDialog({ children, user, onDelete }: UserInfoDialogProps) {
+export default function DriverInfoDialog({ children, user }: UserInfoDialogProps) {
   const [activeTab, setActiveTab] = React.useState<TabName>("orders");
   
 
@@ -47,7 +46,7 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
 
       <DialogContent className="p-0 gap-0 border-0 overflow-hidden max-w-5xl! w-full rounded-3xl shadow-2xl">
         <DialogHeader className="sr-only">
-          <DialogTitle>User Information</DialogTitle>
+          <DialogTitle>Driver Information</DialogTitle>
         </DialogHeader>
 
         <div className="flex h-155">
@@ -61,14 +60,14 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
               {/* Avatar + name + status */}
               <div className="flex flex-col items-center gap-2 pt-2">
                 <div className="w-16 h-16 rounded-2xl bg-[#7F50F4] text-white flex items-center justify-center text-xl font-bold tracking-wide">
-                  {user.customer.first_name[0]}{user.customer.last_name[0]}
+                  {user.driver.first_name[0]}{user.driver.last_name[0]}
                 </div>
                 <div className="flex flex-col items-center gap-1">
                   <span className="font-bold text-[#101828] text-base">
-                    {user.customer.first_name} {user.customer.last_name}
+                    {user.driver.first_name} {user.driver.last_name}
                   </span>
                   <span className="text-xs text-slate-400 font-medium">
-                    ID: {user.customer.id}
+                    ID: {user.driver.id}
                   </span>
                   <span className="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-600">
                     {user.status}
@@ -144,7 +143,11 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
             </div>
 
             {/* Bottom: action buttons */}
-            <div className="flex flex-col gap-2 border-t border-slate-300 pt-4">
+            <div className="flex flex-col gap-2">
+              <button className="w-full py-2.5 px-4 bg-[#02d0ff] hover:bg-[#01bde7] text-white text-xs font-bold rounded-xl transition-colors">
+                + Assign Route
+              </button>
+              <div className='w-full h-px bg-slate-300 my-2'/>
               <button className="w-full py-2.5 px-4 bg-[#7F50F4] hover:bg-[#6B3FD4] text-white text-xs font-bold rounded-xl transition-colors">
                 + Create Order
               </button>
@@ -177,22 +180,19 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
 
             {/* different tabs */}
             {activeTab === "orders" && (
-                <UsersOrders />
-            )}
-            {activeTab === "edit customer" && (
-                <UsersEditCustomer onDelete={onDelete} />
+                <DriversOrders />
             )}
             {activeTab === "stats" && (
                 <UsersStats />
             )}
-            {activeTab === "payments" && (
-                <UsersPayment />
+            {activeTab === "edit profile" && (
+                <DriversEditProfile />
+            )}
+            {activeTab === "payouts" &&(
+              <DriversPayouts />
             )}
             {activeTab === "messages" &&(
               <UsersMessages />
-            )}
-            {activeTab === "pickups" &&(
-              <UsersPickups />
             )}
             {activeTab === "photos" &&(
               <UsersPhotos />

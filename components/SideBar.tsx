@@ -1,5 +1,5 @@
 "use client";
-import {Eye, LayoutDashboard, LogOut, Megaphone, OctagonAlert, Package, Settings, Shirt, TriangleAlert, Truck, Users, Wallet} from "lucide-react";
+import {Eye, LayoutDashboard,Search, LogOut, Megaphone, OctagonAlert, Package, Settings, Shirt, TriangleAlert, Truck, Users, Wallet} from "lucide-react";
 import Link from "next/link";
 import UserDropDown from "./UserDropDown";
 import { usePathname } from "next/navigation";
@@ -14,6 +14,11 @@ const navItems = [
         name: "Overview",
         icon: Eye,
         href: "/overview"
+    },
+    {
+        name: "Search",
+        icon: Search,
+        href: "/search"
     },
     {
         name:"Orders",
@@ -60,7 +65,7 @@ const navItems = [
 export default function SideBar() {
     const pathname = usePathname()
   return (
-    <div className={`fixed top-0 left-0 flex flex-col bg-white text-sm h-full w-60 border-r border-r-blue-500/30 ${(pathname === "/orders/delivery-manifest" || pathname.startsWith("/orders/reports")) ? "hidden" : "flex"}`}>
+    <div className={`fixed top-0 left-0 flex flex-col bg-white text-sm h-full w-60 border-r border-r-blue-500/30 ${(pathname === "/orders/delivery-manifest"|| pathname.startsWith("/disputes/resolution") || pathname.startsWith("/orders/reports")) ? "hidden" : "flex"}`}>
         <div className="flex mt-3 ml-6 w-full justify-center">
             <img src="/images/logo.png" alt="sashly logo" className="h-14"  />
         </div>

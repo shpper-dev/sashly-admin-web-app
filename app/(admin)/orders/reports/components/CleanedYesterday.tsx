@@ -157,7 +157,7 @@ export default function CleanedYesterday() {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-xs font-semibold text-slate-400 tracking-widest">
+            <tr className="text-left text-xs font-semibold text-slate-400 tracking-widest whitespace-nowrap">
               {tableHeadings.map((heading) => (
                 <th
                   key={heading.key}

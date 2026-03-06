@@ -45,7 +45,7 @@ export function ActionsDropdown({ onView, onEdit, onDelete }: ActionsDropdownPro
           className="flex items-center gap-3 cursor-pointer"
         >
           <Pencil className="h-4 w-4 text-slate-500" />
-          <span>Edit Customer</span>
+          <span>Edit Profile</span>
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />

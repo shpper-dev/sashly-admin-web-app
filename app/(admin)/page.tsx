@@ -4,7 +4,7 @@ import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import StatsCard from "@/components/StatsCard";
 import { dashboardHeadings } from "@/constants/headings";
 import { TableHeading } from "@/lib/types";
-import { Banknote, Flag, Megaphone, Radio } from "lucide-react";
+import { Banknote, ChevronLeft, ChevronRight, Flag, Headset, LucideIcon, MapPinX, Megaphone, PackageX, Radio } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -43,17 +43,65 @@ const mockData = [{
 ]
 
 export default function Dashboard() {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [data, setData] = useState<any[]>([]);
 
   useEffect(()=>{
-    setIsLoading(true);
+    setLoading(true);
     setTimeout(()=>{
       setData(mockData);
-      setIsLoading(false)
+      setLoading(false)
     },2000);
     ;
-  },[])
+  },[]);
+
+const renderCellContent = (heading:TableHeading, value:any)=>{
+    if(!value || value === "-"){
+      return (
+        <span className='text-slate-400'>-</span>
+      );
+    }
+
+    switch (heading.id){
+      case "action":
+        return(
+          <div className="flex items-center justify-end px-3">
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium`}>
+                {value}
+              </span>
+          
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </div>
+        );
+      case "flag_reason":
+        type ReachKey = "address issue" | "customer request" | "damaged pkg"
+
+        const REACH_CONFIG: Record<ReachKey, { icon: LucideIcon; style: string }> = {
+          "address issue":    { icon: MapPinX,  style: "text-amber-700 "  },
+          "customer request": { icon: Headset,  style: "text-blue-700 "   },
+          "damaged pkg":      { icon: PackageX, style: "text-red-700"    },
+        }
+        const key = value.toLowerCase().trim() as ReachKey
+        const config = REACH_CONFIG[key]
+        const Icon = config?.icon
+      
+        return (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold`}>
+            {Icon && <Icon className={`h-3.5 w-3.5 ${config?.style ?? "text-slate-600"}`}  />}
+            {value}
+          </span>
+        );
+      case "time_elapsed":
+        return (
+          <span className="px-2 py-1 bg-slate-100 rounded-lg text-xs font-medium">{value} ago</span>
+        );
+     
+      default:
+      return value;
+    }
+
+  }
   return (
     <div className="min-h-screen bg-slate-50">
       <Header/>
@@ -76,56 +124,63 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
             {/* Left: Table Section (8 columns) */}
             <div className="lg:col-span-9 overflow-x-auto rounded-lg border border-slate-200 bg-white">
-              {isLoading ? (
-                <TableSkeleton tableHeadings={dashboardHeadings} />
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-slate-200/50">
-                    <tr>
-                      {dashboardHeadings.map((heading) => (
-                        <th
-                          className="px-6 py-3 text-left text-sm font-semibold text-slate-700 first:rounded-tl-lg last:rounded-tr-lg"
-                          key={heading.id}
-                        >
-                          {heading.title}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-slate-200">
-                    {data.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={dashboardHeadings.length}
-                          className="px-6 py-12 text-center text-sm text-slate-500"
-                        >
-                          No data available
-                        </td>
-                      </tr>
-                    ) : (
-                      data.map((row, index) => (
-                        <tr key={row.id || index} className="hover:bg-slate-50 transition-colors">
-                          {dashboardHeadings.map((heading) => (
-                            <td key={heading.id} className="px-6 py-3 text-sm text-slate-700">
-                              {row[heading.id] || "-"}
-                            </td>
-                          ))}
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                  <tfoot className="bg-slate-200/50">
-                    <tr>
-                      <td
-                        colSpan={dashboardHeadings.length}
-                        className="px-6 py-3 text-left text-sm text-slate-600 first:rounded-bl-lg last:rounded-br-lg"
-                      >
-                        {data.length} {data.length === 1 ? "item" : "items"} requires attention
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              )}
+              {loading ? (
+                 <TableSkeleton tableHeadings={dashboardHeadings} />
+                ):(
+                 <table className='w-full'>
+                     <thead className='bg-slate-200/50'>
+                         <tr>
+                             {dashboardHeadings.map((heading)=>(
+                                 <th key={heading.id} className='px-6 py-3 text-left text-sm font-semibold text-slate-700 first:rounded-tl-lg last:rounded-tr-lg'>{heading.title} </th>
+                             ))}
+                         </tr>
+                     </thead>
+                     <tbody className="bg-white divide-y divide-slate-200">
+                         {data.length === 0 ? (
+                                 <tr>
+                                     <td colSpan={dashboardHeadings.length}
+                                     className="px-6 py-12 text-center text-sm text-slate-500 ">
+                                         No data available
+                                     </td>
+                                 </tr>
+                             ):(
+                                 data.map((row,index)=>(
+                                     <tr key={row.id || index} className="hover:bg-slate-50 transition-colors">
+                                     {dashboardHeadings.map((heading)=>(
+                                         <td key={heading.id}
+                                         className={`px-6 py-3 text-sm text-slate-700`}>
+                                             {renderCellContent(heading, row[heading.id])}
+                                         </td>
+                                     ))}
+                                     </tr>
+                                 ))
+                             )}
+                     </tbody>
+                     <tfoot className='bg-slate-200/50'>
+                         <tr>
+                             <td colSpan={dashboardHeadings.length} className='px-6 py-3 first:rounded-bl-lg last:rounded-br-lg'>
+                                 <div className='flex items-center justify-between'>
+                                     {/* left : showing text */}
+                                     <div className='text-left text-sm text-slate-600'>
+                                         showing <b>1</b>-<b>3</b> of <b>{data.length}</b> orders
+                                     </div>
+                                     {/* Right: pagination controls */}
+                                     <div className='flex items-center gap-2'>
+                                         <button>
+                                             <ChevronLeft className='h-3 w-3 text-slate-700' />
+                                         </button>
+                                         <button>
+                                             <ChevronRight className='h-3 w-3 text-slate-700'/>
+                                         </button>
+                                     </div>
+                                 </div>
+                                 
+                             </td>
+                         </tr>
+                             
+                         </tfoot>
+                 </table>
+                )}
             </div>
 
             {/* Broadcasting card */}

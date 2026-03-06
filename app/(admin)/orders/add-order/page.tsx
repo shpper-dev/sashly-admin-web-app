@@ -316,11 +316,10 @@ export default function AddOrder() {
             </div>
 
             {/* Basket list */}
-            <div className="flex flex-col gap-4 p-6 min-h-40 overflow-y-auto">
+            <div className="flex flex-col items-center justify-center gap-4 p-6 min-h-40 overflow-y-auto">
               {basket.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <span className="text-sm italic font-bold text-[#6A7282] h-full">Basket is empty</span>
-                </div>
+                  <span className="text-sm italic font-bold text-[#6A7282]">Basket is empty</span>
+                
               ) : (
                 basket.map((entry, i) => (
                   <BasketItem
@@ -363,8 +362,8 @@ export default function AddOrder() {
                 disabled={!canCheckout}
                 className="w-full py-4 text-white font-extrabold text-sm rounded-2xl tracking-widest uppercase transition-all duration-200"
                 style={{
-                  background: canCheckout ? "#00D1FF" : "#B2EEF9",
-                  boxShadow: canCheckout ? "0px 10px 15px -3px rgba(0,209,255,0.2), 0px 4px 6px -4px rgba(0,209,255,0.2)" : "none",
+                  background: canCheckout ? "#00D1FF" : "#E5DCFD",
+                  boxShadow:  "0px 10px 15px -3px rgba(0,209,255,0.2), 0px 4px 6px -4px rgba(0,209,255,0.2)",
                   cursor: canCheckout ? "pointer" : "not-allowed",
                 }}
               >

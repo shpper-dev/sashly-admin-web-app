@@ -42,16 +42,16 @@ export function CustomerDetailsDialog({
         </DialogHeader>
 
         {/* Custom Modal Card */}
-        <div className="relative rounded-[28px] bg-[#F2F2F2] shadow-[0_40px_80px_rgba(0,0,0,0.6)] overflow-hidden">
+        <div className="relative rounded-[28px] bg-white shadow-[0_40px_80px_rgba(0,0,0,0.6)] overflow-hidden">
 
           {/* Header */}
           <div className="h-25 bg-linear-to-r from-[#17B6CF] to-[#1EB4D4] relative">
             <DialogTrigger>
-                <button
+                <span
               className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition cursor-pointer"
             >
               <X size={16} />
-            </button>
+            </span>
             </DialogTrigger>
           </div>
 

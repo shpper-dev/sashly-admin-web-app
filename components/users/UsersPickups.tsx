@@ -42,7 +42,7 @@ const COLUMNS: Column[] = [
   { id: "id",     label: "ID",     className: "w-[60px]"  },
   { id: "placed", label: "Placed", className: "w-[80px]"  },
   { id: "items",  label: "Order",  className: "w-[180px]" },
-  { id: "status", label: "Status", className: "w-[160px]" },
+  { id: "status", label: "Status", className: "w-[40px]" },
   { id: "pcs",    label: "Pcs",    className: "w-[40px]"  },
   { id: "notes",  label: "Notes",  className: "flex-1"    },
   { id: "pickup", label: "Pickup", className: "w-[80px]"  },
@@ -149,7 +149,7 @@ function renderCellContent(col: Column, row: PickupRow) {
 
     case "notes":
       return (
-        <span className="text-xs text-slate-500 leading-relaxed">{row.notes}</span>
+        <span className="text-xs text-slate-500 ">{row.notes}</span>
       )
 
     case "pickup":

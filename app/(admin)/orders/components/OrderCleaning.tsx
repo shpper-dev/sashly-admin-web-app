@@ -1,8 +1,8 @@
 import { OrderData, TableHeading } from '@/lib/types';
-import { Pencil, Search } from 'lucide-react';
+import { Pencil, PencilLine, Search } from 'lucide-react';
 import React from 'react'
 import { TabKey } from '../page';
-import FilterButton from '@/components/buttons/FilterButton';
+import FilterDropdown from '@/components/buttons/FilterDropdown';
 import { CustomerDetailsDialog } from '@/components/orders/CustomerDetailsDialog';
 /* ---------------- TABLE HEADINGS ---------------- */
 const orderHeadings: TableHeading[] = [
@@ -90,7 +90,7 @@ export default function OrderCleaning() {
           case "customer":
             return (
               <CustomerDetailsDialog customer={row.customer}>
-                <span className="font-medium text-slate-800 cursor-pointer">{row.customer}</span>
+                <span className="font-medium text-slate-800 cursor-pointer hover:text-purple-600 hover:underline">{row.customer}</span>
               </CustomerDetailsDialog>
             );
           
@@ -132,7 +132,7 @@ export default function OrderCleaning() {
                 )}
               </div>
               <div className='flex items-center  gap-1' >
-                <Pencil className='h-3 w-3 text-yellow-700' />
+                <PencilLine className='h-3 w-3 text-yellow-700' />
                 <span className="text-yellow-700 text-xs font-semibold">
                    SPECIAL INSTRUCTIONS
                 </span>
@@ -157,9 +157,9 @@ export default function OrderCleaning() {
             return (
               <div className="flex items-center gap-1 justify-end">
                 <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
-                  <Pencil className="w-5 h-5 text-slate-400 hover:text-slate-600" />
+                  <PencilLine className="w-4 h-4 text-slate-400 hover:text-slate-600" />
                 </button>
-                <button className="px-3 py-1.5 text-xs font-medium text-white bg-[#02D0FF] rounded-lg hover:bg-blue-200 transition-colors">
+                <button className="px-3 py-1.5 text-[10px] font-medium text-white bg-[#02D0FF] rounded-lg hover:bg-blue-200 transition-colors">
                   CLEANED
                 </button>
               </div>
@@ -178,10 +178,10 @@ export default function OrderCleaning() {
      <div>
         <div className="flex justify-between items-center mb-4 px-8">
           <div className="flex gap-3">
-            <FilterButton label="Reports" options={cleaningReportOptions}  />
-            <FilterButton label="Sections" />
-            <FilterButton label="Order Type" />
-            <FilterButton label="Date" />
+            <FilterDropdown label="Reports" options={cleaningReportOptions}  />
+            <FilterDropdown label="Sections" />
+            <FilterDropdown label="Order Type" />
+            <FilterDropdown label="Date" />
           </div>
 
           <div className="relative">
