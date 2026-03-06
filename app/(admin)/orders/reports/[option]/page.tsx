@@ -27,7 +27,7 @@ export default async function CleaningReportPage({ params }: { params: Promise<{
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 flex items-center bg-white justify-between border-b border-slate-200 p-4 z-10 ">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-purple-600 flex items-center justify-center text-white">
+          <div className={`w-12 h-12 rounded-xl ${option == "yesterday" ? "bg-[#02D0FF]" : "bg-purple-600"} flex items-center justify-center text-white`}>
             <FileText size={22} />
           </div>
           <div>

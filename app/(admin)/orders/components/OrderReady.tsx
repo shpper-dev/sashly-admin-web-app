@@ -1,8 +1,8 @@
 import { OrderData, TableHeading } from '@/lib/types';
-import { FileText, Pencil, Search } from 'lucide-react';
+import { FileText, Pencil, PencilLine, Search } from 'lucide-react';
 import React from 'react'
 import { TabKey } from '../page';
-import FilterButton from '@/components/buttons/FilterButton';
+import FilterButton from '@/components/buttons/FilterDropdown';
 import OrderPaymentDialog from '@/components/orders/OrderPaymentDialog';
 import { CustomerDetailsDialog } from '@/components/orders/CustomerDetailsDialog';
 /* ---------------- TABLE HEADINGS ---------------- */
@@ -82,7 +82,7 @@ export default function OrderReady() {
               return (
                 <div>
                   <CustomerDetailsDialog customer={row.customer}>
-                    <span className="font-medium text-slate-800 cursor-pointer">{row.customer}</span>
+                    <span className="font-medium text-slate-800 cursor-pointer hover:text-purple-600 hover:underline">{row.customer}</span>
                   </CustomerDetailsDialog>
                 </div>
               );
@@ -134,10 +134,12 @@ export default function OrderReady() {
         } 
           case "notes":
             return(
-                <button className='flex w-full items-center justify-center bg-white text-[#02D0FF]'>
+                <button className='flex w-full items-center justify-center text-[#02D0FF]'>
                     <FileText className="h-5 w-5" />
                 </button>
-            ) 
+            );
+          case "paid":
+            return <span className='text-slate-400 font-bold inline-flex'>{row.paid}</span>   
           case "total":
             return (
               <div>
@@ -152,10 +154,10 @@ export default function OrderReady() {
             return (
               <div className="flex items-center gap-1 justify-end">
                 <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
-                  <Pencil className="w-5 h-5 text-slate-400 hover:text-slate-600" />
+                  <PencilLine className="w-4 h-4 text-slate-400 hover:text-slate-600" />
                 </button>
                 <OrderPaymentDialog total={row.total}>
-                  <button className="px-3 py-1.5 text-xs font-medium text-white bg-[#02D0FF] rounded-lg hover:bg-blue-200 transition-colors cursor-pointer">
+                  <button className="px-3 py-1.5 text-[10px] font-medium text-white bg-[#02D0FF] rounded-lg hover:bg-blue-200 transition-colors cursor-pointer">
                   PAYMENT
                 </button>
                 </OrderPaymentDialog>
@@ -165,7 +167,7 @@ export default function OrderReady() {
           default:
             const cellValue = row[heading.id as keyof OrderData];
             if (typeof cellValue === 'string' || typeof cellValue === 'number') {
-            return cellValue;
+            return <span className='inline-flex font-bold'>{cellValue}</span>;
           }
           return null;
         }
@@ -194,7 +196,7 @@ export default function OrderReady() {
                 {orderHeadings.map((heading) => (
                   <th
                     key={heading.id}
-                    className="text-left first:pl-2 px-4 py-3 text-sm font-semibold text-slate-500 "
+                    className="text-left first:pl-2 px-4 py-3 text-sm font-semibold text-slate-500 whitespace-nowrap "
                   >
                     {heading.title}
                   </th>

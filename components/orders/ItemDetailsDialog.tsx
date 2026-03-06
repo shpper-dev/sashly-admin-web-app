@@ -2,7 +2,7 @@
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { X, Zap, AlertTriangle, Minus, Plus } from "lucide-react"
+import { X, Zap, AlertTriangle, Minus, Plus, Search } from "lucide-react"
 import { useEffect, useState } from "react"
 import { ClothingItem } from "@/app/(admin)/orders/add-order/page"
 
@@ -70,6 +70,8 @@ export function ItemDetailsDialog({
   const [selectedPalette, setSelectedPalette] = useState<string | null>(null)
   const [selectedStains, setSelectedStains]   = useState<string[]>([])
   const [selectedDamages, setSelectedDamages] = useState<string[]>([])
+  const [searchStain,setSearchStain]          = useState<string>("");
+  const [searchDamage,setSearchDamage]          = useState<string>("");
 
   useEffect(() => {
     if (open) {
@@ -109,7 +111,7 @@ export function ItemDetailsDialog({
       >
 
         {/* ── HEADER (fixed height) ───────────────────────────────────── */}
-        <div className="flex items-center justify-between px-8 py-5 bg-white border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between px-8 py-5 bg-slate-50 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-4">
             {/* Item thumbnail */}
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
@@ -136,7 +138,7 @@ export function ItemDetailsDialog({
         </div>
 
         {/* ── BODY (flex-1 + overflow-hidden, two columns) ────────────── */}
-        <div className="flex flex-1 overflow-hidden bg-[#F8FAFC]">
+        <div className="flex flex-1 overflow-hidden bg-white">
 
           {/* ── Left column ── */}
           <div className="flex flex-col gap-5 px-8 py-6 w-70 shrink-0 border-r border-gray-100 overflow-y-auto">
@@ -204,15 +206,27 @@ export function ItemDetailsDialog({
 
             {/* Stain logs */}
             <div className="flex flex-col gap-2.5 flex-1 min-h-0">
-              <div className="flex items-center gap-2 shrink-0">
-                <Zap size={14} color="#7F50F4" strokeWidth={2} />
-                <p className="text-[10px] font-bold text-[#101828] uppercase tracking-widest">
-                  Stain Logs
-                </p>
+              <div className="flex items-center justify-between gap-4 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  <Zap size={14} color="#7F50F4" strokeWidth={2} />
+                  <p className="text-[10px] font-bold text-[#101828] uppercase tracking-widest">
+                    Stain Logs
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 flex-1 pb-1 border-b border-slate-300">
+                  <Search size={12} color="#90A1B9" strokeWidth={1.5} />
+                  <input
+                    type="text"
+                    value={searchStain}
+                    onChange={e => setSearchStain(e.target.value)}
+                    placeholder="Find"
+                    className="w-full bg-transparent text-[10px] text-[#90A1B9] placeholder:text-[#90A1B9] outline-none"
+                  />
+                </div>
               </div>
               <div className="flex flex-wrap gap-2 overflow-y-auto pr-1"
                    style={{ maxHeight: 110 }}>
-                {STAINS.map(s => (
+                {STAINS.filter(s => s.toLowerCase().includes(searchStain.toLowerCase())).map(s => (
                   <TagButton
                     key={s}
                     label={s}
@@ -225,21 +239,32 @@ export function ItemDetailsDialog({
 
             {/* Damage logs */}
             <div className="flex flex-col gap-2.5 flex-1 min-h-0">
-              <div className="flex items-center gap-2 shrink-0">
-                <AlertTriangle size={14} color="#F87171" strokeWidth={2} />
-                <p className="text-[10px] font-bold text-[#101828] uppercase tracking-widest">
-                  Damage Logs
-                </p>
+              <div className="flex items-center justify-between gap-4 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  <AlertTriangle size={14} color="#F87171" strokeWidth={2} />
+                  <p className="text-[10px] font-bold text-[#101828] uppercase tracking-widest">
+                    Damage Logs
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 flex-1 pb-1 border-b border-slate-300">
+                  <Search size={12} color="#90A1B9" strokeWidth={1.5} />
+                  <input
+                    type="text"
+                    value={searchDamage}
+                    onChange={e => setSearchDamage(e.target.value)}
+                    placeholder="Find"
+                    className="w-full bg-transparent text-[10px] text-[#90A1B9] placeholder:text-[#90A1B9] outline-none"
+                  />
+                </div>
               </div>
               <div className="flex flex-wrap gap-2 overflow-y-auto pr-1"
                    style={{ maxHeight: 110 }}>
-                {DAMAGES.map(d => (
+                {DAMAGES.filter(d => d.toLowerCase().includes(searchDamage.toLowerCase())).map(d => (
                   <TagButton
                     key={d}
                     label={d}
-                    selected={selectedDamages.includes(d)}
-                    onToggle={() => toggle(d, selectedDamages, setSelectedDamages)}
-                  />
+                    selected={selectedDamages.includes(d)} 
+                    onToggle={()=> toggle(d,selectedDamages,setSelectedDamages)}                   />
                 ))}
               </div>
             </div>

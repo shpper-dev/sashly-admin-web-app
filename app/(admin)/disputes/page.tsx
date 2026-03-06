@@ -4,13 +4,14 @@ import TableSkeleton from '@/components/skeleton/TableSkeleton';
 import { disputeHeadings } from '@/constants/headings';
 import { TableHeading } from '@/lib/types';
 import { ChevronLeft, ChevronRight, CircleAlert, Download, ListFilter, MessagesSquare, Timer, UserRoundX } from 'lucide-react';
+import Link from 'next/link';
 import React, { useEffect, useState } from 'react'
 
 
 const mockData = [
 {
   id:1,
-  order_id: "#4267",
+  order_id: "4267",
   issue_category:{ icon: UserRoundX , text: "Driver No-Show", color:"yellow" },
   wait_time:{ time: "14m", color:"purple"},
   last_activity:"Customer uploaded photo 5m ago",
@@ -18,7 +19,7 @@ const mockData = [
 },
 {
   id:2,
-  order_id: "#5251",
+  order_id: "5251",
   issue_category:{ icon: MessagesSquare , text: "User Dispute", color:"blue"},
   wait_time:{ time:"2h 10m", color:"red"},
   last_activity:"Order Cancel Request",
@@ -26,7 +27,7 @@ const mockData = [
 },
 {
   id:3,
-  order_id: "#7262",
+  order_id: "7262",
   issue_category:{ icon: CircleAlert , text:"Payment Failure", color:"red"},
   wait_time:{ time:"45m", color:"yellow"},
   last_activity:"System Retry failed",
@@ -54,11 +55,11 @@ export default function Disputes() {
 
     // ✅ Issue Category with icon
     case "issue_category": {
-      const Icon = value.icon;
+      const Icon = value.issue_category.icon;
       return (
         <div className="flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${iconColors[value.color]}`}  />
-          <span>{value.text}</span>
+          <Icon className={`h-4 w-4 ${iconColors[value.issue_category.color]}`}  />
+          <span>{value.issue_category.text}</span>
         </div>
       );
     }
@@ -67,9 +68,9 @@ export default function Disputes() {
     case "wait_time": {
       return (
         <div className="flex items-center">
-          <Timer className={`h-4 w-4 ${iconColors[value.color]}`} />
-          <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${iconColors[value.color]}`}>
-            {value.time}
+          <Timer className={`h-4 w-4 ${iconColors[value.wait_time.color]}`} />
+          <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${iconColors[value.wait_time.color]}`}>
+            {value.wait_time.time}
           </span>
         </div>
       );
@@ -81,20 +82,20 @@ export default function Disputes() {
         <div className="flex items-center justify-between gap-8">
           <span
             className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium ${
-              value.toLowerCase() === "needs attention"
+              value.status_disputes.toLowerCase() === "needs attention"
                 ? "bg-purple-100/50 text-purple-600"
                 : "bg-slate-100/50"
             }`}
           >
-            {value}
+            {value.status_disputes}
           </span>
 
-          <ChevronRight className="h-4 w-4 text-slate-400" />
+          <Link href={`/disputes/resolution/${value.order_id}`} ><ChevronRight className="h-4 w-4 text-slate-400" /></Link>
         </div>
       );
 
     default:
-      return value;
+      return value[heading.id];
   }
 };
 
@@ -152,7 +153,7 @@ export default function Disputes() {
                                         {disputeHeadings.map((heading)=>(
                                             <td key={heading.id}
                                             className={`px-6 py-3 text-sm text-slate-700`}>
-                                                {renderCellContent(heading, row[heading.id])}
+                                                {renderCellContent(heading, row)}
                                             </td>
                                         ))}
                                         </tr>

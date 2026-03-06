@@ -83,14 +83,14 @@ export default function DeliveryManifestPage() {
   const totalSelected = Object.values(selected).filter(Boolean).length;
 
   return (
-    <div className="min-h-screen bg-white py-6 space-y-6">
+    <div className="h-screen bg-white flex flex-col">
       <ManifestHeader
         selectedCount={totalSelected}
         onSelectAll={() => toggleAll(true)}
         onDeselectAll={() => toggleAll(false)}
       />
 
-      <main className="pt-17">
+      <main className="flex-1 mt-24 space-y-6 overflow-y-auto ">
         {mockRoutes.map((route) => (
         <RouteSection
           key={route.id}

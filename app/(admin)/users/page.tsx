@@ -130,7 +130,10 @@ export default function Users() {
   switch (heading.id) {
     case "customer":
       return (
-        <UserInfoDialog user={row} >
+        <UserInfoDialog user={row}  onDelete={() => {
+              setData((prevData) => prevData.filter((user) => user.id !== row.id));
+              showDeleteToast(`Deleted ${row.customer.first_name} ${row.customer.last_name}`)
+             }} >
         <div className="flex items-center gap-4">
           {/* Avatar */}
           <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-semibold">
@@ -139,7 +142,7 @@ export default function Users() {
           </div>
 
           <div className="flex flex-col">
-            <span className="font-bold text-slate-900 tracking-wide">
+            <span className="font-bold text-slate-900 tracking-wide cursor-pointer">
               {row.customer.first_name} {row.customer.last_name}
             </span>
             <span className="text-xs text-slate-500">

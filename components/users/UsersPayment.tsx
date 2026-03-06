@@ -99,7 +99,7 @@ export default function UsersPayment() {
         </div>
         {/* stat cards */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6'>
-            <div className='flex flex-col bg-green-100 border border-green-200 px-6 py-4 rounded-xl gap-2'>
+            <div className='flex flex-col bg-green-50 border border-green-200 px-6 py-4 rounded-xl gap-2'>
                 <p className='text-sm font-semibold text-green-600 tracking-wide uppercase' >TOTAL PAID</p>
                 <p className='text-lg font-bold text-slate-700'>SAR 1,240</p>
                 <div className='text-slate-500 text-xs flex gap-2 items-center'>
@@ -107,7 +107,7 @@ export default function UsersPayment() {
                     +12% from last month
                 </div>
             </div>
-            <div className='flex flex-col bg-red-100 border border-red-200 px-6 py-4 rounded-xl gap-2'>
+            <div className='flex flex-col bg-red-50 border border-red-200 px-6 py-4 rounded-xl gap-2'>
                 <p className='text-sm font-semibold text-red-600 tracking-wide uppercase' >TOTAL DUE</p>
                 <p className='text-lg font-bold text-red-700'>SAR 0.00</p>
                 <div className='text-red-600 text-xs flex gap-2 items-center'>
@@ -115,8 +115,8 @@ export default function UsersPayment() {
                     Fully settled
                 </div>
             </div>
-            <div className='flex flex-col bg-purple-200 border border-purple-100 px-6 py-4 rounded-xl gap-2'>
-                <p className='text-sm font-semibold text-purple-600 tracking-wide uppercase' >TOTAL DUE</p>
+            <div className='flex flex-col bg-purple-50 border border-purple-200 px-6 py-4 rounded-xl gap-2'>
+                <p className='text-sm font-semibold text-purple-600 tracking-wide uppercase' >WALLET BALANCE</p>
                 <p className='text-lg font-bold text-slate-700'>SAR 45.00</p>
                 <div className='text-purple-600 text-xs flex gap-2 items-center'>
                     <Wallet className='h-4 w-4 text-purple-500'/>

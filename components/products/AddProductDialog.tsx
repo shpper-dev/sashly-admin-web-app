@@ -95,10 +95,10 @@ export default function AddProductDialog({ children }: Props) {
 
                   <button
                     type="button"
-                    className="bg-slate-200 px-3 py-2 rounded-lg text-purple-600 text-xs font-medium shadow"
+                    className="bg-slate-200 px-3 py-2 rounded-lg text-purple-600 text-xs font-medium cursor-pointer shadow"
                     onClick={() => fileRef.current?.click()}
                   >
-                    Change Icon
+                    {preview ? "Change Icon": "Add Icon"}
                   </button>
 
                   {preview && (
@@ -107,6 +107,7 @@ export default function AddProductDialog({ children }: Props) {
                       variant="outline"
                       size="icon"
                       onClick={removeImage}
+                      className="cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4 text-red-500" />
                     </Button>
@@ -169,7 +170,7 @@ export default function AddProductDialog({ children }: Props) {
               <FormInput label="SLOT SPACE" tooltip="Storage slot space" />
 
               <div className="flex items-center gap-3 pb-3">
-                <Switch  />
+                <Switch className="data-[state=checked]:bg-purple-600!" />
                 <span className="text-xs font-medium">Skip Conveyor</span>
                 <HelpTooltip text="Disable conveyor automation" />
               </div>
@@ -189,7 +190,7 @@ export default function AddProductDialog({ children }: Props) {
               <Button variant="outline" className="cursor-pointer">Cancel</Button>
             </DialogClose>
 
-            <Button className="bg-cyan-500 hover:bg-cyan-600 text-white cursor-pointer">
+            <Button className="bg-cyan-500 hover:bg-cyan-600 text-white cursor-pointer shadow-md shadow-cyan-200">
               Create Product
             </Button>
           </div>

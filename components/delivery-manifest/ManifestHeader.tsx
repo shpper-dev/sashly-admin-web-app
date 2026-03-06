@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { ArrowLeft, Printer, Search} from "lucide-react";
-import FilterButton from "../buttons/FilterButton";
 import { useState } from "react";
+import FilterDropdown from "../buttons/FilterDropdown";
+
+const statusOptions = [
+    { label: "PICKUPS", value: "pickup",href:"/orders" },
+    { label: "DELIVERIES", value: "delivery",href:"/orders" },
+  ]
 
 export default function ManifestHeader({
   selectedCount,
@@ -29,7 +34,7 @@ export default function ManifestHeader({
                 <Search className="h-4 w-4 text-gray-500 shrink-0" />
                 <input type="text" placeholder="Quick search by name or order ID" className="bg-transparent w-full border-none outline-none text-sm placeholder:text-gray-400" />
         </div>
-        <FilterButton label="PICKUPS"  />
+        <FilterDropdown label="PICKUPS" />
         <div className="w-px h-7 bg-slate-300"/>
         {/* tabs / categories */}
          <div className="

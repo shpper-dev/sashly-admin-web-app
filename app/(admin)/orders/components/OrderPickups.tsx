@@ -1,8 +1,8 @@
 import { OrderData, TableHeading } from '@/lib/types';
-import { FileText, Pencil, Printer, ReceiptText, Search } from 'lucide-react';
+import { FileText, Pencil, PencilLine, Printer, ReceiptText, Search } from 'lucide-react';
 import React from 'react'
 import { TabKey } from '../page';
-import FilterButton from '@/components/buttons/FilterButton';
+import FilterButton from '@/components/buttons/FilterDropdown';
 import ConfirmDeliveryDialog from '@/components/orders/ConfirmDeliveryDialog';
 import Link from 'next/link';
 import { CustomerDetailsDialog } from '@/components/orders/CustomerDetailsDialog';
@@ -71,7 +71,7 @@ export default function OrderPickups() {
             return (
               <div>
                 <CustomerDetailsDialog customer={row.customer}>
-                  <span className="font-medium text-slate-800 cursor-pointer">{row.customer}</span>
+                  <span className="font-medium text-slate-800 cursor-pointer hover:text-purple-600 hover:underline">{row.customer}</span>
                 </CustomerDetailsDialog>
               </div>
             );
@@ -123,7 +123,7 @@ export default function OrderPickups() {
         } 
           case "notes":
             return(
-                <button className='flex w-full items-center justify-center bg-white text-[#02D0FF]'>
+                <button className='flex w-full items-center justify-center  text-[#02D0FF]'>
                     <FileText className="h-5 w-5" />
                 </button>
             ) ;
@@ -141,7 +141,7 @@ export default function OrderPickups() {
           case "total":
             return (
               <div>
-                <div className="text-blue-500 text-xs font-medium">SAR</div>
+                <div className="text-[#02D0FF] text-xs font-bold">SAR</div>
                 <div className="font-semibold text-slate-800">
                   {row.total.toFixed(2)}
                 </div>
@@ -152,10 +152,10 @@ export default function OrderPickups() {
             return (
               <div className="flex items-center gap-0.5 justify-end">
                 <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
-                  <Pencil className="w-5 h-5 text-slate-400 hover:text-slate-600" />
+                  <PencilLine className="w-4 h-4 text-slate-400 hover:text-slate-600" />
                 </button>
                 <ConfirmDeliveryDialog   >
-                    <button className="px-2 py-1.5 text-xs font-medium bg-blue-200/50 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
+                    <button className="px-2 py-1.5 text-[10px] font-medium bg-blue-200/50 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
                   COLLECTED
                 </button>
                 </ConfirmDeliveryDialog>
@@ -176,11 +176,11 @@ export default function OrderPickups() {
         <div className="flex justify-between items-center mb-4 px-8">
           <div className="flex gap-3">
             <FilterButton label="Filter Route(s)" />
-            <Link href={"orders/delivery-manifest"} className="flex items-center gap-2 px-4 py-2 border border-[#02D0FF] rounded-lg bg-white text-sm font-medium text-[#02D0FF]  hover:bg-slate-50 transition-colors">
+            <Link href={"orders/delivery-manifest"} className="flex items-center gap-2 px-4 py-2 border  border-purple-600 rounded-lg bg-white text-sm font-medium text-purple-600  hover:bg-slate-50 transition-colors">
                 <Printer className="h-4 w-4" />
                 Delivery Printout
             </Link>
-            <button className="flex items-center gap-2 px-4 py-2 border border-purple-600 rounded-lg bg-white text-sm font-medium text-purple-600 hover:bg-slate-50 transition-colors">
+            <button className="flex items-center gap-2 px-4 py-2 border border-[#02D0FF]  rounded-lg bg-white text-sm font-medium  text-[#02D0FF]  hover:bg-slate-50 transition-colors">
                 <ReceiptText className="h-4 w-4" />
                  Print Receipts
             </button>
@@ -201,7 +201,7 @@ export default function OrderPickups() {
                 {orderHeadings.map((heading) => (
                   <th
                     key={heading.id}
-                    className="text-left first:pl-2 px-4 py-3 text-sm font-semibold text-slate-500 "
+                    className="text-left first:pl-2 px-3 py-3 text-sm font-semibold text-slate-500 uppercase "
                   >
                     {heading.title}
                   </th>
@@ -218,7 +218,7 @@ export default function OrderPickups() {
                   {orderHeadings.map((heading) => (
                     <td
                       key={heading.id}
-                      className="first:pl-2 px-4 py-4 text-sm text-slate-700"
+                      className="first:pl-2 px-3 py-3 text-sm text-slate-700"
                     >
                       {renderCellContent(heading, row)}
                     </td>
