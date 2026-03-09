@@ -69,16 +69,16 @@ export default function DeliveryManifestPage() {
     }));
   };
 
-  const toggleAll = (checked: boolean) => {
-    const updates: Record<string, boolean> = {};
-    mockRoutes.forEach((r) =>
-      r.orders.forEach((o) => {
-        updates[o.id] = checked;
-      })
-    );
+  // const toggleAll = (checked: boolean) => {
+  //   const updates: Record<string, boolean> = {};
+  //   mockRoutes.forEach((r) =>
+  //     r.orders.forEach((o) => {
+  //       updates[o.id] = checked;
+  //     })
+  //   );
 
-    setSelected(updates);
-  };
+  //   setSelected(updates);
+  // };
 
   const totalSelected = Object.values(selected).filter(Boolean).length;
 
@@ -86,8 +86,8 @@ export default function DeliveryManifestPage() {
     <div className="h-screen bg-white flex flex-col">
       <ManifestHeader
         selectedCount={totalSelected}
-        onSelectAll={() => toggleAll(true)}
-        onDeselectAll={() => toggleAll(false)}
+        // onSelectAll={() => toggleAll(true)}
+        // onDeselectAll={() => toggleAll(false)}
       />
 
       <main className="flex-1 mt-24 space-y-6 overflow-y-auto ">

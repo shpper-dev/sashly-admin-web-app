@@ -1,35 +1,36 @@
 "use client";
+import WaitTimeBadge from '@/components/disputes/WaitTimeBadge';
 import Header from '@/components/Header'
 import TableSkeleton from '@/components/skeleton/TableSkeleton';
 import { disputeHeadings } from '@/constants/headings';
 import { TableHeading } from '@/lib/types';
-import { ChevronLeft, ChevronRight, CircleAlert, Download, ListFilter, MessagesSquare, Timer, UserRoundX } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleAlert, Download, ListFilter, LucideProps, MessagesSquare, Timer, UserRoundX } from 'lucide-react';
 import Link from 'next/link';
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 
 const mockData = [
 {
   id:1,
   order_id: "4267",
-  issue_category:{ icon: UserRoundX , text: "Driver No-Show", color:"yellow" },
-  wait_time:{ time: "14m", color:"purple"},
+  issue_category:"Driver No-Show",
+  wait_time:"14m",
   last_activity:"Customer uploaded photo 5m ago",
   status_disputes:"Needs Attention",
 },
 {
   id:2,
   order_id: "5251",
-  issue_category:{ icon: MessagesSquare , text: "User Dispute", color:"blue"},
-  wait_time:{ time:"2h 10m", color:"red"},
+  issue_category:"User Dispute",
+  wait_time:"2h 10m",
   last_activity:"Order Cancel Request",
   status_disputes:"Action Required",
 },
 {
   id:3,
   order_id: "7262",
-  issue_category:{ icon: CircleAlert , text:"Payment Failure", color:"red"},
-  wait_time:{ time:"45m", color:"yellow"},
+  issue_category:"Payment Failure",
+  wait_time:"45m",
   last_activity:"System Retry failed",
   status_disputes:"Needs Attention",
 }]
@@ -41,11 +42,10 @@ export default function Disputes() {
 
     // helper function 
     const renderCellContent = (heading: TableHeading, value: any) => {
-      const iconColors: Record<string,string>= {
-        yellow : "text-yellow-600",
-        purple : "text-purple-600",
-        red : "text-red-600",
-        blue: "text-blue-600"
+      const icons: Record<string,React.ReactNode>= {
+        "driver no-show" : <UserRoundX className='h-4 w-4 text-yellow-600' />,
+        "payment failure" : <CircleAlert className="h-4 w-4 text-red-600" />,
+        "user dispute": <MessagesSquare className="h-4 w-4 text-blue-600" />
       }
   if (!value || value === "-") {
     return <span className="text-slate-400">-</span>;
@@ -58,8 +58,8 @@ export default function Disputes() {
       const Icon = value.issue_category.icon;
       return (
         <div className="flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${iconColors[value.issue_category.color]}`}  />
-          <span>{value.issue_category.text}</span>
+          <span>{icons[value.issue_category.toLowerCase()]}</span>
+          <span>{value.issue_category}</span>
         </div>
       );
     }
@@ -67,12 +67,7 @@ export default function Disputes() {
     // ✅ Wait Time Badge
     case "wait_time": {
       return (
-        <div className="flex items-center">
-          <Timer className={`h-4 w-4 ${iconColors[value.wait_time.color]}`} />
-          <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${iconColors[value.wait_time.color]}`}>
-            {value.wait_time.time}
-          </span>
-        </div>
+        <WaitTimeBadge time={value.wait_time} />
       );
     }
 

@@ -6,6 +6,7 @@ import FilterButton from '@/components/buttons/FilterDropdown';
 import ConfirmDeliveryDialog from '@/components/orders/ConfirmDeliveryDialog';
 import Link from 'next/link';
 import { CustomerDetailsDialog } from '@/components/orders/CustomerDetailsDialog';
+import UserInfoDialog from '@/components/users/UserInfoDialog';
 /* ---------------- TABLE HEADINGS ---------------- */
 const orderHeadings: TableHeading[] = [
   { id: "id", title: "ID" },
@@ -40,16 +41,16 @@ const baseRows = Array.from({ length: 5 }).map((_, i) => ({
   total: 584.0,
 }));
 
-const dataByTab: Record<TabKey, any[]> = {
-  detail: baseRows,
-  cleaning: baseRows,
-  ready: baseRows,
-  pickups: baseRows,
-  all: baseRows,
-};
+// const dataByTab: Record<TabKey, any[]> = {
+//   detail: baseRows,
+//   cleaning: baseRows,
+//   ready: baseRows,
+//   pickups: baseRows,
+//   all: baseRows,
+// };
 
 export default function OrderPickups() {
-    const rows = dataByTab["pickups"];
+    const rows = baseRows //dataByTab["pickups"];
     
       // Helper function to render cell content
       const renderCellContent = (heading: TableHeading, row: any) : React.ReactNode => {
@@ -70,9 +71,9 @@ export default function OrderPickups() {
           case "customer":
             return (
               <div>
-                <CustomerDetailsDialog customer={row.customer}>
+                <UserInfoDialog>
                   <span className="font-medium text-slate-800 cursor-pointer hover:text-purple-600 hover:underline">{row.customer}</span>
-                </CustomerDetailsDialog>
+                </UserInfoDialog>
               </div>
             );
           

@@ -10,20 +10,20 @@ import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
 import Link from "next/link";
 ;
 
-/* ---------------- TAB TYPES ---------------- */
-export type TabKey = "detail" | "cleaning" | "ready" | "pickups" | "all" ;
+// tab types
+export type TabKey = "detail" | "cleaning" | "ready" | "pickups" //| "all" ;
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: "detail", label: "Detail" },
   { key: "cleaning", label: "Cleaning" },
   { key: "ready", label: "Ready" },
   { key: "pickups", label: "Pickups" },
-  { key: "all", label: "All" },
+  // { key: "all", label: "All" },
 ];
 
 
 
-/* ---------------- COMPONENT ---------------- */
+
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("detail");
   const pageHeadings: Record<TabKey, { main: string; sub: string }> = {
@@ -47,10 +47,10 @@ export default function OrdersPage() {
     sub: "All the pickups are listed here",
   },
 
-  all: {
-    main: "All Orders",
-    sub: "All orders across statuses",
-  },
+  // all: {
+  //   main: "All Orders",
+  //   sub: "All orders across statuses",
+  // },
 };
 
   
@@ -133,9 +133,10 @@ export default function OrdersPage() {
         {activeTab === "pickups" &&(
             <OrderPickups />
         )}
-        {activeTab === "all" &&(
+        {/* for now disabling all */}
+        {/* {activeTab === "all" &&(
             <OrderDetails />
-        )}
+        )} */}
        
         </section>
       </main>
@@ -143,7 +144,7 @@ export default function OrdersPage() {
   );
 }
 
-/* ---------------- REUSABLE COMPONENTS ---------------- */
+//  helpers
 function Stat({
   label,
   value,

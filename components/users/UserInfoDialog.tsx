@@ -33,8 +33,8 @@ const HEADER_TABS: HeaderTabDef[] = [
 
 interface UserInfoDialogProps {
   children: React.ReactNode;
-  user: User;
-  onDelete: () => void;
+  user?: User;
+  onDelete?: () => void;
 }
 
 export default function UserInfoDialog({ children, user, onDelete }: UserInfoDialogProps) {
@@ -45,7 +45,7 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
 
-      <DialogContent className="p-0 gap-0 border-0 overflow-hidden max-w-5xl! w-full rounded-3xl shadow-2xl">
+      <DialogContent className="p-0 gap-0 border-0 overflow-hidden min-w-[calc(100vw-250px)]! min-h-[calc(100vh-50px)]! w-full rounded-3xl shadow-2xl">
         <DialogHeader className="sr-only">
           <DialogTitle>User Information</DialogTitle>
         </DialogHeader>
@@ -61,17 +61,17 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
               {/* Avatar + name + status */}
               <div className="flex flex-col items-center gap-2 pt-2">
                 <div className="w-16 h-16 rounded-2xl bg-[#7F50F4] text-white flex items-center justify-center text-xl font-bold tracking-wide">
-                  {user.customer.first_name[0]}{user.customer.last_name[0]}
+                  {user?.customer.first_name[0] ?? "A" }{user?.customer.last_name[0] ?? "Q"}
                 </div>
                 <div className="flex flex-col items-center gap-1">
                   <span className="font-bold text-[#101828] text-base">
-                    {user.customer.first_name} {user.customer.last_name}
+                    {user?.customer.first_name} {user?.customer.last_name}  Abdullah Q
                   </span>
                   <span className="text-xs text-slate-400 font-medium">
-                    ID: {user.customer.id}
+                    ID: {user?.customer.id ?? "CUST:001"}
                   </span>
                   <span className="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-600">
-                    {user.status}
+                    {user?.status ?? "ACTIVE"}
                   </span>
                 </div>
               </div>
@@ -90,7 +90,7 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
                     Email
                     </span>
                     <span className="text-xs text-slate-600 font-medium truncate">
-                      {user.contact.email}
+                      {user?.contact.email ?? "abdullah@gmail.com"}
                     </span>
                   </div>
                 </div>
@@ -104,7 +104,7 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
                     PHONE
                     </span>
                     <span className="text-xs text-slate-600 font-medium truncate">
-                      {user.contact.phone}
+                      {user?.contact.phone ?? "976 1234 5678"}
                     </span>
                   </div>
                 </div>
@@ -130,14 +130,14 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
                   <span className="text-[10px] font-bold uppercase  text-slate-400">
                     Orders
                   </span>
-                  <span className="text-md font-bold text-slate-700">{user.orders}</span>
+                  <span className="text-md font-bold text-slate-700">{user?.orders ?? 5}</span>
                 </div>
                 <div className="flex flex-col pl-3 pr-6 py-2 bg-white rounded-xl border border-slate-100">
                   <span className="text-[10px] font-bold uppercase text-slate-400 text-nowrap">
                     Spent
                   </span>
                   <span className="text-md font-bold text-[#4F39F6] text-nowrap">
-                   SAR {user.total_spent.toFixed(2)}
+                   SAR {user?.total_spent.toFixed(2) ?? "44.00"}
                   </span>
                 </div>
               </div>

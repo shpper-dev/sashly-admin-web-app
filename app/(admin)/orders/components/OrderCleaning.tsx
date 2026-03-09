@@ -4,6 +4,7 @@ import React from 'react'
 import { TabKey } from '../page';
 import FilterDropdown from '@/components/buttons/FilterDropdown';
 import { CustomerDetailsDialog } from '@/components/orders/CustomerDetailsDialog';
+import UserInfoDialog from '@/components/users/UserInfoDialog';
 /* ---------------- TABLE HEADINGS ---------------- */
 const orderHeadings: TableHeading[] = [
   { id: "id", title: "ID" },
@@ -40,13 +41,13 @@ const baseRows = Array.from({ length: 5 }).map((_, i) => ({
   total: 84.0,
 }));
 
-const dataByTab: Record<TabKey, any[]> = {
-  detail: baseRows,
-  cleaning: baseRows,
-  ready: baseRows,
-  pickups: baseRows,
-  all: baseRows,
-};
+// const dataByTab: Record<TabKey, any[]> = {
+//   detail: baseRows,
+//   cleaning: baseRows,
+//   ready: baseRows,
+//   pickups: baseRows,
+//   // all: baseRows,
+// };
 const cleaningReportOptions = [
     { label: "To Clean", value: "to-clean",href:"/orders/reports/to-clean" },
     { label: "To Clean (No dates)", value: "no-dates",href:"/orders/reports/no-dates" },
@@ -56,7 +57,7 @@ const cleaningReportOptions = [
   ]
 
 export default function OrderCleaning() {
-    const rows = dataByTab["cleaning"];
+    const rows = baseRows;
     
     
       // Helper function to render cell content
@@ -89,9 +90,9 @@ export default function OrderCleaning() {
     
           case "customer":
             return (
-              <CustomerDetailsDialog customer={row.customer}>
+              <UserInfoDialog >
                 <span className="font-medium text-slate-800 cursor-pointer hover:text-purple-600 hover:underline">{row.customer}</span>
-              </CustomerDetailsDialog>
+              </UserInfoDialog>
             );
           
           case "contact":

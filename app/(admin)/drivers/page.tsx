@@ -332,8 +332,7 @@ export default function Drivers() {
                                     </div>
                                     
                                 </td>
-                            </tr>
-                                
+                            </tr>   
                             </tfoot>
                     </table>
                    )}

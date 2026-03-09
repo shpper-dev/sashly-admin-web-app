@@ -3,7 +3,7 @@ import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface UsersEditCustomerProps{
-  onDelete : () => void;
+  onDelete ?: () => void;
 }
 
 export default function UsersEditCustomer({onDelete}:UsersEditCustomerProps) {
