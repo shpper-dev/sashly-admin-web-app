@@ -45,15 +45,16 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
 
-      <DialogContent className="p-0 gap-0 border-0 overflow-hidden min-w-[calc(100vw-250px)]! min-h-[calc(100vh-50px)]! w-full rounded-3xl shadow-2xl">
+      <DialogContent className="p-0 gap-0 border-0 overflow-hidden w-[75vw]! h-[90vh]! min-w-0! max-w-none! rounded-3xl shadow-2xl">
         <DialogHeader className="sr-only">
           <DialogTitle>User Information</DialogTitle>
         </DialogHeader>
 
-        <div className="flex h-155">
+        {/* Outer container — fills the dialog exactly */}
+        <div className="flex h-full w-full overflow-hidden">
 
-          {/* ── Sidebar ── */}
-          <div className="w-64 shrink-0 bg-[#F8FAFC] border-r border-slate-100 flex flex-col justify-between p-6">
+          {/* ── Sidebar ── fixed width, independently scrollable */}
+          <div className="w-64 shrink-0 bg-[#F8FAFC] border-r border-slate-100 flex flex-col justify-between p-6 h-full">
 
             {/* Top: avatar + identity + contact */}
             <div className="flex flex-col gap-5">
@@ -65,7 +66,7 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
                 </div>
                 <div className="flex flex-col items-center gap-1">
                   <span className="font-bold text-[#101828] text-base">
-                    {user?.customer.first_name} {user?.customer.last_name}  Abdullah Q
+                    {user?.customer.first_name ?? "Abdullah"} {user?.customer.last_name ?? "Q"}
                   </span>
                   <span className="text-xs text-slate-400 font-medium">
                     ID: {user?.customer.id ?? "CUST:001"}
@@ -144,7 +145,7 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
             </div>
 
             {/* Bottom: action buttons */}
-            <div className="flex flex-col gap-2 border-t border-slate-300 pt-4">
+            <div className="flex flex-col gap-2 border-t border-slate-300 pt-4 mt-6">
               <button className="w-full py-2.5 px-4 bg-[#7F50F4] hover:bg-[#6B3FD4] text-white text-xs font-bold rounded-xl transition-colors">
                 + Create Order
               </button>
@@ -154,10 +155,10 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
             </div>
           </div>
 
-          {/* ── Main content area ── */}
-          <div className="flex flex-col flex-1 overflow-hidden">
+          {/* ── Main content area ── fills remaining width, tab content scrolls */}
+          <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
 
-            {/* Tab bar */}
+            {/* Tab bar — fixed, never scrolls away */}
             <div className="flex items-center border-b border-slate-100 px-4 overflow-x-auto shrink-0">
               {HEADER_TABS.map((tab) => (
                 <HeaderTab
@@ -170,35 +171,18 @@ export default function UserInfoDialog({ children, user, onDelete }: UserInfoDia
               ))}
             </div>
 
-            {/* Tab content */}
-            {/* <div className="flex-1 overflow-y-auto p-6">
-              <TabContent activeTab={activeTab} />
-            </div> */}
+            {/* Tab content — this scrolls */}
+            <div className="flex-1 overflow-y-auto">
+              {activeTab === "orders" && <UsersOrders />}
+              {activeTab === "edit customer" && <UsersEditCustomer onDelete={onDelete} />}
+              {activeTab === "stats" && <UsersStats />}
+              {activeTab === "payments" && <UsersPayment />}
+              {activeTab === "messages" && <UsersMessages />}
+              {activeTab === "pickups" && <UsersPickups />}
+              {activeTab === "photos" && <UsersPhotos />}
+            </div>
 
-            {/* different tabs */}
-            {activeTab === "orders" && (
-                <UsersOrders />
-            )}
-            {activeTab === "edit customer" && (
-                <UsersEditCustomer onDelete={onDelete} />
-            )}
-            {activeTab === "stats" && (
-                <UsersStats />
-            )}
-            {activeTab === "payments" && (
-                <UsersPayment />
-            )}
-            {activeTab === "messages" &&(
-              <UsersMessages />
-            )}
-            {activeTab === "pickups" &&(
-              <UsersPickups />
-            )}
-            {activeTab === "photos" &&(
-              <UsersPhotos />
-            )}
-            
-        </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -234,4 +218,3 @@ function HeaderTab({
     </button>
   );
 }
-

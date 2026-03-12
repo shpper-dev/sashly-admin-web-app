@@ -44,12 +44,12 @@ export default function DriverInfoDialog({ children, user }: UserInfoDialogProps
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
 
-      <DialogContent className="p-0 gap-0 border-0 overflow-hidden max-w-5xl! w-full rounded-3xl shadow-2xl">
+      <DialogContent className="p-0 gap-0 border-0 overflow-hidden w-[75vw]! h-[90vh]! min-w-0! max-w-none! rounded-3xl shadow-2xl">
         <DialogHeader className="sr-only">
           <DialogTitle>Driver Information</DialogTitle>
         </DialogHeader>
-
-        <div className="flex h-155">
+      
+        <div  className="flex h-full w-full overflow-hidden">
 
           {/* ── Sidebar ── */}
           <div className="w-64 shrink-0 bg-[#F8FAFC] border-r border-slate-100 flex flex-col justify-between p-6">
