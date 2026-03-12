@@ -14,7 +14,7 @@ export default async function proxy(req: NextRequest) {
     if(isPublicRoute && session){
         try{
             await adminAuth.verifySessionCookie(session,true);
-            return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
+            return NextResponse.redirect(new URL("/", req.nextUrl));
         }catch{
             const response = NextResponse.next();
             response.cookies.delete("session");

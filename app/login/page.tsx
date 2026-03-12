@@ -36,8 +36,11 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f7fb] flex flex-col">
-
+    <div className="min-h-screen bg-[#f5f7fb] flex flex-col gap-4">
+      {/* HEADER */}
+      <header className="flex items-center justify-between px-10 py-4 border-b bg-white">
+        <img src="/images/logo.png" alt="sashly logo" className="h-10"  />
+      </header>
       {/* LOGIN AREA */}
       <div className="flex flex-1 items-center justify-center px-4">
         <div className="flex flex-col items-center w-full max-w-md gap-6">

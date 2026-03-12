@@ -3,6 +3,8 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, Us
 import { Admin, AdminRole } from "../models/admin.model";
 import { auth, db } from "./config";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { deleteSession } from "../session";
+import { redirect } from "next/navigation";
 
 
 // admin login
@@ -84,8 +86,8 @@ export async function createAdmin(
 // logout
 export async function logoutAdmin(): Promise<void> {
     await signOut(auth);
-    
-    
+    await deleteSession();
+    redirect("/login");
 }
 
 // getAdminProfile

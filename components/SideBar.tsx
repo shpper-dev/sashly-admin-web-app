@@ -2,7 +2,8 @@
 import {Eye, LayoutDashboard,Search, LogOut, Megaphone, OctagonAlert, Package, Settings, Shirt, TriangleAlert, Truck, Users, Wallet} from "lucide-react";
 import Link from "next/link";
 import UserDropDown from "./UserDropDown";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { logoutAdmin } from "@/lib/firebase/admin.auth";
 
 const navItems = [
     {
@@ -63,6 +64,7 @@ const navItems = [
 
 
 export default function SideBar() {
+    const router = useRouter();
     const pathname = usePathname()
   return (
     <div className={`fixed top-0 left-0 flex flex-col bg-white text-sm h-full w-60 border-r border-r-blue-500/30 ${(pathname === "/orders/delivery-manifest"|| pathname.startsWith("/disputes/resolution") || pathname.startsWith("/orders/reports")) ? "hidden" : "flex"}`}>
@@ -100,7 +102,11 @@ export default function SideBar() {
                 </Link>
 
                 <UserDropDown user="John"/>
-                <button className="flex items-center gap-3 px-3 py-2 mb-2 rounded-lg transition-all duration-200 text-red-500  hover:bg-slate-200/50 cursor-pointer w-full text-left">
+                <button className="flex items-center gap-3 px-3 py-2 mb-2 rounded-lg transition-all duration-200 text-red-500  hover:bg-slate-200/50 cursor-pointer w-full text-left"
+                onClick={async ()=> {
+                    await logoutAdmin();
+                    // router.refresh();
+                }}>
                 <LogOut className="h-5 w-5 text-red-500" /> <span className="">Sign Out</span>
                 </button>
 
