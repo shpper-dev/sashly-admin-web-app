@@ -1,11 +1,11 @@
 import { OrderData, TableHeading } from '@/lib/types';
 import { Pencil, PencilLine, Search } from 'lucide-react';
-import React from 'react'
-import { TabKey } from '../page';
+import React from 'react';
 import FilterButton from '@/components/buttons/FilterDropdown';
 import OrderDetailsDrawer from '@/components/orders/OrderDetailsDrawer';
 import { CustomerDetailsDialog } from '@/components/orders/CustomerDetailsDialog';
-/* ---------------- TABLE HEADINGS ---------------- */
+import UserInfoDialog from '@/components/users/UserInfoDialog';
+//  TABLE HEADINGS 
 const orderHeadings: TableHeading[] = [
   { id: "id", title: "ID" },
   { id: "ready_by", title: "READY BY" },
@@ -16,7 +16,7 @@ const orderHeadings: TableHeading[] = [
   { id: "total", title: "TOTAL" },
   { id: "actions", title: "" },
 ];
-/* ---------------- MOCK DATA ---------------- */
+//MOCK DATA 
 
 const baseRows: OrderData[] = Array.from({ length: 5 }).map((_, i) => ({
   id: 3861 + i,
@@ -33,16 +33,16 @@ const baseRows: OrderData[] = Array.from({ length: 5 }).map((_, i) => ({
   total: 84.0,
 }));
 
-const dataByTab: Record<TabKey, OrderData[]> = {
-  detail: baseRows,
-  cleaning: baseRows,
-  ready: baseRows,
-  pickups: baseRows,
-  all: baseRows,
-};
+// const dataByTab: Record<TabKey, OrderData[]> = {
+//   detail: baseRows,
+//   cleaning: baseRows,
+//   ready: baseRows,
+//   pickups: baseRows,
+//   all: baseRows,
+// };
 
 export default function OrderDetails() {
-    const rows = dataByTab["detail"];
+    const rows = baseRows // dataByTab["detail"];
     
       // Helper function to render cell content
       const renderCellContent = (heading: TableHeading, row: OrderData) : React.ReactNode => {
@@ -75,9 +75,9 @@ export default function OrderDetails() {
           case "customer":
             return (
               <div>
-                <CustomerDetailsDialog customer={row.customer}>
+                <UserInfoDialog >
                   <span className="font-medium text-slate-800 cursor-pointer hover:text-purple-600 hover:underline">{row.customer}</span>
-                </CustomerDetailsDialog>
+                </UserInfoDialog>
               </div>
             );
     

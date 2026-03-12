@@ -14,18 +14,19 @@ const TABLE_HEADERS = [
   { label: "Notes / Instructions",   className: "px-4 min-w-[140px]"               },
   { label: "Financials",             className: "px-4 min-w-[100px] text-right"    },
 ];
+interface RouteSectionProps {
+  route: Route;
+  selected: Record<string, boolean>;
+  onToggleOrder: (id: string) => void;
+  onToggleRoute: (route: Route, checked: boolean) => void;
+}
 
 export default function RouteSection({
   route,
   selected,
   onToggleOrder,
   onToggleRoute,
-}: {
-  route: Route;
-  selected: Record<string, boolean>;
-  onToggleOrder: (id: string) => void;
-  onToggleRoute: (route: Route, checked: boolean) => void;
-}) {
+}: RouteSectionProps) {
   const [open, setOpen] = useState(true);
   const checkboxRef = useRef<HTMLInputElement>(null);
 
@@ -99,16 +100,16 @@ export default function RouteSection({
             {/* Table header */}
             <thead className="bg-white">
               <tr className="border-t border-slate-200">
-                {TABLE_HEADERS.map((h) => (
+                {TABLE_HEADERS.map((heading) => (
                   <th
-                    key={h.label}
+                    key={heading.label}
                     className={`
                       py-4 text-left
                       text-xs font-bold uppercase tracking-widest text-[#90A1B9]
-                      ${h.className}
+                      ${heading.className}
                     `}
                   >
-                    {h.label}
+                    {heading.label}
                   </th>
                 ))}
               </tr>

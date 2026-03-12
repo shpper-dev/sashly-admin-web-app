@@ -1,100 +1,68 @@
 "use client";
 import Header from "@/components/Header";
-import AddProductDialog from "@/components/products/AddProductDialog";
+import AddCategoryDialog from "@/components/products/AddCategoryDialog";
+import AddItemDialog from "@/components/products/AddItemDialog";
+import AddServiceDialog from "@/components/products/AddServiceDialog";
 import ProductCard from "@/components/products/ProductCard";
-import { Select, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search } from "lucide-react";
-import Link from "next/link";
-import { useMemo, useState } from "react";
-
-const filters = [
-  "All Items",
-  "Wash & Iron",
-  "Steam & Special Care",
-  "Bedding",
-  "Iron",
-  "Shoes",
-];
-
-const products = [
-  {
-    image: "/images/products/thob.png",
-    name_en: "Thob",
-    name_ar: "ثوب",
-    category: "WASH & IRON",
-    price: 6.0,
-  },
-  {
-    image: "/images/products/sderiyah.png",
-    name_en: "Sderiyah",
-    name_ar: "سديرية",
-    category: "WASH & IRON",
-    price: 6.0,
-  },
-  {
-    image: "/images/products/taqiyah.png",
-    name_en: "Taqiyah",
-    name_ar: "طاقية",
-    category: "IRON",
-    price: 6.0,
-  },
-  {
-    image: "/images/products/undershirt.png",
-    name_en: "Undershirt",
-    name_ar: "فانيلة داخلية",
-    category: "IRON",
-    price: 6.0,
-  },
-  {
-    image: "/images/products/shemagh.png",
-    name_en: "Shemagh",
-    name_ar: "شماغ",
-    category: "WASH & IRON",
-    price: 6.0,
-  },
-  {
-    image: "/images/products/thob-colored.png",
-    name_en: "Thob Colored",
-    name_ar: "ثوب ملون",
-    category: "STEAM & SPECIAL CARE",
-    price: 6.0,
-  },
-  {
-    image: "/images/products/shorts.png",
-    name_en: "Shorts",
-    name_ar: "شورت",
-    category: "WASH & IRON",
-    price: 6.0,
-  },
-  {
-    image: "/images/products/serwal.png",
-    name_en: "Serwal",
-    name_ar: "سروال طويل داخلي",
-    category: "WASH & IRON",
-    price: 6.0,
-  },
-];
+import { Search, Loader2 } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
+import { Item, Service } from "@/lib/models/product.model";
 
 export default function Products() {
   const [activeFilter, setActiveFilter] = useState("All Items");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm]     = useState("");
+  const [items, setItems]               = useState<Item[]>([]);
+  const [services, setServices]         = useState<Service[]>([]);
+  const [loading, setLoading]           = useState(true);
 
-  //  Combined filtering logic
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      // Category filtering
-      const matchesCategory =
+  // fetch items + services 
+  const fetchData = async () =>{
+    const [itemsSnap, servicesSnap] = await Promise.all([
+          getDocs(collection(db, "Items")),
+          getDocs(collection(db, "Services")),
+        ]);
+        setItems(itemsSnap.docs.map((d) => d.data() as Item));
+        setServices(servicesSnap.docs.map((d) => d.data() as Service));
+  }
+  useEffect(() => {
+      setLoading(true);
+      try {
+        fetchData();
+      } catch (e) {
+        console.error("Failed to fetch products data:", e);
+      } finally {
+        setLoading(false);
+      }
+  }, []);
+
+
+  //filters = "All Items" + each service name 
+  const filters = useMemo(
+    () => ["All Items", ...services.map((s) => s.name)],
+    [services]
+  );
+
+  // filtering logic 
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      // Category filter — match if item has the selected service
+      const matchesFilter =
         activeFilter === "All Items" ||
-        product.category.toLowerCase() === activeFilter.toLowerCase();
+        item.services.some(
+          (s: { name: string; }) => s.name.toLowerCase() === activeFilter.toLowerCase()
+        );
 
-      // Search filtering (EN + AR)
+      // Search filter — EN + AR
       const matchesSearch =
-        product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.name_ar.includes(searchTerm);
+        item.searchTerms.some((term: string)=>{
+          return term.toLowerCase().includes(searchTerm.toLowerCase());
+        })
 
-      return matchesCategory && matchesSearch;
+      return matchesFilter && matchesSearch;
     });
-  }, [activeFilter, searchTerm]);
+  }, [activeFilter, searchTerm, items]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -111,26 +79,30 @@ export default function Products() {
           </div>
 
           <div className="flex gap-3 items-center">
-            <Select>
-              <SelectTrigger className="w-70 flex items-center gap-2 px-4 py-5 bg-white border border-cyan-200 rounded-lg text-[#45556C] font-bold text-xs hover:border-cyan-400 transition-colors [&>span]:text-cyan-400 [&>svg]:text-cyan-400">
-                <SelectValue placeholder="Default Prices" />
-              </SelectTrigger>
-            </Select>
+            <AddCategoryDialog>
+              <button className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold transition-colors shadow-md cursor-pointer">
+                + Add Category
+              </button>
+            </AddCategoryDialog>
 
-            <AddProductDialog>
-              <button
-              className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold transition-colors shadow-md cursor-pointer"
-            >
-              + Add Product
-            </button>
-            </AddProductDialog>
+            <AddServiceDialog onSuccess={fetchData}>
+              <button className="px-6 py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-bold transition-colors shadow-md cursor-pointer">
+                + Add Service
+              </button>
+            </AddServiceDialog>
+
+            <AddItemDialog onSuccess={fetchData}>
+              <button className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold transition-colors shadow-md cursor-pointer">
+                + Add Product
+              </button>
+            </AddItemDialog>
           </div>
         </section>
 
         {/* Search + Filters + Products */}
         <section className="px-6 flex flex-col gap-6">
           <div className="flex justify-between">
-            {/*  SEARCH */}
+            {/* SEARCH */}
             <div className="flex items-center gap-3 px-4 py-2 bg-white border border-[#E2E8F0] rounded-lg shadow-sm w-100">
               <Search size={16} className="text-slate-400" />
               <input
@@ -141,8 +113,8 @@ export default function Products() {
               />
             </div>
 
-            {/* FILTERS */}
-            <div className="flex gap-3.5">
+            {/* FILTERS — service names */}
+            <div className="flex gap-3.5 flex-wrap">
               {filters.map((label) => (
                 <FilterButton
                   key={label}
@@ -154,18 +126,25 @@ export default function Products() {
             </div>
           </div>
 
-          {/*  PRODUCT GRID */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-4">
-            {filteredProducts.length > 0 ? (
-              filteredProducts.map((product) => (
-                <ProductCard key={product.name_en} product={product} />
-              ))
-            ) : (
-              <div className="col-span-full text-center py-10 text-slate-400 font-semibold">
-                No products found.
-              </div>
-            )}
-          </div>
+          {/* PRODUCT GRID */}
+          {loading ? (
+            <div className="flex items-center justify-center py-20 text-slate-400 gap-2">
+              <Loader2 size={18} className="animate-spin" />
+              <span className="text-sm font-medium">Loading products…</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-4">
+              {filteredItems.length > 0 ? (
+                filteredItems.map((item) => (
+                  <ProductCard key={item.id} product={item} onDeleted={fetchData} onUpdated={fetchData} />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-10 text-slate-400 font-semibold">
+                  No products found.
+                </div>
+              )}
+            </div>
+          )}
         </section>
       </main>
     </div>

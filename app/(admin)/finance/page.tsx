@@ -2,16 +2,13 @@
 import ConfirmDriverPayoutDialog from '@/components/finance/ConfirmDriverPayoutDialog';
 import VerfiyTopupDialog from '@/components/finance/VerifyTopupDialog';
 import Header from '@/components/Header'
-import { Banknote, Clock, RotateCcw, Wallet, ArrowDownToLine, ArrowUpToLine, ArrowRight, WalletIcon } from 'lucide-react'
+import { TableHeading } from '@/lib/types';
+import { Banknote, Clock, RotateCcw, Wallet, ArrowRight, WalletIcon } from 'lucide-react'
 import React, { useState } from 'react'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-export type TableHeading = {
-  id: string;
-  title: string | null;
-}
 
-// ── Stats ─────────────────────────────────────────────────────────────────────
+
+// Stats 
 const stats = [
   {
     title: "Total Revenue",
@@ -95,11 +92,11 @@ const transactionRows = [
   },
 ]
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function Finance() {
   const [activeTab, setActiveTab] = useState<"payout" | "topup">("payout")
 
-  // ── Payout cell renderer ──────────────────────────────────────────────────
+  // Payout cell renderer 
   const renderPayoutCell = (heading: TableHeading, row: typeof payoutRows[0]) => {
     switch (heading.id) {
       case "user_name":
@@ -150,7 +147,7 @@ export default function Finance() {
     }
   }
 
-  // ── Transaction cell renderer ─────────────────────────────────────────────
+  //Transaction cell renderer 
   const renderTransactionCell = (heading: TableHeading, row: typeof transactionRows[0]) => {
     switch (heading.id) {
       case "transaction_id":
@@ -288,12 +285,12 @@ export default function Finance() {
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  {payoutHeadings.map((h) => (
+                  {payoutHeadings.map((heading) => (
                     <th
-                      key={h.id}
+                      key={heading.id}
                       className="px-6 py-3.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest"
                     >
-                      {h.title}
+                      {heading.title}
                     </th>
                   ))}
                 </tr>
@@ -308,9 +305,9 @@ export default function Finance() {
                 ) : (
                   payoutRows.map((row, i) => (
                     <tr key={i} className="hover:bg-slate-50 transition-colors">
-                      {payoutHeadings.map((h) => (
-                        <td key={h.id} className="px-6 py-4 text-sm">
-                          {renderPayoutCell(h, row)}
+                      {payoutHeadings.map((heading) => (
+                        <td key={heading.id} className="px-6 py-4 text-sm">
+                          {renderPayoutCell(heading, row)}
                         </td>
                       ))}
                     </tr>
@@ -339,12 +336,12 @@ export default function Finance() {
               <table className="w-full">
                 <thead className="bg-slate-50 border-b border-slate-100">
                   <tr>
-                    {transactionHeadings.map((h) => (
+                    {transactionHeadings.map((heading) => (
                       <th
-                        key={h.id}
+                        key={heading.id}
                         className="px-6 py-3.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest"
                       >
-                        {h.title}
+                        {heading.title}
                       </th>
                     ))}
                   </tr>
@@ -352,9 +349,9 @@ export default function Finance() {
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {transactionRows.map((row, i) => (
                     <tr key={i} className="hover:bg-slate-50 transition-colors">
-                      {transactionHeadings.map((h) => (
-                        <td key={h.id} className="px-6 py-4 text-sm">
-                          {renderTransactionCell(h, row)}
+                      {transactionHeadings.map((heading) => (
+                        <td key={heading.id} className="px-6 py-4 text-sm">
+                          {renderTransactionCell(heading, row)}
                         </td>
                       ))}
                     </tr>

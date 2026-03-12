@@ -9,7 +9,7 @@ import { ItemDetailsDialog } from "@/components/orders/ItemDetailsDialog";
 import { ReviewRecordDialog } from "@/components/orders/ReviewRecordDialog";
 import OrderSuccessDialog from "@/components/orders/OrderSuccessDialog";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Types 
 export interface ClothingItem {
   id: number;
   name: string;
@@ -34,7 +34,7 @@ interface Customer {
   avatarColor: string;
 }
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+
 const CLOTHING_ITEMS: ClothingItem[] = [
   { id: 1, name: "Thob Colored", nameAr: "ثوب ملون",          price: "7.00" },
   { id: 2, name: "Sderiyah",     nameAr: "ثوب ملون",          price: "7.00" },
@@ -57,7 +57,6 @@ const MOCK_CUSTOMERS: Customer[] = [
 
 
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AddOrder() {
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>(MOCK_CUSTOMERS[0]);
@@ -116,7 +115,7 @@ export default function AddOrder() {
   const removeItem = (id: number) =>
     setBasket(prev => prev.filter(e => e.item.id !== id));
 
-  // ── Derived ─────────────────────────────────────────────────────────────────
+  // Derived 
   const subtotal   = basket.reduce((s, e) => s + parseFloat(e.item.price) * e.qty, 0);
   const tax        = subtotal * 0.15;
   const total      = subtotal + tax;

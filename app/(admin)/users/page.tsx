@@ -9,6 +9,7 @@ import { useDeleteToast } from '@/hooks/useDeleteToast';
 import { DeleteToastContainer } from '@/components/users/DeleteToast';
 import UserInfoDialog from '@/components/users/UserInfoDialog';
 import FilterButtonWithBadge from '@/components/buttons/FilterButtonWithBadges';
+import Link from 'next/link';
 
 
 const userHeadings : TableHeading[]= [
@@ -247,6 +248,9 @@ export default function Users() {
                     <Download className='h-3 w-3' />
                       Export CSV
                   </button>
+                  <Link href={"/admin/add-admin"} className='flex gap-2 items-center bg-[#7F50F4] px-5 py-3 text-white text-sm font-medium rounded-md'>
+                        + Add New Admin
+                  </Link>
                   <button className='flex gap-2 items-center bg-[#7F50F4] px-5 py-3 text-white text-sm font-medium rounded-md'>
                         + Add New User
                   </button>

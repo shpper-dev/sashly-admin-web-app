@@ -8,15 +8,15 @@ const statusOptions = [
     { label: "DELIVERIES", value: "delivery",href:"/orders" },
   ]
 
+interface ManifestHeaderProps {
+  selectedCount: number;
+  // onSelectAll: () => void;
+  // onDeselectAll: () => void;
+}
+
 export default function ManifestHeader({
   selectedCount,
-  onSelectAll,
-  onDeselectAll,
-}: {
-  selectedCount: number;
-  onSelectAll: () => void;
-  onDeselectAll: () => void;
-}) {
+}:ManifestHeaderProps) {
     const [activeTab, setActiveTab] = useState<"all" | "pickups" | "deliveries">("all");
   return (
     <div className="w-full flex items-center justify-between bg-white px-6 py-6 fixed top-0 left-0 z-10">

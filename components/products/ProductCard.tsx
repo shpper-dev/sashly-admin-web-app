@@ -1,43 +1,83 @@
+import { Item } from '@/lib/models/product.model'
 import { Pencil, Trash2 } from 'lucide-react'
 import Image from 'next/image'
-import React from 'react'
+import  { useState } from 'react'
+import { doc, deleteDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase/config'
+import EditItemDialog from './EditItemDialog'
+
 
 interface ProductCardProps {
-    product: {
-        image: string;
-        name_en: string;
-        name_ar: string;
-        category: string;
-        price: number;
-    }
+  product: Item
+  onDeleted?: () => void
+  onUpdated?: () => void
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, onDeleted, onUpdated }: ProductCardProps) {
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    if (!confirm(`Delete "${product.name}"? This cannot be undone.`)) return
+    setDeleting(true)
+    try {
+      await deleteDoc(doc(db, 'Items', product.id))
+      onDeleted?.()
+    } catch (e) {
+      console.error('Delete failed:', e)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
-    // main container
-    <div className='flex flex-col bg-white rounded-lg py-2 px-5 border border-slate-300 shadow-md max-w-70'>
-        {/* product imgae +  action buttons */}
-        <div className='flex items-start justify-between pt-2'>
-             <Image src={product.image} alt={product.name_en}     width={60} height={60} />
+    <div className='flex flex-col bg-white rounded-lg py-2 px-5 border border-slate-300 shadow-md'>
+
+      {/* Image + action buttons */}
+      <div className='flex items-start justify-between pt-2'>
+        {product.photoUrl ? (
+          <Image src={product.photoUrl} alt={product.name} width={60} height={60} className='rounded-lg object-cover' />
+        ) : (
+          <div className='w-16 h-16 bg-slate-50 flex items-center justify-center rounded-lg'>
+            <span className='text-[9px] text-slate-400 text-center leading-tight px-1'>No Image</span>
+          </div>
+        )}
+
         <div className='flex gap-2'>
-            <button>
-                <Pencil className='h-4 w-4 text-slate-700' />
+          {/* Edit — opens EditItemDialog */}
+          <EditItemDialog item={product} onSuccess={onUpdated}>
+            <button className='p-1 rounded hover:bg-slate-100 transition-colors'>
+              <Pencil className='h-4 w-4 text-slate-700' />
             </button>
-            <button className=''>
-                <Trash2 className='h-4 w-4 text-red-600' />
-            </button>
+          </EditItemDialog>
+
+          {/* Delete */}
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className='p-1 rounded hover:bg-red-50 transition-colors disabled:opacity-50'
+          >
+            <Trash2 className='h-4 w-4 text-red-600' />
+          </button>
         </div>
-        </div>
-        {/* product  name in english and arabic */}
-        <div className='flex flex-col px-2 mb-2'>
-            <span className='text-xs font-bold text-slate-800'>{product.name_en}</span>
-            <span className='text-xs text-slate-400'>{product.name_ar}</span>
-        </div>
-        <div className='h-px w-full bg-slate-300'></div>
-        <div className='flex justify-between p-2 '>
-            <span className='text-slate-400 text-xs font-medium tracking-wide'>{product.category}</span>
-            <span className='text-sm text-purple-600 font-bold'>SAR {product.price.toFixed(2)}</span>
-        </div>
+      </div>
+
+      {/* Names */}
+      <div className='flex flex-col px-2 mb-2 mt-1'>
+        <span className='text-xs font-bold text-slate-800'>{product.name}</span>
+        <span className='text-xs text-slate-400'>{product.arabicName}</span>
+      </div>
+
+      <div className='h-px w-full bg-slate-300' />
+
+      {/* Services */}
+      <div className='flex flex-col gap-1 pt-2 pb-1'>
+        {product.services.map((service) => (
+          <div className='flex justify-between' key={service.id}>
+            <span className='text-slate-400 text-xs font-medium tracking-wide'>{service.name}</span>
+            <span className='text-sm text-purple-600 font-bold'>SAR {service.price.toFixed(2)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
