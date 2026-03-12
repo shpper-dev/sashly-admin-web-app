@@ -1,4 +1,4 @@
-import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
 import { db} from "@/lib/firebase/config";
 import { Service } from "../models/product.model";
 import { uploadImage } from "../utils";
@@ -116,4 +116,8 @@ export async function updateItem(id: string, data: {
     photoUrl,
     services: data.selectedServices,
   })
+}
+
+export async function deleteItem(id: string) {
+  await deleteDoc(doc(db, 'Items', id));
 }
