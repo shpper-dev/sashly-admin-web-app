@@ -86,8 +86,8 @@ export default function AddAdminForm() {
             {/* TITLE */}
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-2xl font-bold text-slate-800">Create Admin</h1>
-              <Link href={"/users"} className="text-slate-400 hover:text-slate-600 text-sm" >
-              Back to users
+              <Link href={"/settings"} className="text-slate-400 hover:text-slate-600 text-sm" >
+              Back to settings
               </Link> 
               
             </div>

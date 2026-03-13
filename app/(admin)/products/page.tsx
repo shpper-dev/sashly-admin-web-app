@@ -1,6 +1,5 @@
 "use client";
 import Header from "@/components/Header";
-import AddCategoryDialog from "@/components/products/AddCategoryDialog";
 import AddItemDialog from "@/components/products/AddItemDialog";
 import AddServiceDialog from "@/components/products/AddServiceDialog";
 import ProductCard from "@/components/products/ProductCard";
@@ -28,13 +27,16 @@ export default function Products() {
   }
   useEffect(() => {
       setLoading(true);
-      try {
-        fetchData();
+      async function initalMount() {
+       try {
+        await fetchData();
       } catch (e) {
         console.error("Failed to fetch products data:", e);
       } finally {
         setLoading(false);
       }
+      }
+      initalMount();
   }, []);
 
 
@@ -79,12 +81,6 @@ export default function Products() {
           </div>
 
           <div className="flex gap-3 items-center">
-            <AddCategoryDialog>
-              <button className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold transition-colors shadow-md cursor-pointer">
-                + Add Category
-              </button>
-            </AddCategoryDialog>
-
             <AddServiceDialog onSuccess={fetchData}>
               <button className="px-6 py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-bold transition-colors shadow-md cursor-pointer">
                 + Add Service

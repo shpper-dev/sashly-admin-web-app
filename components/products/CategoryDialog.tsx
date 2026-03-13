@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { X, ImagePlus, Tag, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -9,14 +9,23 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { createCategory } from "@/lib/firebase/product";
+import { createCategory, updateCategory } from "@/lib/firebase/product";
+import { Category } from "@/lib/models/product.model";
 
-interface AddCategoryDialogProps {
+interface CategoryDialogProps {
   children: React.ReactNode;
   onSuccess?: () => void;
+
+  mode?: "add" | "edit";
+  category?: Category;
 }
 
-export default function AddCategoryDialog({ children, onSuccess }: AddCategoryDialogProps) {
+export default function CategoryDialog({
+  children,
+  onSuccess,
+  mode = "add",
+  category,
+}: CategoryDialogProps){
   const [open, setOpen]               = useState(false);
   const [name, setName]               = useState("");
   const [arabicName, setArabicName]   = useState("");
@@ -28,6 +37,15 @@ export default function AddCategoryDialog({ children, onSuccess }: AddCategoryDi
   const [error, setError]             = useState("");
   const [success, setSuccess]         = useState("");
   const fileInputRef                  = useRef<HTMLInputElement>(null);
+  const [photoRemoved, setPhotoRemoved] = useState(false);
+  useEffect(() => {
+  if (mode === "edit" && category) {
+    setName(category.name || "");
+    setArabicName(category.arabicName || "");
+    setTags(category.searchTerms || []);
+    setPhotoPreview(category.photoUrl || null);
+  }
+}, [mode, category]);
 
   //tag helpers
   const addTag = (raw: string) => {
@@ -62,36 +80,57 @@ export default function AddCategoryDialog({ children, onSuccess }: AddCategoryDi
   //reset
   const resetForm = () => {
     setName(""); setArabicName(""); setTagInput("");
-    setTags([]); setPhoto(null); setPhotoPreview(null);
-    setError(""); setSuccess("");
+    setTags([]); setPhoto(null); setPhotoPreview(null); 
+    setPhotoRemoved(false); setError(""); setSuccess("");
   };
 
   const handleClose = () => { resetForm(); setOpen(false); };
 
   //  submit 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(""); setSuccess("");
-    setLoading(true);
+  e.preventDefault();
 
-    try {
+  setError("");
+  setSuccess("");
+  setLoading(true);
+
+  try {
+
+    if (mode === "edit" && category) {
+      await updateCategory(category.id, {
+        name,
+        arabicName,
+        searchTerms: tags,
+        photo,
+        existingPhotoUrl: category.photoUrl ?? null,
+        photoRemoved,
+      });
+
+      setSuccess(`Category updated successfully.`);
+    } 
+    
+    else {
       await createCategory({
-      name,
-      arabicName,
-      searchTerms: tags,
-      photo,
-    });
+        name,
+        arabicName,
+        searchTerms: tags,
+        photo,
+      });
 
       setSuccess(`Category: ${name} created successfully.`);
-      onSuccess?.();
-      setTimeout(() => handleClose(), 1200);
-    } catch (err: any) {
-      console.error("Create category failed:", err);
-      setError("Failed to create category. Please try again.");
-    } finally {
-      setLoading(false);
     }
-  };
+
+    onSuccess?.();
+
+    setTimeout(() => handleClose(), 1200);
+
+  } catch (err: any) {
+    console.error("Category save failed:", err);
+    setError("Failed to save category. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // shared styles 
   const labelClass = "text-xs font-semibold text-slate-500 uppercase tracking-wide";
@@ -109,7 +148,9 @@ export default function AddCategoryDialog({ children, onSuccess }: AddCategoryDi
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100">
-          <h2 className="text-base font-bold text-slate-800">Add Category</h2>
+          <h2 className="text-base font-bold text-slate-800">
+             {mode === "edit" ? "Edit Category" : "Add Category"}
+          </h2>
           <button
             type="button"
             onClick={handleClose}
@@ -182,6 +223,7 @@ export default function AddCategoryDialog({ children, onSuccess }: AddCategoryDi
                 </span>
               ))}
               <input
+                required
                 type="text"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
@@ -230,15 +272,23 @@ export default function AddCategoryDialog({ children, onSuccess }: AddCategoryDi
         
             {/* File info — right of preview */}
             <div className="flex flex-col gap-1 flex-1 min-w-0">
-              {photo ? (
+              {(photo || photoPreview) ? (
                 <>
-                  <span className="text-sm font-medium text-slate-700 truncate">{photo.name}</span>
-                  <span className="text-[11px] text-slate-400">
-                    {(photo.size / 1024).toFixed(1)} KB
+                  <span className="text-sm font-medium text-slate-700 truncate">
+                    {photo?.name || "Existing Image"}
                   </span>
+                  {photo && (
+                    <span className="text-[11px] text-slate-400">
+                      {(photo.size / 1024).toFixed(1)} KB
+                    </span>
+                  )}
                   <button
                     type="button"
-                    onClick={() => { setPhoto(null); setPhotoPreview(null); }}
+                    onClick={() => { 
+                      setPhoto(null); 
+                      setPhotoPreview(null); 
+                      setPhotoRemoved(true);
+                    }}
                     className="self-start mt-1 text-[11px] font-medium text-red-400 hover:text-red-600 transition-colors"
                   >
                     Remove
@@ -271,7 +321,7 @@ export default function AddCategoryDialog({ children, onSuccess }: AddCategoryDi
                   Saving…
                 </>
               ) : (
-                "Add Category"
+                mode === "edit" ? "Save Changes" : "Add Category"
               )}
             </button>
           </div>
