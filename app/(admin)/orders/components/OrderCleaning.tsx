@@ -90,9 +90,9 @@ export default function OrderCleaning() {
     
           case "customer":
             return (
-              <UserInfoDialog >
+              <CustomerDetailsDialog customer={row.customer}  >
                 <span className="font-medium text-slate-800 cursor-pointer hover:text-purple-600 hover:underline">{row.customer}</span>
-              </UserInfoDialog>
+              </CustomerDetailsDialog>
             );
           
           case "contact":
