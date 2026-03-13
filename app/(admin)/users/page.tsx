@@ -1,353 +1,342 @@
 "use client";
 import Header from '@/components/Header'
-import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, EllipsisVertical, Mail, Phone, Search, User, } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Download, Search, SlidersHorizontal } from "lucide-react";
 import TableSkeleton from '@/components/skeleton/TableSkeleton';
 import { TableHeading } from '@/lib/types';
-import { ActionsDropdown } from '@/components/ActionsDropdown';
 import { useDeleteToast } from '@/hooks/useDeleteToast';
 import { DeleteToastContainer } from '@/components/users/DeleteToast';
 import UserInfoDialog from '@/components/users/UserInfoDialog';
 import FilterButtonWithBadge from '@/components/buttons/FilterButtonWithBadges';
-import Link from 'next/link';
+import { getUsers, getUsersNextPage, UserFilters } from '@/lib/firebase/user';
+import { User } from '@/lib/models/user.model';
 
+const PAGE_SIZE = 10;
 
-const userHeadings : TableHeading[]= [
-{
-    id: "customer",
-    title: "CUSTOMER"
-},
-{
-    id: "contact",
-    title: "CONTACT"
-},
-{
-    id: "orders",
-    title: "ORDERS"
-},
-{
-    id:"total_spent",
-    title:"TOTAL SPENT"
-},
-{
-  id:"status",
-  title:"STATUS"
-},
-{
-  id:"actions",
-  title:""
-}
-]
-const mockData = [
-{
-  id:1,
-  customer:{
-    first_name:"Ahmed",
-    last_name:"Khalid",
-    id:"CUST-001"
-  },
-  contact:{
-    email:"ahmed.khalid@email.com",
-    phone:"+966 5 1234 5678"
-  },
-  orders: 7,
-  total_spent: 84,
-  status: "Active"
-},
-{
-  id:2,
-  customer:{
-    first_name:"Sara",
-    last_name:"Mohammed",
-    id:"CUST-002"
-  },
-  contact:{
-    email:"sara.mohammed@email.com",
-    phone:"+966 5 2234 4478"
-  },
-  orders: 5,
-  total_spent: 154,
-  status: "Active"
-},
-{
- id:3,
-  customer:{
-    first_name:"Omar",
-    last_name:"Hassan",
-    id:"CUST-003"
-  },
-  contact:{
-    email:"omar.hassan@email.com",
-    phone:"+966 5 4321 5678"
-  },
-  orders: 67,
-  total_spent: 261,
-  status: "Inactive"
-},
-{
-  id:4,
-  customer:{
-    first_name:"Laila",
-    last_name:"Ali",
-    id:"CUST-004"
-  },
-  contact:{
-    email:"laila.ali@email.com",
-    phone:"+966 5 5225 5998"
-  },
-  orders: 125,
-  total_spent: 627,
-  status: "Blocked"
-},
-]
+const userHeadings: TableHeading[] = [
+  { id: "name",         title: "NAME"          },
+  { id: "email",        title: "EMAIL"         },
+  { id: "language",     title: "LANGUAGE"      },
+  { id: "registeredAt", title: "REGISTERED AT" },
+  { id: "status",       title: "STATUS"        },
+];
 
+// Server-side filter (isDeleted only — has composite index)
+const SERVER_FILTERS: { label: string; filters: UserFilters }[] = [
+  { label: "All",     filters: {}                  },
+  { label: "Active",  filters: { isDeleted: false } },
+  { label: "Deleted", filters: { isDeleted: true  } },
+];
+
+// Client-side filters (no extra indexes needed)
+const CLIENT_FILTERS: { label: string; field: keyof User; value: any }[] = [
+  { label: "Email Verified",   field: "isEmailVerified", value: true  },
+  { label: "Phone Verified",   field: "isPhoneVerified", value: true  },
+  { label: "English",          field: "appLanguageCode", value: "en"  },
+  { label: "Arabic",           field: "appLanguageCode", value: "ar"  },
+];
 
 export default function Users() {
-  const [loading , setLoading] = useState<boolean>(false);
-  const [data, setData] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeFilter, setActiveFilter] = useState("All");
+  const [loading, setLoading]           = useState(false);
+  const [data, setData]                 = useState<any[]>([]);
+  const [searchTerm, setSearchTerm]     = useState("");
+  const [serverFilter, setServerFilter] = useState<UserFilters>({});
+  const [activeServer, setActiveServer] = useState("All");
+  const [activeClients, setActiveClients] = useState<string[]>([]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const cursorStackRef = useRef<any[]>([undefined]);
+  const [lastDoc, setLastDoc]         = useState<any>(null);
+  const [hasNextPage, setHasNextPage] = useState(false);
+
+  const { toasts, showDeleteToast } = useDeleteToast();
+
+  // ── Client-side filtering + search on top of server results ───────────────
   const filteredData = useMemo(() => {
-      return data.filter((user) => {
-        // Category filtering
-        const matchesCategory =
-          activeFilter === "All" ||
-          user.status.toLowerCase() === activeFilter.toLowerCase();
-  
-        // Search filtering (EN + AR)
-        const matchesSearch =
-          user.customer.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.customer.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.contact.phone.includes(searchTerm);
-  
-        return matchesCategory && matchesSearch;
+    return data.filter((u) => {
+      // client-side filter tags
+      const passesClientFilters = activeClients.every((label) => {
+        const cf = CLIENT_FILTERS.find((f) => f.label === label);
+        if (!cf) return true;
+        return u[cf.field] === cf.value;
       });
-    }, [activeFilter, searchTerm,data]);
 
-  const {toasts, showDeleteToast } = useDeleteToast();
+      // search
+      const term = searchTerm.toLowerCase();
+      const passesSearch = !term || (
+        u.name?.toLowerCase().includes(term) ||
+        u.email?.toLowerCase().includes(term) ||
+        u.phone?.includes(term)
+      );
 
-  const renderCellContent = (heading: TableHeading, row: any) => {
-  switch (heading.id) {
-    case "customer":
-      return (
-        <UserInfoDialog user={row}  onDelete={() => {
-              setData((prevData) => prevData.filter((user) => user.id !== row.id));
-              showDeleteToast(`Deleted ${row.customer.first_name} ${row.customer.last_name}`)
-             }} >
-        <div className="flex items-center gap-4">
-          {/* Avatar */}
-          <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-semibold">
-            {row.customer.first_name[0]}
-            {row.customer.last_name[0]}
-          </div>
+      return passesClientFilters && passesSearch;
+    });
+  }, [data, activeClients, searchTerm]);
 
-          <div className="flex flex-col">
-            <span className="font-bold text-slate-900 tracking-wide cursor-pointer">
-              {row.customer.first_name} {row.customer.last_name}
-            </span>
-            <span className="text-xs text-slate-500">
-              ID: {row.customer.id}
-            </span>
-          </div>
-        </div>
-        </UserInfoDialog>
-      )
+  const toggleClientFilter = (label: string) => {
+    setActiveClients((prev) =>
+      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
+    );
+  };
 
-    case "contact":
-      return (
-        <div className="flex flex-col gap-1 text-sm">
-          <div className='flex items-center whitespace-nowrap gap-2'>
-            <Mail className='h-3 w-3' />
-            <span className="text-slate-700">
-               {row.contact.email}
-            </span>
-          </div>
-          <div className='flex items-center whitespace-nowrap gap-2'>
-            <Phone className='h-3 w-3' />
-            <span className="text-slate-700">
-               {row.contact.phone}
-            </span>
-          </div>
-        </div>
-      )
-
-    case "orders":
-      return (
-        <span className="font-semibold text-slate-900">
-          {row.orders}
-        </span>
-      )
-
-    case "total_spent":
-      return (
-        <div className="flex flex-col">
-          <span className="text-xs text-cyan-500 font-semibold">
-            SAR
-          </span>
-          <span className="font-semibold text-slate-900">
-            {row.total_spent.toFixed(2)}
-          </span>
-        </div>
-      )
-
-    case "status":
-      return (
-        <span
-          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-            row.status === "Active"
-              ? "bg-green-100 text-green-700"
-              : row.status === "Inactive"
-              ? "bg-yellow-100 text-yellow-600"
-              : "bg-red-100 text-red-600"
-              
-          }`}
-        >
-          {row.status.toUpperCase()}
-        </span>
-      )
-
-    case "actions":
-      return (
-        <div className="flex justify-end">
-           <ActionsDropdown
-             onView={() => console.log("View", row.id)}
-             onEdit={() => console.log("Edit", row.id)}
-             onDelete={() => {
-              setData((prevData) => prevData.filter((user) => user.id !== row.id));
-              showDeleteToast(`Deleted ${row.customer.first_name} ${row.customer.last_name}`)
-             }}
-            />
-        </div>
-      )
-
-    default:
-      return "-"
+  // ── Data fetching ──────────────────────────────────────────────────────────
+ const fetchPage = async (cursor: any, filtersToUse: UserFilters = serverFilter) => {
+  setLoading(true);
+  try {
+    const result = cursor
+      ? await getUsersNextPage(cursor, PAGE_SIZE, filtersToUse)
+      : await getUsers(PAGE_SIZE, filtersToUse);
+    setData(result.rows);
+    setLastDoc(result.lastDoc);
+    setHasNextPage(result.rows.length === PAGE_SIZE);
+  } catch (e) {
+    console.error("Failed to fetch users:", e);
+  } finally {
+    setLoading(false);
   }
-}
+  };
+  
+  const refetch = () => {
+    cursorStackRef.current = [undefined];
+    setCurrentPage(1);
+    fetchPage(undefined, serverFilter);
+  };
+  
+  useEffect(() => {
+    cursorStackRef.current = [undefined];
+    setCurrentPage(1);
+    fetchPage(undefined, serverFilter); // pass directly, don't rely on closure
+  }, [serverFilter]);
 
-  useEffect(()=>{
-    setLoading(true);
-    setTimeout(()=>{
-      setData(mockData);
-      setLoading(false);
-    },2000)
-  },[]);
+ 
+
+  const handleNext = async () => {
+  if (!hasNextPage || !lastDoc) return;
+  cursorStackRef.current.push(lastDoc);
+  await fetchPage(lastDoc, serverFilter);
+  setCurrentPage((p) => p + 1);
+};
+
+const handlePrev = async () => {
+  if (currentPage <= 1) return;
+  cursorStackRef.current.pop();
+  const prevCursor = cursorStackRef.current[cursorStackRef.current.length - 1];
+  await fetchPage(prevCursor, serverFilter);
+  setCurrentPage((p) => p - 1);
+};
+
+  const rangeStart = (currentPage - 1) * PAGE_SIZE + 1;
+  const rangeEnd   = (currentPage - 1) * PAGE_SIZE + data.length;
+
+  // ── Cell renderer ──────────────────────────────────────────────────────────
+  const renderCellContent = (heading: TableHeading, row: User & { id: string }) => {
+    switch (heading.id) {
+      case "name": {
+        const name = row.name?.trim() || "Unknown";
+        const initials = name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+        return (
+          <UserInfoDialog
+            user={row}
+            onDelete={() => { showDeleteToast(`Deleted ${name}`); refetch(); }}
+            onSuccess={refetch}
+          >
+            <div className="flex items-center gap-3 cursor-pointer">
+              <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center font-semibold text-sm">
+                {row.profileImageUrl
+                  ? <img src={row.profileImageUrl} alt={name} className="w-full h-full object-cover" />
+                  : initials}
+              </div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-slate-900">{name}</span>
+                <span className="text-xs text-slate-400">ID: {row.userId}</span>
+              </div>
+            </div>
+          </UserInfoDialog>
+        );
+      }
+      case "email":
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-slate-700 text-sm">{row.email ?? "—"}</span>
+            {row.phone && <span className="text-xs text-slate-400">{row.phoneCode ?? ""} {row.phone}</span>}
+          </div>
+        );
+      case "language":
+        return row.appLanguageCode ? (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-xs font-medium uppercase tracking-wide">
+            {row.appLanguageCode}
+          </span>
+        ) : <span className="text-slate-400 text-sm">—</span>;
+      case "registeredAt": {
+        const date = row.createdAt ? new Date(row.createdAt) : null;
+        return (
+          <span className="text-slate-600 text-sm">
+            {date ? date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—"}
+          </span>
+        );
+      }
+      case "status":
+        return row.isDeleted ? (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600">DELETED</span>
+        ) : (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">ACTIVE</span>
+        );
+      default: return "—";
+    }
+  };
+
   return (
-    <div className='min-h-screen bg-white'>
-        <Header />
-        <main className='flex flex-col pt-16 pl-60 min-h-screen'>
-            {/* cards to display stats */}
-            <section className='flex  justify-between px-8 pb-6'>
-              <div className='flex flex-col gap-1'>
-                <h2 className='text-xl font-semibold'>Users</h2>
-                <p className='text-sm text-slate-700'>Manage your user base and their order history</p>
-              </div>
-              <div className='flex gap-3 items-center'>
-                  <button className='flex gap-2 items-center bg-white px-5 py-3 border border-slate-500/30 text-sm font-medium rounded-md '>
-                    <Download className='h-3 w-3' />
-                      Export CSV
-                  </button>
-                  <Link href={"/admin/add-admin"} className='flex gap-2 items-center bg-[#7F50F4] px-5 py-3 text-white text-sm font-medium rounded-md'>
-                        + Add New Admin
-                  </Link>
-                  <button className='flex gap-2 items-center bg-[#7F50F4] px-5 py-3 text-white text-sm font-medium rounded-md'>
-                        + Add New User
-                  </button>
-                </div>
-                <DeleteToastContainer toasts={toasts} />
-            </section>
-            <section className='flex justify-between px-8 pb-6'>
-              <div className='flex bg-slate-50 border border-slate-100 shadow-inner items-center gap-3 rounded-lg p-1'>
-                    {["All", "Active", "Inactive", "Blocked"].map((filter) => (
-                      <FilterButtonWithBadge
-                        key={filter}
-                        label={filter}
-                        count={
-                          filter === "All"
-                            ? data.length
-                            : data.filter((user) => user.status === filter).length
-                        }
-                        active={activeFilter === filter}
-                        onClick={() => setActiveFilter(filter)}
-                      />
-                    ))}
-              </div>
-              <div className="flex items-center gap-3 px-4 py-2 bg-white border border-[#E2E8F0] rounded-lg shadow-sm w-100">
-              <Search size={16} className="text-slate-400" />
+    <div className="min-h-screen bg-white">
+      <Header />
+      <main className="flex flex-col pt-16 pl-60 min-h-screen">
+
+        {/* ── Top bar: title + search + export ────────────────────────────── */}
+        <section className="flex items-center justify-between px-8 py-5 border-b border-slate-100">
+          <div>
+            <h2 className="text-xl font-semibold">Users</h2>
+            <p className="text-sm text-slate-500">Manage your user base and their account details</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg shadow-sm w-72">
+              <Search size={14} className="text-slate-400 shrink-0" />
               <input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by name, email, or phone..."
-                className="bg-transparent outline-none text-xs text-slate-600 placeholder:text-[#94A3B8] placeholder:font-semibold w-full"
+                placeholder="Search by name, email or phone..."
+                className="bg-transparent outline-none text-xs text-slate-600 placeholder:text-slate-400 w-full"
               />
             </div>
-            </section>
-            {/* users table */}
-            <section>
-              <div className='px-8 pb-6'>
-                   {loading ? (
-                    <TableSkeleton tableHeadings={userHeadings} />
-                   ):(
-                    <table className='w-full'>
-                        <thead className='bg-slate-100'>
-                            <tr>
-                                {userHeadings.map((heading)=>(
-                                    <th key={heading.id} className='px-6 py-4 text-left text-sm font-bold text-slate-500 first:rounded-tl-lg last:rounded-tr-lg'>{heading.title} </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-slate-200">
-                            {filteredData.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={userHeadings.length}
-                                        className="px-6 py-12 text-center text-sm text-slate-500 ">
-                                            No data available
-                                        </td>
-                                    </tr>
-                                ):(
-                                    filteredData.map((row,index)=>(
-                                        <tr key={row.id || index} className="hover:bg-slate-50 transition-colors">
-                                        {userHeadings.map((heading)=>(
-                                            <td key={heading.id}
-                                            className={`px-6 py-3 text-sm text-slate-700`}>
-                                                {renderCellContent(heading, row)}
-                                            </td>
-                                        ))}
-                                        </tr>
-                                    ))
-                                )}
-                        </tbody>
-                        <tfoot className='bg-slate-200/50'>
-                            <tr>
-                                <td colSpan={userHeadings.length} className='px-6 py-3 first:rounded-bl-lg last:rounded-br-lg'>
-                                    <div className='flex items-center justify-between'>
-                                        {/* left : showing text */}
-                                        <div className='text-left text-sm text-slate-600'>
-                                            showing <b>1</b>-<b>4</b> of <b>{data.length}</b> orders
-                                        </div>
-                                        {/* Right: pagination controls */}
-                                        <div className='flex items-center gap-2'>
-                                            <button>
-                                                <ChevronLeft className='h-3 w-3 text-slate-700' />
-                                            </button>
-                                            <button>
-                                                <ChevronRight className='h-3 w-3 text-slate-700'/>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    
-                                </td>
-                            </tr>
-                                
-                            </tfoot>
-                    </table>
-                   )}
-                </div>
+            <button className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm">
+              <Download className="h-3.5 w-3.5" /> Export CSV
+            </button>
+          </div>
+          <DeleteToastContainer toasts={toasts} />
+        </section>
 
-            </section>
-        </main>
+        {/* ── Filter bar ───────────────────────────────────────────────────── */}
+        <section className="flex items-center gap-3 px-8 py-3 border-b border-slate-100 flex-wrap">
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider mr-1">
+            <SlidersHorizontal className="h-3.5 w-3.5" /> Filters
+          </div>
+
+          {/* Divider */}
+          <div className="h-5 w-px bg-slate-200" />
+
+          {/* Server-side: isDeleted */}
+          <div className="flex bg-slate-50 border border-slate-100 shadow-inner items-center gap-1 rounded-lg p-1">
+            {SERVER_FILTERS.map(({ label, filters: f }) => (
+              <FilterButtonWithBadge
+                key={label}
+                label={label}
+                count={
+                  label === "All" ? data.length
+                  : data.filter((u) => u.isDeleted === f.isDeleted).length
+                }
+                active={activeServer === label}
+                onClick={() => { setActiveServer(label); setServerFilter(f); }}
+              />
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div className="h-5 w-px bg-slate-200" />
+
+          {/* Client-side: toggleable tags */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {CLIENT_FILTERS.map(({ label, field, value }) => {
+              const on = activeClients.includes(label);
+              const count = data.filter((u) => u[field] === value).length;
+              return (
+                <button
+                  key={label}
+                  onClick={() => toggleClientFilter(label)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    on
+                      ? "bg-[#7F50F4] border-[#7F50F4] text-white shadow-sm"
+                      : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                  }`}
+                >
+                  {label}
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${on ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Clear client filters */}
+          {activeClients.length > 0 && (
+            <button
+              onClick={() => setActiveClients([])}
+              className="text-xs text-slate-400 hover:text-slate-600 underline transition ml-1"
+            >
+              Clear
+            </button>
+          )}
+        </section>
+
+        {/* ── Table ────────────────────────────────────────────────────────── */}
+        <section className="px-8 py-6">
+          {loading ? (
+            <TableSkeleton tableHeadings={userHeadings} />
+          ) : (
+            <table className="w-full">
+              <thead className="bg-slate-100">
+                <tr>
+                  {userHeadings.map((h) => (
+                    <th key={h.id} className="px-6 py-4 text-left text-sm font-bold text-slate-500 first:rounded-tl-lg last:rounded-tr-lg">
+                      {h.title}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan={userHeadings.length} className="px-6 py-12 text-center text-sm text-slate-500">
+                      No users found
+                    </td>
+                  </tr>
+                ) : (
+                  filteredData.map((row, index) => (
+                    <tr key={row.id ?? index} className="hover:bg-slate-50 transition-colors">
+                      {userHeadings.map((h) => (
+                        <td key={h.id} className="px-6 py-3 text-sm text-slate-700">
+                          {renderCellContent(h, row)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              <tfoot className="bg-slate-200/50">
+                <tr>
+                  <td colSpan={userHeadings.length} className="px-6 py-3 rounded-b-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">
+                        Showing <b>{rangeStart}</b>–<b>{rangeEnd}</b> users
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button onClick={handlePrev} disabled={currentPage <= 1 || loading}
+                          className="p-1 rounded hover:bg-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                          <ChevronLeft className="h-4 w-4 text-slate-700" />
+                        </button>
+                        <span className="text-sm text-slate-600 px-1">Page {currentPage}</span>
+                        <button onClick={handleNext} disabled={!hasNextPage || loading}
+                          className="p-1 rounded hover:bg-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                          <ChevronRight className="h-4 w-4 text-slate-700" />
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </section>
+      </main>
     </div>
-  )
-}   
-
+  );
+}

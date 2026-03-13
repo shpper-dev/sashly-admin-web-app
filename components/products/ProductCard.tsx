@@ -1,10 +1,9 @@
 import { Item } from '@/lib/models/product.model'
 import { Pencil, Trash2 } from 'lucide-react'
 import Image from 'next/image'
-import  { useState } from 'react'
-import { doc, deleteDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase/config'
+import  { useState } from 'react';
 import EditItemDialog from './EditItemDialog'
+import { deleteItem } from '@/lib/firebase/product'
 
 
 interface ProductCardProps {
@@ -20,7 +19,7 @@ export default function ProductCard({ product, onDeleted, onUpdated }: ProductCa
     if (!confirm(`Delete "${product.name}"? This cannot be undone.`)) return
     setDeleting(true)
     try {
-      await deleteDoc(doc(db, 'Items', product.id))
+      await deleteItem(product.id);
       onDeleted?.()
     } catch (e) {
       console.error('Delete failed:', e)

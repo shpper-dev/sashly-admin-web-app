@@ -7,7 +7,6 @@ import { TableHeading } from '@/lib/types';
 import { ActionsDropdown } from '@/components/ActionsDropdown';
 import { useDeleteToast } from '@/hooks/useDeleteToast';
 import { DeleteToastContainer } from '@/components/users/DeleteToast';
-import UserInfoDialog from '@/components/users/UserInfoDialog';
 import FilterButtonWithBadge from '@/components/buttons/FilterButtonWithBadges';
 import DriverInfoDialog from '@/components/drivers/DriverInfoDialog';
 

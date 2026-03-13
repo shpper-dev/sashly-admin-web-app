@@ -1,6 +1,6 @@
-import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, deleteDoc, getDocs } from "firebase/firestore";
 import { db} from "@/lib/firebase/config";
-import { Service } from "../models/product.model";
+import { Category, Service } from "../models/product.model";
 import { uploadImage } from "../utils";
 
 // category
@@ -33,6 +33,50 @@ export async function createCategory(data: {
   });
 }
 
+export const updateCategory = async (
+  id: string,
+  data: {
+    name: string;
+    arabicName: string;
+    searchTerms: string[];
+    photo?: File | null;
+    existingPhotoUrl?: string | null;
+    photoRemoved?: boolean;
+  }
+) => {
+
+  let photoUrl: string | null = data.existingPhotoUrl ?? null;
+
+  // Upload new photo if provided
+  if (data.photo) {
+    photoUrl = await uploadImage(data.photo, "categories");
+  }
+
+  // Remove photo
+  if (data.photoRemoved) {
+    photoUrl = null;
+  }
+
+  await updateDoc(doc(db, "Categories", id), {
+    name: data.name,
+    arabicName: data.arabicName,
+    searchTerms: data.searchTerms,
+    photoUrl,
+  });
+};
+
+export async function deleteCategory(id: string) {
+  await deleteDoc(doc(db, "Categories", id));
+  
+}
+
+export async function getCategories(): Promise<Category[]> {
+  const snap = await getDocs(collection(db, "Categories"));
+  const rows = snap.docs.map((d) => d.data() as Category);
+  return rows;
+  
+}
+
 // service
 
 export async function createService(data:{
@@ -53,6 +97,38 @@ export async function createService(data:{
   await updateDoc(docRef, {id: docRef.id})
   
 }
+
+export const updateService = async (
+  id: string,
+  data: {
+    name: string;
+    arabicName: string;
+    description?: string | null;
+    arabicDescription?: string | null;
+    price: number;
+    searchTerms: string[];
+  }
+) => {
+
+  await updateDoc(doc(db, "Services", id), {
+    name: data.name,
+    arabicName: data.arabicName,
+    description: data.description ?? null,
+    arabicDescription: data.arabicDescription ?? null,
+    price: data.price,
+    searchTerms: data.searchTerms,
+  });
+
+};
+
+export async function deleteService(id: string) {
+  await deleteDoc(doc(db, "Services", id));
+}
+
+export const getServices = async (): Promise<Service[]> => {
+  const snap = await getDocs(collection(db, "Services"));
+  return snap.docs.map((d) => d.data() as Service);
+};
 
 // items
 export async function createItem(data:{
@@ -116,4 +192,8 @@ export async function updateItem(id: string, data: {
     photoUrl,
     services: data.selectedServices,
   })
+}
+
+export async function deleteItem(id: string) {
+  await deleteDoc(doc(db, 'Items', id));
 }
