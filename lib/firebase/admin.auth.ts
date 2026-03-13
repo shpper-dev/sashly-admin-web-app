@@ -2,7 +2,7 @@
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, UserCredential } from "firebase/auth";
 import { Admin, AdminRole } from "../models/admin.model";
 import { auth, db } from "./config";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { deleteSession } from "../session";
 import { redirect } from "next/navigation";
 
@@ -91,4 +91,10 @@ export async function logoutAdmin(): Promise<void> {
 }
 
 // getAdminProfile
+export async function getAdmins(): Promise<Admin[]> {
+    const q = query(collection(db, "admins"), where("isDeleted", "==", false));
+    const snap = await getDocs(q);
+    const admins = snap.docs.map((d) => d.data() as Admin)
+    return admins
+}
 
