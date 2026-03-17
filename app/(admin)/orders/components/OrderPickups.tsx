@@ -1,236 +1,226 @@
-import { OrderData, TableHeading } from '@/lib/types';
-import { FileText, Pencil, PencilLine, Printer, ReceiptText, Search } from 'lucide-react';
-import React from 'react'
-import { TabKey } from '../page';
-import FilterButton from '@/components/buttons/FilterDropdown';
-import ConfirmDeliveryDialog from '@/components/orders/ConfirmDeliveryDialog';
-import Link from 'next/link';
-import { CustomerDetailsDialog } from '@/components/orders/CustomerDetailsDialog';
-import UserInfoDialog from '@/components/users/UserInfoDialog';
-/* ---------------- TABLE HEADINGS ---------------- */
+"use client";
+import { FileText, PencilLine, Printer, ReceiptText } from "lucide-react";
+import React, { useState } from "react";
+import { Order, OrderStatuses } from "@/lib/models/order.model";
+import { TableHeading } from "@/lib/types";
+import { OrderTabProps } from "../page";
+import FilterButton from "@/components/buttons/FilterDropdown";
+import ConfirmDeliveryDialog from "@/components/orders/ConfirmDeliveryDialog";
+// import CustomerCell from "@/components/orders/CustomerCell";
+import TableSkeleton from "@/components/skeleton/TableSkeleton";
+import Link from "next/link";
+import { OrderTable } from "@/components/orders/OrderTable";
+import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
+import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
+import OrderPaymentDialog from "@/components/orders/OrderPaymentDialog";
+
 const orderHeadings: TableHeading[] = [
-  { id: "id", title: "ID" },
-  { id: "placed", title: "PLACED" },
-  { id: "customer", title: "CUSTOMER" },
-  { id:"route", title: "Route#"},
-  { id: "contact", title: "CONTACT" },
-  { id: "order_details", title: "ORDER DETAILS" },
-  { id: "pcs", title: "PCS" },
-  { id: "notes", title: "NOTES" },
-  { id: "paid", title: "PAID"},
-  { id: "total", title: "TOTAL"},
-  { id: "actions", title: ""}
+  { id: "id",           title: "ID"           },
+  { id: "placed",       title: "PLACED"       },
+  { id: "customer",     title: "CUSTOMER"     },
+  // { id: "route",        title: "ROUTE #"      },
+  { id: "contact",      title: "CONTACT"      },
+  { id: "order_details",title: "ORDER DETAILS"},
+  { id: "pcs",          title: "PCS"          },
+  { id: "notes",        title: "NOTES"        },
+  { id: "paid",         title: "PAID"         },
+  { id: "total",        title: "TOTAL"        },
+  { id: "actions",      title: ""             },
 ];
 
+export default function OrderPickups({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
+  const [search, setSearch] = useState("");
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
-const baseRows = Array.from({ length: 5 }).map((_, i) => ({
-  id: 3861 + i,
-  placed: "10/01/26",
-  placed_badge: "1st",
-  customer: "Abdullah Q",
-  route: 6,
-  contact: {
-    type: "DELIVERY",
-    address: "24.805430307392644 // 46.76628251224954",
-    email: "dhaialjameelsgs@gmail.com"
-  },
+  const filtered = orders.filter((o) =>
+    !search ||
+    o.userName.toLowerCase().includes(search.toLowerCase()) ||
+    o.id.includes(search)
+  );
 
-  order_details: ["Laundry Bag x1", "Trousers x2", "T-Shirt x2","T-Shirt x1"],
-  pcs: 6,
-  paid: {date:"15/01/26", time: "8PM-10PM"},
-  total: 584.0,
-}));
+  const toggleItems = (id: string) => {
+    setExpandedItems((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
-// const dataByTab: Record<TabKey, any[]> = {
-//   detail: baseRows,
-//   cleaning: baseRows,
-//   ready: baseRows,
-//   pickups: baseRows,
-//   all: baseRows,
-// };
+  const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
+    switch (heading.id) {
+      case "id":
+        return <span className="text-xs font-mono text-slate-500">#{row.id.slice(-6)}</span>;
 
-export default function OrderPickups() {
-    const rows = baseRows //dataByTab["pickups"];
-    
-      // Helper function to render cell content
-      const renderCellContent = (heading: TableHeading, row: any) : React.ReactNode => {
-    
-        switch (heading.id) {
-          case "placed":
-            return (
-              <div className="flex flex-col items-start justify-start">
-                <span>{row.placed}</span>
-                {row.placed_badge && (
-                  <span className="px-1 py-0.5 text-xs rounded-md bg-yellow-100 text-yellow-700">
-                    {row.placed_badge}
-                  </span>
-                )}
-              </div>
-            );
-    
-          case "customer":
-            return (
-              <div>
-                <CustomerDetailsDialog customer={row.customer}>
-                  <span className="font-medium text-slate-800 cursor-pointer hover:text-purple-600 hover:underline">{row.customer}</span>
-                </CustomerDetailsDialog>
-              </div>
-            );
-          
-          case "contact":
-             return (
-               <div className="flex flex-col text-xs gap-1">
-                <span className="font-semibold text-slate-400">
-                     {row.contact.type}
-                </span>
+      case "placed":
+        return (
+          <div className="flex flex-col items-start">
+            <span className="text-xs">
+              {new Date(row.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+            </span>
+          </div>
+        );
 
-                <span className="text-slate-600">
-                    {row.contact.address}
-                </span>
-                <span className='text-slate-600'>
-                    {row.contact.email}
-                </span>
-               </div>
-           );
+      case "customer":
+        return (
+          // <CustomerCell
+          //   userId={row.userId}
+          //   userName={row.userName}
+          //   userPhone={row.userPhone}
+          //   onDelete={onStatusUpdate}
+          // />
+          <div className="flex flex-col cursor-pointer">
+            <span className="font-medium text-slate-800 hover:text-purple-600 hover:underline">
+              {row.userName}
+            </span>
+             {row.userPhone && (
+              <span className="text-xs text-slate-400">{row.userPhone}</span>
+            )}
+          </div>
+        );
 
-    
-          case "order_details": {
-            const visibleCount = 3;
-            const items = row.order_details ;
-            const hiddenCount = items.length - visibleCount;
-    
-            return (
-              <div className='flex flex-col'>
-                <div className="flex flex-wrap gap-2">
-                {items.slice(0, visibleCount).map((item:any, i:any) => (
-                  <span
-                    key={i}
-                    className="px-3 py-1 rounded-full bg-white text-xs text-slate-700 shadow-sm border border-slate-200"
-                  >
-                    {item}
-                  </span>
-                ))}
-         
-                {hiddenCount > 0 && (
-                  <span className="px-3 py-1 rounded-full text-purple-600 text-xs bg-purple-200/50 font-bold cursor-pointer">
-                    +{hiddenCount} more
-                  </span>
-                )}
-              </div>
+      // route is not on Order model yet - add when updated
+      // case "route":
+      //   return <span className="text-slate-500 text-xs">—</span>;
 
-              </div>
-              
-            );
-        } 
-          case "notes":
-            return(
-                <button className='flex w-full items-center justify-center  text-[#02D0FF]'>
-                    <FileText className="h-5 w-5" />
-                </button>
-            ) ;
-          case "paid":
-            return(
-            <div className="flex flex-col items-start justify-start">
-              <span className="text-left w-full text-xs font-semibold">
-               {row.paid.date}
+      case "contact":
+        return (
+          <div className="flex flex-col text-xs gap-1">
+            <span className="font-semibold text-slate-400">PICKUP</span>
+            <span className="text-slate-600">{row.deliveryAddress?.formattedAddress ?? "—"}</span>
+            <span className="text-slate-600">{row.userEmail}</span>
+          </div>
+        );
+
+      case "order_details": {
+        const visibleCount = 3;
+        const isExpanded = expandedItems[row.id];      
+
+        const itemsToShow = isExpanded
+          ? row.items
+          : row.items.slice(0, visibleCount);      
+
+        const hiddenCount = row.items.length - visibleCount;      
+
+        return (
+          <div className="flex flex-wrap gap-2 items-center">
+            
+            {itemsToShow.map((item, i) => (
+              <span
+                key={i}
+                className="px-3 py-1 rounded-full bg-white text-xs text-slate-700 shadow-sm border border-slate-200"
+              >
+                {item.name} x{item.count}
               </span>
-              <span className="text-slate-500 text-xs font-medium whitespace-nowrap">
-               {row.paid.time}
+            ))}      
+
+            {!isExpanded && hiddenCount > 0 && (
+              <span
+                onClick={() => toggleItems(row.id)}
+                className="px-3 py-1 rounded-full text-purple-600 text-xs bg-purple-200/50 font-bold cursor-pointer hover:bg-purple-200"
+              >
+                +{hiddenCount} more
               </span>
-             </div>
-            )
-          case "total":
-            return (
-              <div>
-                <div className="text-[#02D0FF] text-xs font-bold">SAR</div>
-                <div className="font-semibold text-slate-800">
-                  {row.total.toFixed(2)}
-                </div>
-              </div>
-            );
-    
-          case "actions":
-            return (
-              <div className="flex items-center gap-0.5 justify-end">
-                <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
-                  <PencilLine className="w-4 h-4 text-slate-400 hover:text-slate-600" />
+            )}      
+
+            {isExpanded && row.items.length > visibleCount && (
+              <span
+                onClick={() => toggleItems(row.id)}
+                className="px-3 py-1 rounded-full text-slate-600 text-xs bg-slate-200 font-semibold cursor-pointer hover:bg-slate-300"
+              >
+                Show less
+              </span>
+            )}
+          </div>
+        );
+      }
+
+      case "pcs":
+        return <span className="font-semibold">{row.items.reduce((s, i) => s + i.count, 0)}</span>;
+
+      case "notes":
+        return (
+          <button className="flex w-full items-center justify-center text-[#02D0FF]">
+            <FileText className="h-5 w-5" />
+          </button>
+        );
+
+      case "paid":
+        return row.isPaid ? (
+          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">PAID</span>
+        ) : (
+          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-500">UNPAID</span>
+        );
+
+      case "total":
+        return (
+          <div>
+            <div className="text-[#02D0FF] text-xs font-bold">SAR</div>
+            <div className="font-semibold text-slate-800">{row.totalPrice.toFixed(2)}</div>
+          </div>
+        );
+
+      case "actions":
+        return (
+          <div className="flex items-center gap-0.5 justify-end">
+            {row.isPaid ? (
+              <UpdateOrderDialog
+              orderId={row.id}
+              currentStatus={row.latestStatus.status as OrderStatuses}
+              onSuccess={onStatusUpdate}>
+              <button className="px-2 py-1.5 text-xs flex items-center gap-2 font-medium bg-blue-200/50 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
+              <PencilLine className="w-4 h-4 text-slate-400 hover:text-slate-600" />
+              PICKUP
+              </button>
+            </UpdateOrderDialog>
+
+            ):(
+              <OrderPaymentDialog total={row.totalPrice} 
+              orderId={row.id}
+              isPaid={row.isPaid}
+              onSuccess={onStatusUpdate}
+              >
+                <button className="px-3 py-1.5 text-xs flex items-center gap-2 font-medium text-white bg-[#02D0FF] rounded-lg hover:bg-blue-200 transition-colors cursor-pointer">
+                  <PencilLine className="w-4 h-4 text-white" />
+                  PAYMENT
                 </button>
-                <ConfirmDeliveryDialog   >
-                    <button className="px-2 py-1.5 text-[10px] font-medium bg-blue-200/50 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
-                  COLLECTED
-                </button>
-                </ConfirmDeliveryDialog>
-              </div>
-            );
-    
-          default:
-            const cellValue = row[heading.id as keyof OrderData];
-            if (typeof cellValue === 'string' || typeof cellValue === 'number') {
-            return cellValue;
-          }
-          return null;
-        }
-      };
-    
+              </OrderPaymentDialog>
+
+            )}
+            
+          </div>
+        );
+
+      default: return null;
+    }
+  };
+
   return (
-     <div>
-        <div className="flex justify-between items-center mb-4 px-8">
-          <div className="flex gap-3">
-            <FilterButton label="Filter Route(s)" />
-            <Link href={"orders/delivery-manifest"} className="flex items-center gap-2 px-4 py-2 border  border-purple-600 rounded-lg bg-white text-sm font-medium text-purple-600  hover:bg-slate-50 transition-colors">
-                <Printer className="h-4 w-4" />
-                Delivery Printout
-            </Link>
-            <button className="flex items-center gap-2 px-4 py-2 border border-[#02D0FF]  rounded-lg bg-white text-sm font-medium  text-[#02D0FF]  hover:bg-slate-50 transition-colors">
-                <ReceiptText className="h-4 w-4" />
-                 Print Receipts
-            </button>
-          </div>
-
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 bg-slate-50 text-slate-400" />
-            <input
-              placeholder="Search anything..."
-              className="pl-9 pr-4 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
-            />
-          </div>
+    <div>
+      <div className="flex justify-between items-center mb-4 px-8">
+        <div className="flex gap-3">
+          <FilterButton label="Filter Route(s)" />
+          <Link href="orders/delivery-manifest" className="flex items-center gap-2 px-4 py-2 border border-purple-600 rounded-lg bg-white text-sm font-medium text-purple-600 hover:bg-slate-50 transition-colors">
+            <Printer className="h-4 w-4" /> Delivery Printout
+          </Link>
+          <button className="flex items-center gap-2 px-4 py-2 border border-[#02D0FF] rounded-lg bg-white text-sm font-medium text-[#02D0FF] hover:bg-slate-50 transition-colors">
+            <ReceiptText className="h-4 w-4" /> Print Receipts
+          </button>
         </div>
-         <div className="bg-white border overflow-hidden shadow-sm">
-          <table className="w-full text-sm">
-            <thead className="border-b border-slate-200">
-              <tr>
-                {orderHeadings.map((heading) => (
-                  <th
-                    key={heading.id}
-                    className="text-left first:pl-2 px-3 py-3 text-sm font-semibold text-slate-500 uppercase "
-                  >
-                    {heading.title}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+        <OrderSearchInput value={search} onChange={setSearch} />
+      </div>
 
-            <tbody className="bg-white divide-y divide-slate-200">
-              {rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="hover:bg-slate-50 transition-colors"
-                >
-                  {orderHeadings.map((heading) => (
-                    <td
-                      key={heading.id}
-                      className="first:pl-2 px-3 py-3 text-sm text-slate-700"
-                    >
-                      {renderCellContent(heading, row)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-     </div>
-    
-
-  )
+      {loading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
+        <OrderTable
+          headings={orderHeadings}
+          rows={filtered}
+          renderCell={renderCell}
+          currentPage={currentPage}
+          hasNextPage={hasNextPage}
+          onNext={onNext}
+          onPrev={onPrev}
+          pageSize={pageSize}
+          loading={loading}
+        />
+      )}
+    </div>
+  );
 }

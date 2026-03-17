@@ -31,11 +31,13 @@ import { useState } from "react"
 import { format } from "date-fns"
 
 interface ConfirmDeliveryDialogProps {
-  children: React.ReactNode
+  children: React.ReactNode;
+  onStatusUpdate: (orderId: string) => void;
 }
 
 export default function ConfirmDeliveryDialog({
   children,
+  onStatusUpdate,
 }: ConfirmDeliveryDialogProps) {
   const [open, setOpen] = useState(false)
   const [date, setDate] = useState<Date | undefined>()
