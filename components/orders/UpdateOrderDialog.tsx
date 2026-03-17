@@ -1,124 +1,115 @@
 "use client";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { OrderStatuses } from "@/lib/models/order.model";
+import { advanceOrderStatus, getAllowedNextStatuses } from "@/lib/firebase/order";
 
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-
-import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
-import { useState } from "react"
+const STATUS_LABELS: Record<OrderStatuses, string> = {
+  unpaid:         "Unpaid",
+  confirmed:      "Confirmed",
+  pickedUp:       "Picked Up",
+  sorting:        "Sorting",
+  inProgress:     "In Progress",
+  readyToDeliver: "Ready to Deliver",
+  delivered:      "Delivered",
+  cancelled:      "Cancelled",
+};
 
 interface UpdateOrderDialogProps {
-  orderId: number
-  children: React.ReactNode
+  orderId: string;
+  currentStatus: OrderStatuses;
+  onSuccess?: () => void;
+  children: React.ReactNode;
 }
 
-export default function UpdateOrderDialog({ orderId, children }: UpdateOrderDialogProps) {
-  const [updateAction, setUpdateAction] = useState("cleaned")
-  const [notes, setNotes] = useState("");
-  const [open, setOpen] = useState(false);
+export default function UpdateOrderDialog({ orderId, currentStatus, onSuccess, children }: UpdateOrderDialogProps) {
+  const [open, setOpen]           = useState(false);
+  const [selected, setSelected]   = useState<OrderStatuses | null>(null);
+  const [description, setDescription] = useState("");
+  const [saving, setSaving]       = useState(false);
 
+  const allowedNext = getAllowedNextStatuses(currentStatus);
 
-  const handleSubmit = () => {
-    setOpen(false);
-  }
+  const handleSave = async () => {
+    if (!selected) return;
+    setSaving(true);
+    try {
+      await advanceOrderStatus(orderId, selected, description || undefined);
+      setOpen(false);
+      setSelected(null);
+      setDescription("");
+      onSuccess?.();
+    } catch (e) {
+      console.error("Status update failed:", e);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen} >
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-
-      <DialogContent className="max-w-180 rounded-2xl p-8">
-        {/* HEADER */}
-        <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle className="text-3xl font-bold text-slate-700">
-            Update Order
-          </DialogTitle>
-          <DialogClose>
-                <X className="w-5 h-5 text-slate-400 cursor-pointer" />
-          </DialogClose>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Update Order Status</DialogTitle>
         </DialogHeader>
 
-        {/* FORM CONTENT */}
-        <div className="space-y-6 mt-6">
+        <div className="flex flex-col gap-4 pt-2">
+          {/* Current status */}
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-slate-400">Current:</span>
+            <span className="font-semibold text-slate-700">{STATUS_LABELS[currentStatus]}</span>
+          </div>
 
-          {/* ID + NOTES */}
-          <div className="grid grid-cols-2 gap-6">
-            <div className="flex flex-col">
-              <label className="text-slate-400 font-semibold">ID</label>
+          {/* Next status options */}
+          {allowedNext.length === 0 ? (
+            <p className="text-sm text-slate-400">No further transitions available.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <span className="text-xs uppercase tracking-wider text-slate-400 font-bold">Advance to</span>
+              {allowedNext.map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setSelected(status)}
+                  className={`flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                    selected === status
+                      ? "bg-purple-50 border-purple-400 text-purple-700"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300"
+                  }`}
+                >
+                  {STATUS_LABELS[status]}
+                  {/* Show what flag gets set */}
+                  {status === "confirmed"     && <span className="text-xs text-green-500">Sets isPaid ✓</span>}
+                  {status === "delivered"     && <span className="text-xs text-blue-500">Sets isDelivered ✓</span>}
+                  {status === "cancelled"     && <span className="text-xs text-red-400">Sets isCancelled ✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Optional description */}
+          {selected && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs uppercase tracking-wider text-slate-400 font-bold">Note (optional)</label>
               <input
-                value={orderId}
-                disabled
-                className="mt-2 p-3 bg-slate-100 border-none rounded-xl"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g. Items loaded into machines"
+                className="h-10 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-400"
               />
             </div>
+          )}
 
-            <div className="flex flex-col">
-              <label className="text-slate-400 font-semibold">Notes</label>
-              <input
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="mt-2 p-3 bg-slate-100 border-none rounded-xl resize-none"
-              />
-            </div>
-          </div>
-
-          {/* UPDATE SELECT */}
-          <div className="flex flex-col gap-1">
-            <label className="text-slate-400 font-semibold">Update</label>
-
-            <div className="p-2 bg-slate-100 border-none rounded-xl">
-            <Select value={updateAction} onValueChange={setUpdateAction}>
-              <SelectTrigger className="w-full h-12 px-3 bg-transparent border-0 shadow-none focus:ring-0 focus:ring-offset-0">
-            <SelectValue placeholder="Select action" />
-              </SelectTrigger>
-
-              <SelectContent 
-                    position="popper"
-                    className="p-3">
-                <SelectItem value="cleaned" className="p-3" >
-                  Mark as Cleaned
-                </SelectItem>
-
-                <SelectItem value="notes-only" className="p-3">
-                  Update Notes Without Checkin
-                </SelectItem>
-
-                <SelectItem value="delete" className="p-3">
-                  Delete Order
-                </SelectItem>
-
-                <SelectItem value="reference" className="p-3">
-                  Add Check Number / Reference (using Notes)
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            </div>
-          </div>
-
-          {/* SUBMIT BUTTON */}
-          <div className="flex justify-end pt-6">
-            <Button
-              onClick={handleSubmit}
-              className="h-14 px-10 text-lg rounded-xl bg-[#02D0FF] hover:bg-cyan-500 shadow-lg cursor-pointer"
-            >
-              Submit
-            </Button>
-          </div>
+          {/* Save */}
+          <button
+            onClick={handleSave}
+            disabled={!selected || saving}
+            className="mt-1 w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-40 transition"
+          >
+            {saving ? "Saving..." : "Confirm Update"}
+          </button>
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

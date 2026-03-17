@@ -29,4 +29,35 @@ export interface NotificationPref{
     getServiceAlerts: boolean;
 }
 
+export interface UserAddress{
+    id: string;
+    userId: string;
+    type: string;
+    formattedAddress?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+    address1?: string | null;
+    address2?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postalCode?: string | null;
+    country?: CustomCountry | null;
+    isDefault: boolean;
+    buildingName?: string | null;
+    floor?: string | null;
+    apartment?: string | null;
+    specialLandmark?: string | null;
+    createdAt: number;
+}
+export interface CustomCountry{
+    code: string;
+    en: string;
+    ar: string;
+    searchTerms: string[];
 
+}
+
+export interface DeviceToken{
+    userId: string;
+    deviceToken: string;
+}

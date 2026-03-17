@@ -1,51 +1,58 @@
 "use client";
-
-import Header from "@/components/Header";
-import { useState } from "react";
+import { getOrders, getOrdersNextPage, OrderFilters } from "@/lib/firebase/order";
+import { Order } from "@/lib/models/order.model";
+import { useEffect, useRef, useState } from "react";
 import OrderDetails from "./components/OrderDetails";
+import Header from "@/components/Header";
 import OrderCleaning from "./components/OrderCleaning";
 import OrderReady from "./components/OrderReady";
 import OrderPickups from "./components/OrderPickups";
-import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
-import Link from "next/link";
-;
 
-// tab types
 export type TabKey = "detail" | "cleaning" | "ready" | "pickups" //| "all" ;
+// Tab → filters mapping
+const TAB_FILTERS: Record<TabKey, OrderFilters> = {
+  detail:  {}, //all
+  pickups: { status: "confirmed" },    //once confirmed..next to be picked up                                 
+  cleaning:{ status: "inProgress" }, //after pickup in progress
+  ready:   { status: "readyToDeliver" }, //ready for delivery
+  
+};
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: "detail", label: "Detail" },
+  { key: "pickups", label: "Pickups" },
   { key: "cleaning", label: "Cleaning" },
   { key: "ready", label: "Ready" },
-  { key: "pickups", label: "Pickups" },
+  
   // { key: "all", label: "All" },
 ];
 
-
-
+export interface OrderTabProps {
+  orders: Order[];
+  loading: boolean;
+  onStatusUpdate: () => void;
+  // pagination
+  currentPage: number;
+  hasNextPage: boolean;
+  onNext: () => void;
+  onPrev: () => void;
+  pageSize: number;
+}
 
 export default function OrdersPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>("detail");
+  const [activeTab, setActiveTab]     = useState<TabKey>("detail");
+  const [loading, setLoading]         = useState(false);
+  const [orders, setOrders]           = useState<Order[]>([]);
+  const [lastDoc, setLastDoc]         = useState<any>(null);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const cursorStack = useRef<any[]>([undefined]);
+
   const pageHeadings: Record<TabKey, { main: string; sub: string }> = {
-  detail: {
-    main: "Detail",
-    sub: "Placed orders are listed here",
-  },
-
-  cleaning: {
-    main: "Cleaning",
-    sub: "Orders that are currently cleaning",
-  },
-
-  ready: {
-    main: "Ready",
-    sub: "Ready laundry to send for pickups",
-  },
-
-  pickups: {
-    main: "Pickups",
-    sub: "All the pickups are listed here",
-  },
+  detail: { main: "Detail", sub: "Placed orders are listed here", },
+  cleaning: { main: "Cleaning", sub: "Orders that are currently cleaning",},
+  ready: { main: "Ready", sub: "Ready laundry to send for pickups", },
+  pickups: { main: "Pickups", sub: "All the pickups are listed here",},
 
   // all: {
   //   main: "All Orders",
@@ -53,9 +60,64 @@ export default function OrdersPage() {
   // },
 };
 
+  const PAGE_SIZE = 20;
 
-  
-  return (
+  const fetchPage = async (cursor: any, filters: OrderFilters) => {
+    setLoading(true);
+    try {
+      const result = cursor
+        ? await getOrdersNextPage(cursor, PAGE_SIZE, filters)
+        : await getOrders(PAGE_SIZE, filters);
+      setOrders(result.rows);
+      setLastDoc(result.lastDoc);
+      setHasNextPage(result.rows.length === PAGE_SIZE);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refetch = () => {
+    cursorStack.current = [undefined];
+    setCurrentPage(1);
+    fetchPage(undefined, TAB_FILTERS[activeTab]);
+  };
+
+  // Refetch when tab changes
+  useEffect(() => {
+    cursorStack.current = [undefined];
+    setCurrentPage(1);
+    fetchPage(undefined, TAB_FILTERS[activeTab]);
+  }, [activeTab]);
+
+  const handleNext = async () => {
+    if (!hasNextPage || !lastDoc) return;
+    cursorStack.current.push(lastDoc);
+    await fetchPage(lastDoc, TAB_FILTERS[activeTab]);
+    setCurrentPage((p) => p + 1);
+  };
+
+  const handlePrev = async () => {
+    if (currentPage <= 1) return;
+    cursorStack.current.pop();
+    const prev = cursorStack.current[cursorStack.current.length - 1];
+    await fetchPage(prev, TAB_FILTERS[activeTab]);
+    setCurrentPage((p) => p - 1);
+  };
+
+  // Pass orders + loading + refetch + pagination down to each tab
+  const tabProps: OrderTabProps = {
+  orders,
+  loading,
+  onStatusUpdate: refetch,
+  currentPage,
+  hasNextPage,
+  onNext: handleNext,
+  onPrev: handlePrev,
+  pageSize: PAGE_SIZE,
+};
+return (
     <div className="min-h-screen bg-white">
       <Header />
 
@@ -72,16 +134,17 @@ export default function OrdersPage() {
 
           {/* STATS */}
           <div className="flex items-center gap-8">
-            <Stat label="ORDERS" value="12" />
-            <Stat label="PIECES" value="94" />
-            <Stat label="TOTAL" value="SAR 1,450" />
-            <Stat label="UNPAID" value="SAR 420" danger />
+            <Stat label="ORDERS" value={orders.length} />
+            <Stat label="PIECES" value={orders.reduce((acc, order) => 
+            acc + order.items.reduce((sum, item) => sum + item.count, 0), 0)}  />
+            <Stat label="TOTAL" value={`SAR ${orders.reduce((acc, order) => acc + order.totalPrice, 0).toFixed(2)}`}  />
+            <Stat label="UNPAID" value={`SAR ${orders.filter(o=> !o.isPaid).reduce((acc,order) => acc + order.totalPrice, 0).toFixed(2)}`} danger />
 
             <div className="w-px h-7 bg-slate-300" />
             
-            <Link href={"/orders/add-order"} className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors shadow-md">
+            {/* <Link href={"/orders/add-order"} className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors shadow-md">
               + New Order
-            </Link>
+            </Link> */}
           </div>
         </div>
         </section>
@@ -105,35 +168,17 @@ export default function OrdersPage() {
               </button>
             ))}
           </div>
-        
-          {/* Update Button */}
-          <div className="mb-2">
-            <UpdateOrderDialog orderId={3261} >
-              <button className="bg-[#02D0FF] text-xs font-medium text-white rounded-lg px-4 py-2 transition-colors shadow-sm cursor-pointer">
-                 Update Order
-              </button>
-
-            </UpdateOrderDialog>
-            
-          </div>
         </div>
         </div>
         </section>
         <section>
         {/* FILTER ROW */}
+        {activeTab === "detail"   && <OrderDetails  {...tabProps} />}
+        {activeTab === "pickups"  && <OrderPickups  {...tabProps} />}
+        {activeTab === "cleaning" && <OrderCleaning {...tabProps} />}
+        {activeTab === "ready"    && <OrderReady    {...tabProps} />}
         
-        { activeTab === "detail" && (
-            <OrderDetails />
-        )}
-        {activeTab === "cleaning" &&(
-            <OrderCleaning />
-        )}
-        {activeTab === "ready" &&(
-            <OrderReady />
-        )}
-        {activeTab === "pickups" &&(
-            <OrderPickups />
-        )}
+        
         {/* for now disabling all */}
         {/* {activeTab === "all" &&(
             <OrderDetails />
@@ -143,6 +188,7 @@ export default function OrdersPage() {
       </main>
     </div>
   );
+
 }
 
 //  helpers
@@ -152,7 +198,7 @@ function Stat({
   danger,
 }: {
   label: string;
-  value: string;
+  value: string  | number;
   danger?: boolean;
 }) {
   return (
