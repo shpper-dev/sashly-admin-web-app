@@ -10,7 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { ChevronDown, KeyRound, User } from "lucide-react";
+import { ChevronDown, KeyRound, LogOut, User } from "lucide-react";
+import { logoutAdmin } from "@/lib/firebase/admin.auth";
 
 interface UserDropDownProps{
     user: string;
@@ -52,6 +53,15 @@ export default function UserDropDown({user}:UserDropDownProps) {
           <DropdownMenuItem className="cursor-pointer">
             <KeyRound className="mr-2 h-4 w-4" />
             <span>Change Password</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="cursor-pointer">
+            <button className="flex items-center text-red-500 w-full text-left"
+                onClick={async ()=> {
+                    await logoutAdmin();
+                    // router.refresh();
+                }}>
+                <LogOut className="mr-2 h-4 w-4 text-red-500" /> <span className="">Sign Out</span>
+                </button>
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

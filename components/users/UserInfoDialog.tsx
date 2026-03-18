@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Calendar, Camera, ChartNoAxesColumn,  CreditCard,LucideIcon, Mail, MessageCircle, PencilLine, Phone, ShoppingBag, Timer, Truck, Wallet } from 'lucide-react';
 import UsersOrders from './UsersOrders';
@@ -34,25 +34,51 @@ const HEADER_TABS: HeaderTabDef[] = [
 
 interface UserInfoDialogProps {
   children: React.ReactNode;
-  user: User;
+  user?: User;
   onDelete?: () => void;
   onSuccess?: () => void;
 }
 
 export default function UserInfoDialog({ children, user, onDelete, onSuccess }: UserInfoDialogProps) {
-  const [activeTab, setActiveTab] = React.useState<TabName>("orders");
-  const name = user.name?.trim() || "Unknown";
-  const initials = name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
-  const date = new Date(user.createdAt);
+  const [activeTab, setActiveTab] = useState<TabName>("orders");
+  const [open, setOpen] = useState(false);
+  const isLoading = !user;
+
+let name = "Unknown";
+let initials = "";
+let date: Date | null = null;
+
+if (user) {
+  name = user.name?.trim() || "Unknown";
+  initials = name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+
+  date = new Date(user.createdAt);
+}
+ 
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <div onClick={() => setOpen(true)}>
+            {children}
+        </div>
+      </DialogTrigger>
 
       <DialogContent className="p-0 gap-0 border-0 overflow-hidden w-[75vw]! h-[90vh]! min-w-0! max-w-none! rounded-3xl shadow-2xl">
         <DialogHeader className="sr-only">
           <DialogTitle>User Information</DialogTitle>
         </DialogHeader>
+        {!user ? (
+            <div className="p-6 text-sm text-slate-400">
+              Loading user...
+            </div>
+          ) : (
+            <>
+        
 
         {/* Outer container — fills the dialog exactly */}
         <div className="flex h-full w-full overflow-hidden">
@@ -125,7 +151,7 @@ export default function UserInfoDialog({ children, user, onDelete, onSuccess }: 
                     Joined
                     </span>
                     <span className="text-xs text-slate-600 font-medium truncate">
-                      {date.toLocaleDateString("en-US",{ year: "numeric", month: "short", day: "numeric" })}
+                      {date?.toLocaleDateString("en-US",{ year: "numeric", month: "short", day: "numeric" })}
                     </span>
                   </div>
                 </div>
@@ -190,10 +216,12 @@ export default function UserInfoDialog({ children, user, onDelete, onSuccess }: 
 
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
+            </>
+          )}
+              </DialogContent>
+            </Dialog>
+          );
+        }
 
 //helpers
 function HeaderTab({

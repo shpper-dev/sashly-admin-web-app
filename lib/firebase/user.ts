@@ -10,7 +10,8 @@ import {
   updateDoc,
   doc,
   Query,
-  getCountFromServer
+  getCountFromServer,
+  getDoc
 } from "firebase/firestore";
 
 
@@ -102,3 +103,11 @@ export async function restoreUser(userId: string) {
     deletedAt: null,
   });
 }
+
+// get singular user by id
+export async function getUserById(id: string): Promise<User | null> {
+  const snap = await getDoc(doc(db,"users",id));
+  if(!snap.exists()) return null;
+  return {id: snap.id, ...snap.data() } as unknown as User
+}
+
