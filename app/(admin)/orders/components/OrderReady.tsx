@@ -5,15 +5,13 @@ import { Order, OrderStatuses } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
 import { OrderTabProps } from "../page";
 import FilterButton from "@/components/buttons/FilterDropdown";
-import OrderPaymentDialog from "@/components/orders/OrderPaymentDialog";
-// import CustomerCell from "@/components/orders/CustomerCell";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import { OrderTable } from "@/components/orders/OrderTable";
-import ConfirmDeliveryDialog from "@/components/orders/ConfirmDeliveryDialog";
-import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
-import ConfirmActionDialog from "@/components/orders/ConfirmActionDialog";
+import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import { markDelivered, markDeliveryStarted } from "@/lib/firebase/order";
+import CustomerCell from "@/components/orders/CustomerCell";
+import { useDeleteToast } from "@/hooks/useDeleteToast";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -32,6 +30,7 @@ const orderHeadings: TableHeading[] = [
 export default function OrderReady({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
   const [search, setSearch] = useState("");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+  const { toasts, showDeleteToast } = useDeleteToast();
 
   const filtered = orders.filter((o) =>
     !search ||
@@ -73,20 +72,13 @@ export default function OrderReady({ orders, loading, onStatusUpdate, currentPag
 
       case "customer":
         return (
-          // <CustomerCell
-          //   userId={row.userId}
-          //   userName={row.userName}
-          //   userPhone={row.userPhone}
-          //   onDelete={onStatusUpdate}
-          // />
-          <div className="flex flex-col cursor-pointer">
-            <span className="font-medium text-slate-800 hover:text-purple-600 hover:underline">
-              {row.userName}
-            </span>
-             {row.userPhone && (
-              <span className="text-xs text-slate-400">{row.userPhone}</span>
-            )}
-          </div>
+           <CustomerCell
+           userId={row.userId}
+           userName={row.userName}
+           userPhone={row.userPhone}
+           onDelete={() => { showDeleteToast(`Deleted ${name}`)}}
+         />
+          
         );
 
       case "contact":

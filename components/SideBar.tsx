@@ -1,5 +1,5 @@
 "use client";
-import {Eye, LayoutDashboard,Search, LogOut, Megaphone, OctagonAlert, Package, Settings, Shirt, TriangleAlert, Truck, Users, Wallet, ChevronDown} from "lucide-react";
+import {Eye, LayoutDashboard,Search, LogOut, Megaphone, OctagonAlert, Package, Settings, Shirt, TriangleAlert, Truck, Users, Wallet, ChevronDown, TicketPercent, Tags} from "lucide-react";
 import Link from "next/link";
 import UserDropDown from "./UserDropDown";
 import { usePathname, useRouter } from "next/navigation";
@@ -48,6 +48,11 @@ const navItems = [
         href:"/products"
     },
     {
+        name:"Promotions",
+        icon: Tags,
+        href:"/coupons"
+    },
+    {
         name:"Broadcast",
         icon: Megaphone,
         href:"/broadcast"
@@ -73,7 +78,7 @@ export default function SideBar() {
         <div className="flex mt-3 ml-6 w-full justify-center">
             <img src="/images/logo.png" alt="sashly logo" className="h-14"  />
         </div>
-        <div className="w-54 flex flex-col justify-between h-full px-2 mt-4">
+        <div className="w-54 flex flex-col justify-between h-full px-2 mt-3">
             {/* top section */}
             <nav className="space-y-1">
                {navItems.map((item) => {
@@ -141,22 +146,22 @@ export default function SideBar() {
                })}
              </nav>
             {/* Bottom section */}
-            <div className="flex flex-col w-50 ">
+            <div className="flex flex-col w-50 mb-2 ">
                 <hr className="border-slate-200 mb-2" />
 
-                <Link href="/settings" className="flex gap-2 px-3 py-2 rounded-lg text-slate-500 hover:text-indigo-600 focus:text-indigo-600 hover:bg-slate-200/50 focus:bg-slate-200/50 transition-all duration-200">
+                <Link href="/settings" className="flex gap-1 px-3 py-2 rounded-lg text-slate-500 hover:text-indigo-600 focus:text-indigo-600 hover:bg-slate-200/50 focus:bg-slate-200/50 transition-all duration-200">
                     <Settings className="h-5 w-5" />
                     <span>Settings</span>
                 </Link>
 
                 <UserDropDown user="John"/>
-                <button className="flex items-center gap-3 px-3 py-2 mb-2 rounded-lg transition-all duration-200 text-red-500  hover:bg-slate-200/50 cursor-pointer w-full text-left"
+                {/* <button className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-red-500  hover:bg-slate-200/50 cursor-pointer w-full text-left"
                 onClick={async ()=> {
                     await logoutAdmin();
                     // router.refresh();
                 }}>
                 <LogOut className="h-5 w-5 text-red-500" /> <span className="">Sign Out</span>
-                </button>
+                </button> */}
 
             </div>
             </div>

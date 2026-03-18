@@ -79,7 +79,7 @@ export default function Users() {
     );
   };
 
-  // ── Data fetching ──────────────────────────────────────────────────────────
+  //  Data fetching
  const fetchPage = async (cursor: any, filtersToUse: UserFilters = serverFilter) => {
   setLoading(true);
   try {
@@ -128,7 +128,7 @@ const handlePrev = async () => {
   const rangeStart = (currentPage - 1) * PAGE_SIZE + 1;
   const rangeEnd   = (currentPage - 1) * PAGE_SIZE + data.length;
 
-  // ── Cell renderer ──────────────────────────────────────────────────────────
+  //  Cell renderer 
   const renderCellContent = (heading: TableHeading, row: User & { id: string }) => {
     switch (heading.id) {
       case "name": {
@@ -190,7 +190,7 @@ const handlePrev = async () => {
       <Header />
       <main className="flex flex-col pt-16 pl-60 min-h-screen">
 
-        {/* ── Top bar: title + search + export ────────────────────────────── */}
+        {/*  Top bar: title + search + export */}
         <section className="flex items-center justify-between px-8 py-5 border-b border-slate-100">
           <div>
             <h2 className="text-xl font-semibold">Users</h2>
@@ -214,7 +214,7 @@ const handlePrev = async () => {
           <DeleteToastContainer toasts={toasts} />
         </section>
 
-        {/* ── Filter bar ───────────────────────────────────────────────────── */}
+        {/*  Filter bar  */}
         <section className="flex items-center gap-3 px-8 py-3 border-b border-slate-100 flex-wrap">
           <div className="flex items-center gap-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider mr-1">
             <SlidersHorizontal className="h-3.5 w-3.5" /> Filters
@@ -277,7 +277,7 @@ const handlePrev = async () => {
           )}
         </section>
 
-        {/* ── Table ────────────────────────────────────────────────────────── */}
+        {/* Table*/}
         <section className="px-8 py-6">
           {loading ? (
             <TableSkeleton tableHeadings={userHeadings} />
