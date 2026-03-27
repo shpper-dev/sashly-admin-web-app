@@ -223,7 +223,6 @@ export default function CategoryDialog({
                 </span>
               ))}
               <input
-                required
                 type="text"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}

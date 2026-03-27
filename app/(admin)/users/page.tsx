@@ -8,9 +8,8 @@ import { useDeleteToast } from '@/hooks/useDeleteToast';
 import { DeleteToastContainer } from '@/components/users/DeleteToast';
 import UserInfoDialog from '@/components/users/UserInfoDialog';
 import FilterButtonWithBadge from '@/components/buttons/FilterButtonWithBadges';
-import { getUsers, getUsersNextPage, UserFilters } from '@/lib/firebase/user';
+import { getUsers, getUsersNextPage, UserFilters, getUsersCount } from '@/lib/firebase/user';
 import { User } from '@/lib/models/user.model';
-
 const PAGE_SIZE = 10;
 
 const userHeadings: TableHeading[] = [
@@ -21,14 +20,14 @@ const userHeadings: TableHeading[] = [
   { id: "status",       title: "STATUS"        },
 ];
 
-// Server-side filter (isDeleted only — has composite index)
+// Server-side filter
 const SERVER_FILTERS: { label: string; filters: UserFilters }[] = [
   { label: "All",     filters: {}                  },
   { label: "Active",  filters: { isDeleted: false } },
   { label: "Deleted", filters: { isDeleted: true  } },
 ];
 
-// Client-side filters (no extra indexes needed)
+// Client-side filters 
 const CLIENT_FILTERS: { label: string; field: keyof User; value: any }[] = [
   { label: "Email Verified",   field: "isEmailVerified", value: true  },
   { label: "Phone Verified",   field: "isPhoneVerified", value: true  },
@@ -50,8 +49,28 @@ export default function Users() {
   const [hasNextPage, setHasNextPage] = useState(false);
 
   const { toasts, showDeleteToast } = useDeleteToast();
+  const [counts, setCounts] = useState({
+  all: 0,
+  active: 0,
+  deleted: 0,
+});
 
-  // ── Client-side filtering + search on top of server results ───────────────
+useEffect(() => {
+  const fetchCounts = async () => {
+    const [all, active, deleted] = await Promise.all([
+      getUsersCount({}),
+      getUsersCount({ isDeleted: false }),
+      getUsersCount({ isDeleted: true }),
+    ]);
+
+    setCounts({ all, active, deleted });
+  };
+
+  fetchCounts();
+}, []);
+
+
+  //  Client-side filtering + search on top of server results
   const filteredData = useMemo(() => {
     return data.filter((u) => {
       // client-side filter tags
@@ -105,7 +124,7 @@ export default function Users() {
   useEffect(() => {
     cursorStackRef.current = [undefined];
     setCurrentPage(1);
-    fetchPage(undefined, serverFilter); // pass directly, don't rely on closure
+    fetchPage(undefined, serverFilter); 
   }, [serverFilter]);
 
  
@@ -230,9 +249,12 @@ const handlePrev = async () => {
                 key={label}
                 label={label}
                 count={
-                  label === "All" ? data.length
-                  : data.filter((u) => u.isDeleted === f.isDeleted).length
-                }
+                label === "All"
+                  ? counts.all
+                  : label === "Active"
+                  ? counts.active
+                  : counts.deleted
+              }
                 active={activeServer === label}
                 onClick={() => { setActiveServer(label); setServerFilter(f); }}
               />

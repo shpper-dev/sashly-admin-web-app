@@ -5,7 +5,7 @@ import { Order } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
 import { OrderTabProps } from "../page";
 import FilterButton from "@/components/buttons/FilterDropdown";
-import OrderDetailsDrawer from "@/components/orders/OrderDetailsDrawer";
+import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog";
 // import CustomerCell from "@/components/orders/CustomerCell";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
@@ -135,12 +135,12 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
       case "actions":
         return (
           <div className="flex items-center gap-1 justify-end">
-            <OrderDetailsDrawer order={row} onStatusUpdate={onStatusUpdate}>
+            <OrderDetailsDialog order={row} onStatusUpdate={onStatusUpdate}>
               <button className="px-3 py-1.5 flex items-center gap-2 text-xs font-medium bg-blue-200/30 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
                <PencilLine className="w-4 h-4 text-slate-400 hover:text-slate-600" />
                 DETAILS
               </button>
-            </OrderDetailsDrawer>
+            </OrderDetailsDialog>
           </div>
         );
 

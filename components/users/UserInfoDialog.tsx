@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Calendar, Camera, ChartNoAxesColumn,  CreditCard,LucideIcon, Mail, MessageCircle, PencilLine, Phone, ShoppingBag, Timer, Truck, Wallet } from 'lucide-react';
 import UsersOrders from './UsersOrders';
@@ -10,8 +10,11 @@ import UsersMessages from './UsersMessages';
 import UsersPickups from './UsersPickups';
 import UsersPhotos from './UsersPhotos';
 import { User } from '@/lib/models/user.model';
+import { getActiveOrdersByUserId } from "@/lib/firebase/order";
+import { Order } from '@/lib/models/order.model';
+import UsersWallet from './UsersWallet';
 
-type TabName = "orders" | "stats" | "edit customer"| "payments" | "messages" | "pickups" | "photos";
+type TabName = "orders" | "stats" | "edit customer"| "wallet" | "messages" | "pickups" | "photos";
 
 interface HeaderTabDef {
   name: string;
@@ -21,11 +24,11 @@ interface HeaderTabDef {
 
 
 const HEADER_TABS: HeaderTabDef[] = [
-  { name: "Orders",          key: "orders",         icon: ShoppingBag        },
+  { name: "Orders",          key: "orders",          icon: ShoppingBag        },
   { name: "Stats",           key: "stats",           icon: ChartNoAxesColumn },
   { name: "Edit Customer",   key: "edit customer",   icon: PencilLine        },
-  // { name: "Wallet",          key: "wallet",          icon: Wallet            },
-  { name: "Payments",        key: "payments",        icon: CreditCard        },
+  { name: "Wallet",          key: "wallet",          icon: Wallet            },
+  // { name: "Payments",        key: "payments",        icon: CreditCard        },
   { name: "Messages",        key: "messages",        icon: MessageCircle     },
   { name: "Pickups",         key: "pickups",         icon: Truck             },
   { name: "Photos",          key: "photos",          icon: Camera            },
@@ -42,6 +45,8 @@ interface UserInfoDialogProps {
 export default function UserInfoDialog({ children, user, onDelete, onSuccess }: UserInfoDialogProps) {
   const [activeTab, setActiveTab] = useState<TabName>("orders");
   const [open, setOpen] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   const isLoading = !user;
 
 let name = "Unknown";
@@ -58,6 +63,24 @@ if (user) {
 
   date = new Date(user.createdAt);
 }
+
+useEffect(() => {
+  const fetchOrders = async () => {
+    if (!user || !open) return;
+
+    try {
+      setLoadingOrders(true);
+      const data = await getActiveOrdersByUserId(user.userId);
+      setOrders(data);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  fetchOrders();
+}, [user, open]);
  
 
   return (
@@ -100,9 +123,9 @@ if (user) {
                   <span className="font-bold text-[#101828] text-base">
                     {user.name ?? "Abdullah Q"}
                   </span>
-                  {/* <span className="text-xs text-slate-400 font-medium">
-                    ID: {user.userId ?? "CUST:001"}
-                  </span> */}
+                  <span className="text-xs text-slate-400 font-medium">
+                    ID: {user.userId.slice(-6) ?? "CUST:001"}
+                  </span>
                   <span className={`mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${user.isDeleted ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"} `}>
                     {user.isDeleted ? "DELETED" : "ACTIVE"}
                   </span>
@@ -158,22 +181,22 @@ if (user) {
               </div>
 
               {/* Stats row */}
-              {/* <div className="flex items-center gap-3 w-full justify-center">
+              <div className="flex items-center gap-3 w-full justify-center">
                 <div className="flex flex-col  pl-3 pr-6 py-2 bg-white rounded-xl border border-slate-100">
                   <span className="text-[10px] font-bold uppercase  text-slate-400">
                     Orders
                   </span>
-                  <span className="text-md font-bold text-slate-700"></span>
+                  <span className="text-md font-bold text-slate-700">{orders.length}</span>
                 </div>
                 <div className="flex flex-col pl-3 pr-6 py-2 bg-white rounded-xl border border-slate-100">
                   <span className="text-[10px] font-bold uppercase text-slate-400 text-nowrap">
                     Spent
                   </span>
                   <span className="text-md font-bold text-[#4F39F6] text-nowrap">
-                   SAR 
+                   SAR {orders.reduce((acc,order) => acc + order.totalPrice,0)}
                   </span>
                 </div>
-              </div> */}
+              </div>
             </div>
 
             {/* Bottom: action buttons */}
@@ -187,10 +210,10 @@ if (user) {
             </div>
           </div>
 
-          {/* ── Main content area ── fills remaining width, tab content scrolls */}
+          {/* Main content area */}
           <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
 
-            {/* Tab bar — fixed, never scrolls away */}
+            {/* Tab bar*/}
             <div className="flex items-center border-b border-slate-100 px-4 overflow-x-auto shrink-0">
               {HEADER_TABS.map((tab) => (
                 <HeaderTab
@@ -203,12 +226,13 @@ if (user) {
               ))}
             </div>
 
-            {/* Tab content — this scrolls */}
+            {/* Tab content*/}
             <div className="flex-1 overflow-y-auto">
-              {activeTab === "orders" && <UsersOrders />}
+              {activeTab === "orders" && <UsersOrders orders={orders} loading={loadingOrders} />}
               {activeTab === "edit customer" && <UsersEditCustomer onDelete={onDelete} user={user} onSuccess={onSuccess} />}
+              {activeTab === "wallet" && <UsersWallet userId={user.userId} />}
               {activeTab === "stats" && <UsersStats />}
-              {activeTab === "payments" && <UsersPayment />}
+              {/* {activeTab === "payments" && <UsersPayment />} */}
               {activeTab === "messages" && <UsersMessages />}
               {activeTab === "pickups" && <UsersPickups />}
               {activeTab === "photos" && <UsersPhotos />}
