@@ -13,3 +13,12 @@ export interface Coupon {
   isActive: boolean;
   createdAt: number;
 }
+
+// coupon usage to track per person usage
+interface CouponUsage {
+  id: string;
+  userId: string;
+  couponId: string;
+  orderId: string;
+  createdAt: number;
+}

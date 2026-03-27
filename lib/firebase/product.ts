@@ -2,6 +2,7 @@ import { collection, addDoc, updateDoc, doc, deleteDoc, getDocs } from "firebase
 import { db} from "@/lib/firebase/config";
 import { Category, Service } from "../models/product.model";
 import { uploadImage } from "../utils";
+import { mapCategory, mapService } from "../mappers/product.mappper";
 
 // category
 
@@ -72,7 +73,7 @@ export async function deleteCategory(id: string) {
 
 export async function getCategories(): Promise<Category[]> {
   const snap = await getDocs(collection(db, "Categories"));
-  const rows = snap.docs.map((d) => d.data() as Category);
+  const rows = snap.docs.map(mapCategory);
   return rows;
   
 }
@@ -127,7 +128,7 @@ export async function deleteService(id: string) {
 
 export const getServices = async (): Promise<Service[]> => {
   const snap = await getDocs(collection(db, "Services"));
-  return snap.docs.map((d) => d.data() as Service);
+  return snap.docs.map(mapService);
 };
 
 // items

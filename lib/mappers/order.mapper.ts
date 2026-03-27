@@ -1,0 +1,77 @@
+import { DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
+import { Order, OrderItem, OrderStatus, OrderRating } from "../models/order.model";
+
+export function mapOrder(doc: QueryDocumentSnapshot<DocumentData>): Order {
+  const data = doc.data();
+
+  if (!data) {
+    throw new Error(`Order document ${doc.id} is empty`);
+  }
+
+  const mapStatus = (s: any): OrderStatus => ({
+    status: s?.status ?? "unpaid",
+    description: s?.description ?? null,
+    createdAt: s?.createdAt ?? 0,
+  });
+
+  const mapItem = (item: any): OrderItem => ({
+    id: item?.id ?? "",
+    name: item?.name ?? "",
+    arabicName: item?.arabicName ?? "",
+    categoryId: item?.categoryId ?? "",
+    serviceName: item?.serviceName ?? "",
+    serviceArabicName: item?.serviceArabicName ?? "",
+    servicePrice: item?.servicePrice ?? 0,
+    count: item?.count ?? 0,
+    photoUrl: item?.photoUrl ?? null,
+  });
+
+  const mapRating = (r: any): OrderRating => ({
+    rating: r?.rating ?? 0,
+    feedback: r?.feedback ?? null,
+    photoUrls: Array.isArray(r?.photoUrls) ? r.photoUrls : null,
+  });
+
+  return {
+    id: doc.id,
+
+    userId: data.userId ?? "",
+    userName: data.userName ?? "",
+    userEmail: data.userEmail ?? "",
+    userPhone: data.userPhone ?? "",
+
+    items: Array.isArray(data.items) ? data.items.map(mapItem) : [],
+
+    totalPrice: data.totalPrice ?? 0,
+
+    latestStatus: mapStatus(data.latestStatus),
+
+    statusHistory: Array.isArray(data.statusHistory)
+      ? data.statusHistory.map(mapStatus)
+      : [],
+
+    isPaid: data.isPaid ?? false,
+    isDelivered: data.isDelivered ?? false,
+    isCancelled: data.isCancelled ?? false,
+
+    serviceType: data.serviceType ?? "ordinary",
+
+    pickUpStartTime: data.pickUpStartTime ?? 0,
+    pickUpEndTime: data.pickUpEndTime ?? 0,
+
+    pickUpAddress: data.pickUpAddress ?? null,
+    deliveryAddress: data.deliveryAddress ?? null,
+
+    expectedDeliveryTime: data.expectedDeliveryTime ?? null,
+    deliveryStartTime: data.deliveryStartTime ?? null,
+    deliveryEndTime: data.deliveryEndTime ?? null,
+
+    paidBy: data.paidBy ?? null,
+    paymentInfo: data.paymentInfo ?? null,
+
+    ratingByUser: data.ratingByUser ? mapRating(data.ratingByUser) : null,
+
+    createdAt: data.createdAt?.toMillis?.() ?? data.createdAt ?? 0,
+    updatedAt: data.updatedAt?.toMillis?.() ?? data.updatedAt ?? 0,
+  };
+}

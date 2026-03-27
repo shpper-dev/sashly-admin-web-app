@@ -5,6 +5,7 @@ import {
   QueryConstraint
 } from "firebase/firestore";
 import { Order, OrderStatuses, OrderStatus } from "@/lib/models/order.model";
+import { mapOrder } from "../mappers/order.mapper";
 
 //Filters type
 export interface OrderFilters {
@@ -37,7 +38,7 @@ export async function getOrders(
 ): Promise<{ rows: Order[]; lastDoc: any }> {
   const q = query(collection(db, "orders"), ...buildOrderConstraints(filters, pageSize));
   const snapshot = await getDocs(q);
-  const rows = snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as Order));
+  const rows = snapshot.docs.map(mapOrder)
   return { rows, lastDoc: snapshot.docs[snapshot.docs.length - 1] ?? null };
 }
 
@@ -47,11 +48,10 @@ export async function getOrdersNextPage(
   filters: OrderFilters = {}
 ): Promise<{ rows: Order[]; lastDoc: any }> {
   const constraints = buildOrderConstraints(filters, pageSize);
-  // insert startAfter before limit (last two items)
   constraints.splice(constraints.length - 1, 0, startAfter(lastDoc));
   const q = query(collection(db, "orders"), ...constraints);
   const snapshot = await getDocs(q);
-  const rows = snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as Order));
+  const rows = snapshot.docs.map(mapOrder);
   return { rows, lastDoc: snapshot.docs[snapshot.docs.length - 1] ?? null };
 }
 
@@ -109,14 +109,21 @@ export async function confirmOrderPayment(
   };
 
 // now the order is coming in as confirmed even when unpaid..really no need to do specifically set paid true will auto change while confirming. then only update payment option via this function
+  // await updateDoc(doc(db, "orders", orderId), {
+  //   isPaid: true,
+  //   paidBy,
+  //   paymentInfo : paymentInfo ?? null,
+  //   latestStatus: statusEntry,
+  //   statusHistory: arrayUnion(statusEntry),
+  //   updatedAt: Date.now(),
+  // });
+  // seperating status from payment
   await updateDoc(doc(db, "orders", orderId), {
-    isPaid: true,
-    paidBy,
-    paymentInfo : paymentInfo ?? null,
-    latestStatus: statusEntry,
-    statusHistory: arrayUnion(statusEntry),
-    updatedAt: Date.now(),
-  });
+  isPaid: true,
+  paidBy,
+  paymentInfo: paymentInfo ?? null,
+  updatedAt: Date.now(),
+});
 }
 
 // delivery
@@ -149,4 +156,26 @@ export async function markDelivered(orderId: string): Promise<void> {
     statusHistory: arrayUnion(statusEntry),
     updatedAt: Date.now(),
   });
+}
+
+// get active orders by user id
+export async function getActiveOrdersByUserId(userId: string): Promise<Order[]> {
+  try {
+    const ordersRef = collection(db, "orders");
+
+    const q = query(
+      ordersRef,
+      where("userId", "==", userId),
+      where("isDelivered", "==", false) 
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    const orders: Order[] = querySnapshot.docs.map(mapOrder)
+
+    return orders;
+  } catch (error) {
+    console.error("Error fetching active orders:", error);
+    throw error;
+  }
 }

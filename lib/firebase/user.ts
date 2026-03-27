@@ -13,11 +13,11 @@ import {
   getCountFromServer,
   getDoc
 } from "firebase/firestore";
-
+import { QuerySnapshot, DocumentData } from "firebase/firestore";
 
 import { User } from "@/lib/models/user.model";
 import { db } from "./config";
-
+import { mapUser } from "../mappers/user.mapper";
 export interface UserFilters {
   isDeleted?: boolean;
   isEmailVerified?: boolean;
@@ -25,39 +25,67 @@ export interface UserFilters {
   appLanguageCode?: string;
 }
 
-export async function getUsers(pageSize = 20, filters: UserFilters = {}): Promise<{ rows: User[]; lastDoc: any }> {
-  const constraints: QueryConstraint[] = [];
 
-  if (filters.isDeleted === true) {
-    constraints.push(where("isDeleted", "==", true));
-  } else if (filters.isDeleted === false) {
-    // "Active" — explicitly not deleted
-    constraints.push(where("isDeleted", "==", false));
+
+function buildUserQuery(
+  pageSize: number,
+  filters: UserFilters,
+  cursor?: any
+) {
+  const constraints: QueryConstraint[] = [
+    orderBy("createdAt", "desc"),
+    limit(pageSize),
+  ];
+
+  if (filters.isDeleted !== undefined) {
+    constraints.push(where("isDeleted", "==", filters.isDeleted));
   }
- 
-  constraints.push(orderBy("createdAt", "desc"), limit(pageSize));
 
-  const q = query(collection(db, "users"), ...constraints);
-  const snapshot = await getDocs(q);
-  const rows = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as unknown as User));
-  return { rows, lastDoc: snapshot.docs[snapshot.docs.length - 1] ?? null };
+  if (filters.isEmailVerified !== undefined) {
+    constraints.push(where("isEmailVerified", "==", filters.isEmailVerified));
+  }
+
+  if (filters.isPhoneVerified !== undefined) {
+    constraints.push(where("isPhoneVerified", "==", filters.isPhoneVerified));
+  }
+
+  if (filters.appLanguageCode) {
+    constraints.push(where("appLanguageCode", "==", filters.appLanguageCode));
+  }
+
+  if (cursor) {
+    constraints.push(startAfter(cursor));
+  }
+
+  return query(collection(db, "users"), ...constraints);
+}
+export async function getUsers(
+  pageSize = 10,
+  filters: UserFilters = {}
+): Promise<{ rows: User[]; lastDoc: any }> {
+
+  const q = buildUserQuery(pageSize, filters);
+  const snapshot: QuerySnapshot<DocumentData> = await getDocs(q);
+  const rows = snapshot.docs.map(mapUser);
+  const lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+  return { rows, lastDoc };
 }
 
-export async function getUsersNextPage(lastDoc: any, pageSize = 20, filters: UserFilters = {}): Promise<{ rows: User[]; lastDoc: any }> {
-  const constraints: QueryConstraint[] = [];
+export async function getUsersNextPage(
+  lastDoc: any,
+  pageSize = 10,
+  filters: UserFilters = {}
+): Promise<{ rows: User[]; lastDoc: any }> {
 
-  if (filters.isDeleted === true) {
-    constraints.push(where("isDeleted", "==", true));
-  } else if (filters.isDeleted === false) {
-    constraints.push(where("isDeleted", "==", false));
-  }
+  const q = buildUserQuery(pageSize, filters, lastDoc);
 
-  constraints.push(orderBy("createdAt", "desc"), startAfter(lastDoc), limit(pageSize));
+  const snapshot: QuerySnapshot<DocumentData> = await getDocs(q);
 
-  const q = query(collection(db, "users"), ...constraints);
-  const snapshot = await getDocs(q);
-  const rows = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as unknown as User));
-  return { rows, lastDoc: snapshot.docs[snapshot.docs.length - 1] ?? null };
+  const rows = snapshot.docs.map(mapUser);
+
+  const newLastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+
+  return { rows, lastDoc: newLastDoc };
 }
 // to get just the total count
 export async function getUsersTotalCount(): Promise<number> {
@@ -111,3 +139,13 @@ export async function getUserById(id: string): Promise<User | null> {
   return {id: snap.id, ...snap.data() } as unknown as User
 }
 
+export async function getUsersCount(filters: UserFilters = {}) {
+  let q: any = collection(db, "users");
+
+  if (filters.isDeleted !== undefined) {
+    q = query(q, where("isDeleted", "==", filters.isDeleted));
+  }
+
+  const snap = await getCountFromServer(q);
+  return snap.data().count;
+}
