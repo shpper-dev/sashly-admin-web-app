@@ -6,7 +6,7 @@ import UserInfoDialog from "@/components/users/UserInfoDialog";
 
 interface CustomerCellProps {
   userId: string;
-  userName: string;   // from order snapshot — shows instantly, no fetch needed
+  userName: string;   // from order snapshot 
   userPhone?: string; 
   onDelete?: () => void;
 }
