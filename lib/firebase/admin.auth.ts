@@ -55,7 +55,7 @@ export async function loginAdmin(email: string, password: string) : Promise<Admi
 
 }
 
-// createAdmin (only callable by super admin)
+// createAdmin
 export async function createAdmin(
     email: string,
     password: string,
