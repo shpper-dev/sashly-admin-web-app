@@ -36,6 +36,7 @@ export async function loginAdmin(email: string, password: string) : Promise<Admi
         },
         body: JSON.stringify({idToken}),
     });
+   
 
     if(!res.ok){
         await signOut(auth);
@@ -91,10 +92,20 @@ export async function logoutAdmin(): Promise<void> {
 }
 
 // getAdminProfile
+export async function getCurrentUser():Promise<Admin | null> {
+    const user = auth.currentUser;
+    if(!user) return null;
+    const uid = user.uid;
+    const snap = await getDoc(doc(db,'admins',uid));
+    if(!snap.exists()) return null;
+     return {id: snap.id, ...snap.data() } as unknown as Admin
+    
+}
 export async function getAdmins(): Promise<Admin[]> {
-    const q = query(collection(db, "admins"), where("isDeleted", "==", false));
+    const q = query(collection(db, "admins"));
     const snap = await getDocs(q);
     const admins = snap.docs.map((d) => d.data() as Admin)
     return admins
 }
+
 

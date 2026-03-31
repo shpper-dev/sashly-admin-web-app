@@ -9,12 +9,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
 import { Admin } from "@/lib/models/admin.model";
 import { TableHeading } from "@/lib/types";
 import Link from "next/link";
-import { getAdmins } from "@/lib/firebase/admin.auth";
+import { getAdmins, getCurrentUser } from "@/lib/firebase/admin.auth";
 
 const adminHeadings: TableHeading[] = [
     { id: "name", title: "Name" },
@@ -25,7 +23,20 @@ const adminHeadings: TableHeading[] = [
 ]
 
 
-function renderCell(heading: TableHeading, admin: Admin) {
+
+
+
+interface Props {
+  children: React.ReactNode;
+}
+
+export default function AdminsDialog({ children }: Props) {
+  const [open, setOpen]           = useState(false);
+  const [admins, setAdmins]       = useState<Admin[]>([]);
+  const [loading, setLoading]     = useState(false);
+  const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
+
+  function renderCell(heading: TableHeading, admin: Admin) {
   switch (heading.id) {
     case "name":
       return (
@@ -51,23 +62,14 @@ function renderCell(heading: TableHeading, admin: Admin) {
   }
 }
 
-//Props 
-interface Props {
-  children: React.ReactNode;
-}
-
-export default function AdminsDialog({ children }: Props) {
-  const [open, setOpen]           = useState(false);
-  const [admins, setAdmins]       = useState<Admin[]>([]);
-  const [loading, setLoading]     = useState(false);
-  const [showAdd, setShowAdd]     = useState(false);
-
   // fetch admins from Firestore
   async function fetchAdmins() {
     setLoading(true);
     try {
       const adminsData = await getAdmins();
       setAdmins(adminsData);
+      const current = await getCurrentUser();
+      setCurrentAdmin(current);
     } catch (e) {
       console.error("Failed to fetch admins:", e);
     } finally {
@@ -98,12 +100,15 @@ export default function AdminsDialog({ children }: Props) {
               </p>
             )}
           </div>
-          <Link href={"/admin/add-admin"}
+          {currentAdmin?.role === "superadmin" && (
+            <Link href={"/admin/add-admin"} 
             className="flex items-center gap-1.5 px-3.5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white text-xs font-semibold rounded-lg shadow-sm shadow-cyan-200 transition-colors"
           >
             <Plus size={13} strokeWidth={2.5} />
             Add Admin
           </Link>
+          )}
+          
         </div>
 
         {/* ── Table ── */}
