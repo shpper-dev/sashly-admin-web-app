@@ -1,10 +1,11 @@
 "use client";
-import { createAdmin } from "@/lib/firebase/admin.auth";
+// import { createAdmin } from "@/lib/firebase/admin.auth";
 import { Mail, Lock, Eye, ArrowRight, User, Shield, ChevronDown, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState, useRef, useEffect } from "react";
 import { AdminRole } from "@/lib/models/admin.model";
 import Link from "next/link";
+import { createAdminAccount } from "@/lib/firebase/admin.create";
 
 const ROLES: { value: AdminRole; label: string }[] = [
   { value: "admin",      label: "Admin"       },
@@ -44,7 +45,7 @@ export default function AddAdminForm() {
     setSuccess("");
     try {
       setLoading(true);
-      await createAdmin(email, password, firstName, lastName, role);
+      await createAdminAccount({email, password, firstName, lastName, role});
       setSuccess(`Admin account for ${firstName} ${lastName} created successfully.`);
       setFirstName("");
       setLastName("");

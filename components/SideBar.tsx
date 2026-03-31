@@ -2,10 +2,11 @@
 import {Eye, LayoutDashboard,Search, LogOut, Megaphone, OctagonAlert, Package, Settings, Shirt, TriangleAlert, Truck, Users, Wallet, ChevronDown, TicketPercent, Tags} from "lucide-react";
 import Link from "next/link";
 import UserDropDown from "./UserDropDown";
-import { usePathname, useRouter } from "next/navigation";
-import { logoutAdmin } from "@/lib/firebase/admin.auth";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { getCurrentUser } from "@/lib/firebase/admin.auth";
+import { Admin } from "@/lib/models/admin.model";
 
 const navItems = [
     {
@@ -73,6 +74,23 @@ const navItems = [
 export default function SideBar() {
     const pathname = usePathname();
     const [productsOpen, setProductsOpen] = useState(false);
+    const [admin, setAdmin] = useState<Admin | null>(null);
+
+    useEffect(()=>{
+      //fetch admin profile
+      async function fetchAdminProfile(){
+        try{
+         const current = await getCurrentUser();
+
+         setAdmin(current);
+         console.log("current user",admin)
+        }catch(error){
+          console.error("Error fetching admin profile:", error);
+        }
+      }
+      fetchAdminProfile();
+    }, [])
+
   return (
     <div className={`fixed top-0 left-0 flex flex-col bg-white text-sm h-full w-60 border-r border-r-blue-500/30 ${(pathname === "/orders/delivery-manifest"|| pathname.startsWith("/disputes/resolution") || pathname.startsWith("/orders/reports")) ? "hidden" : "flex"}`}>
         <div className="flex mt-3 ml-6 w-full justify-center">
@@ -154,7 +172,7 @@ export default function SideBar() {
                     <span>Settings</span>
                 </Link>
 
-                <UserDropDown user="John"/>
+                <UserDropDown user={admin?.firstName || "Admin"}/>
                 {/* <button className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-red-500  hover:bg-slate-200/50 cursor-pointer w-full text-left"
                 onClick={async ()=> {
                     await logoutAdmin();

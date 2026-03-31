@@ -3,9 +3,13 @@ import { adminAuth } from "./lib/firebase/admin-config";
 // export const runtime = "nodejs";
 const publicRoutes =["/login"];
 
+// route for adding admin (only superadmin)
+const superAdminOnlyRoutes = ["/admin/add-admin"];
+
 export default async function proxy(req: NextRequest) {
     const path = req.nextUrl.pathname;
     const isPublicRoute = publicRoutes.includes(path);
+    const isSuperAdminOnlyRoute = superAdminOnlyRoutes.includes(path);
 
     // get session
     const session = req.cookies.get("session")?.value;
@@ -30,7 +34,13 @@ export default async function proxy(req: NextRequest) {
     // protected route and session
     if(!isPublicRoute && session){
         try{
-            await adminAuth.verifySessionCookie(session, true);
+            // await adminAuth.verifySessionCookie(session, true);
+            const decoded = await adminAuth.verifySessionCookie(session,true);
+
+            // check for super admin restriction
+            if(isSuperAdminOnlyRoute && decoded.role !== "superadmin"){
+                return NextResponse.redirect(new URL("/", req.nextUrl));
+            }
             return NextResponse.next()
         }catch{
             const response = NextResponse.redirect(new URL("/login", req.nextUrl));
