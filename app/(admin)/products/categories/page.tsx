@@ -7,6 +7,7 @@ import { TableHeading } from '@/lib/types';
 import CategoryDialog from '@/components/products/CategoryDialog';
 import { deleteCategory, getCategories } from '@/lib/firebase/product';
 import { Category } from '@/lib/models/product.model';
+import ConfirmActionDialog from '@/components/ConfirmActionDialog';
 
 
 
@@ -35,16 +36,16 @@ export default function Categories() {
   }
 };
 
- const handleDelete = async (id: string) => {
-  if (!confirm("Delete this category?")) return;
+//  const handleDelete = async (id: string) => {
+//   if (!confirm("Delete this category?")) return;
 
-  try {
-    await deleteCategory(id);
-    fetchCategories();
-  } catch (e) {
-    console.error("Delete failed:", e);
-  }
-};
+//   try {
+//     await deleteCategory(id);
+//     fetchCategories();
+//   } catch (e) {
+//     console.error("Delete failed:", e);
+//   }
+// };
 
   const renderCellContent = (heading: TableHeading, row: any) => {
   switch (heading.id) {
@@ -100,12 +101,17 @@ export default function Categories() {
             </button>
           </CategoryDialog>
 
-          <button
-            onClick={() => handleDelete(row.id)}
-            className="text-red-500 hover:text-red-600 cursor-pointer"
+          <ConfirmActionDialog
+            title="Delete Category"
+            description={`Are you sure you want to delete "${row.name}"? This action cannot be undone.`}
+            confirmLabel="Delete"
+            onConfirm={() => deleteCategory(row.id)}
+            onSuccess={fetchCategories}
           >
-            <Trash2 size={16} />
-          </button>
+            <button className="text-red-500 hover:text-red-600 cursor-pointer">
+              <Trash2 size={16} />
+            </button>
+          </ConfirmActionDialog>
         </div>
       );
     default:

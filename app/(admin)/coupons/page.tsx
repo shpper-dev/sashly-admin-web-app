@@ -10,7 +10,6 @@ import { TableHeading } from "@/lib/types";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import CreateCouponDialog from "@/components/coupons/CreateCouponDialog";
 import EditCouponDialog from "@/components/coupons/EditCouponDialog";
-import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import { PencilLine, Trash2 } from "lucide-react";
 import DeleteCouponDialog from "@/components/coupons/DeleteCouponDialog";
 

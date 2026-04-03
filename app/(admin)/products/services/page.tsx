@@ -7,6 +7,7 @@ import { TableHeading } from "@/lib/types";
 import ServiceDialog from "@/components/products/ServiceDialog";
 import { deleteService, getServices } from "@/lib/firebase/product";
 import { Service } from "@/lib/models/product.model";
+import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 
 const serviceHeadings: TableHeading[] = [
   { id: "name", title: "NAME" },
@@ -96,12 +97,17 @@ export default function Services() {
               </button>
             </ServiceDialog>
 
-            <button
-              onClick={() => handleDelete(row.id)}
-              className="text-red-500 hover:text-red-600 cursor-pointer"
+            <ConfirmActionDialog
+              title="Delete Service"
+              description={`Are you sure you want to delete "${row.name}"? This action cannot be undone.`}
+              confirmLabel="Delete"
+              onConfirm={() => deleteService(row.id)}
+              onSuccess={fetchServices}
             >
-              <Trash2 size={16} />
-            </button>
+              <button className="text-red-500 hover:text-red-600 cursor-pointer">
+                <Trash2 size={16} />
+              </button>
+            </ConfirmActionDialog>
           </div>
         );
 

@@ -1,5 +1,5 @@
 
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, UserCredential } from "firebase/auth";
+import { createUserWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, signInWithEmailAndPassword, signOut, updatePassword, UserCredential } from "firebase/auth";
 import { Admin, AdminRole } from "../models/admin.model";
 import { auth, db } from "./config";
 import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from "firebase/firestore";
@@ -84,13 +84,32 @@ export async function createAdmin(
     
 }
 
+// change password
+
+
 // logout
 export async function logoutAdmin(): Promise<void> {
     await signOut(auth);
     await deleteSession();
     redirect("/login");
 }
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void>{
+    const user = auth.currentUser;
+    if(!user) throw new Error("User not authenticated");
 
+    try{
+        // re authenticate user
+        const credential = EmailAuthProvider.credential(user.email || "", currentPassword.trim());
+        await reauthenticateWithCredential(user,credential);
+
+        // update password
+        await updatePassword(user, newPassword.trim());
+  
+    }catch(err){
+        console.error("Password change failed: ", err);
+        throw new Error("Password change failed!")
+    }
+}
 // getAdminProfile
 export async function getCurrentUser():Promise<Admin | null> {
     const user = auth.currentUser;
