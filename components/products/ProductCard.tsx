@@ -4,6 +4,7 @@ import Image from 'next/image'
 import  { useState } from 'react';
 import EditItemDialog from './EditItemDialog'
 import { deleteItem } from '@/lib/firebase/product'
+import ConfirmActionDialog from '../ConfirmActionDialog';
 
 
 interface ProductCardProps {
@@ -50,13 +51,17 @@ export default function ProductCard({ product, onDeleted, onUpdated }: ProductCa
           </EditItemDialog>
 
           {/* Delete */}
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className='p-1 rounded hover:bg-red-50 transition-colors disabled:opacity-50'
+          <ConfirmActionDialog
+            title="Delete Item"
+            description={`Are you sure you want to delete "${product.name}"? This action cannot be undone.`}
+            confirmLabel="Delete"
+            onConfirm={() => deleteItem(product.id)}
+            onSuccess={onDeleted}
           >
-            <Trash2 className='h-4 w-4 text-red-600' />
-          </button>
+            <button className="text-red-500 hover:text-red-600 cursor-pointer">
+              <Trash2 size={16} />
+            </button>
+          </ConfirmActionDialog>
         </div>
       </div>
 

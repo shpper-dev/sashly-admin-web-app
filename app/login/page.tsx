@@ -117,10 +117,10 @@ export default function AdminLogin() {
             </div>
 
             {/* REMEMBER */}
-            <div className="flex items-center gap-2 mb-6 text-sm text-slate-600">
+            {/* <div className="flex items-center gap-2 mb-6 text-sm text-slate-600">
               <input type="checkbox" className="rounded border-slate-300" />
               Remember this device
-            </div>
+            </div> */}
 
             {/* LOGIN BUTTON */}
             <button

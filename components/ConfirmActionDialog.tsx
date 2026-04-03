@@ -50,7 +50,7 @@ export default function ConfirmActionDialog({ children, title, description, conf
             <button
               onClick={handleConfirm}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-xl bg-[#02D0FF] text-white text-sm font-semibold hover:bg-blue-400 disabled:opacity-50 transition"
+              className={`flex-1 py-2.5 rounded-xl  text-white text-sm font-semibold ${confirmLabel.toLowerCase().trim() === "delete" ?"bg-red-500 hover:bg-red-600":"bg-[#02D0FF] hover:bg-blue-400"}  disabled:opacity-50 transition`}
             >
               {saving ? "..." : confirmLabel}
             </button>

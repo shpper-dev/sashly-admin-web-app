@@ -12,6 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ChevronDown, KeyRound, LogOut, User } from "lucide-react";
 import { logoutAdmin } from "@/lib/firebase/admin.auth";
+import Link from "next/link";
 
 interface UserDropDownProps{
     user: string;
@@ -52,10 +53,10 @@ export default function UserDropDown({user}:UserDropDownProps) {
           </DropdownMenuItem>
           <DropdownMenuItem className="cursor-pointer">
             <KeyRound className="mr-2 h-4 w-4" />
-            <span>Change Password</span>
+            <Link href="/admin/change-password">Change Password</Link>
           </DropdownMenuItem>
           <DropdownMenuItem className="cursor-pointer">
-            <button className="flex items-center text-red-500 w-full text-left"
+            <button className="flex items-center gap-2 text-red-500 w-full text-left"
                 onClick={async ()=> {
                     await logoutAdmin();
                     // router.refresh();
