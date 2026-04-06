@@ -29,6 +29,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { db, storage } from "@/lib/firebase/config"
 import { Category, Item, Service } from "@/lib/models/product.model"
 import { updateItem } from "@/lib/firebase/product"
+import { useToast } from "@/lib/providers/ToastProvider"
 
 // Types
 interface SelectedService extends Service {
@@ -72,6 +73,9 @@ export default function EditItemDialog({ children, item, onSuccess }: EditItemDi
   const [loading, setLoading]                     = useState(false)
   const [error, setError]                         = useState("")
   const [success, setSuccess]                     = useState("")
+
+  // toast
+  const {showToast} = useToast();
 
   // fetch categories + services when dialog opens
   useEffect(() => {
@@ -183,9 +187,10 @@ export default function EditItemDialog({ children, item, onSuccess }: EditItemDi
         selectedServices: servicesPayload,
       });
 
-      setSuccess(`Item: ${name} updated successfully.`)
-      onSuccess?.()
-      setTimeout(() => setOpen(false), 1200)
+      // setSuccess(`Item: ${name} updated successfully.`)
+      onSuccess?.();
+      setOpen(false);
+      showToast(`Item: ${name} updated successfully.`,"success");
     } catch (err: any) {
       console.error("Update item failed:", err)
       setError("Failed to update item. Please try again.")

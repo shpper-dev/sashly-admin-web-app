@@ -12,6 +12,7 @@ import {
 
 import { createService, updateService } from "@/lib/firebase/product";
 import { Service } from "@/lib/models/product.model";
+import { useToast } from "@/lib/providers/ToastProvider";
 
 interface ServiceDialogProps {
   children: React.ReactNode;
@@ -43,6 +44,8 @@ export default function ServiceDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const {showToast} = useToast();
 
   //prefill
 
@@ -126,24 +129,26 @@ export default function ServiceDialog({
 
         await updateService(service.id, payload);
 
-        setSuccess(`Service updated successfully.`);
+        
 
       } else {
 
         await createService(payload);
 
-        setSuccess(`Service: ${name} created successfully.`);
+        // setSuccess(`Service: ${name} created successfully.`);
+        
 
       }
 
       onSuccess?.();
-
-      setTimeout(() => handleClose(), 1200);
+      handleClose();
+      showToast(`Service: ${name} ${mode === "edit" ? "updated" : "created"} successfully.`, "success");
 
     } catch (err) {
       console.error("Save service failed:", err);
       setError("Failed to save service. Please try again.");
     } finally {
+    
       setLoading(false);
     }
   };

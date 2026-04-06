@@ -4,12 +4,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Download, Search, SlidersHorizontal } from "lucide-react";
 import TableSkeleton from '@/components/skeleton/TableSkeleton';
 import { TableHeading } from '@/lib/types';
-import { useDeleteToast } from '@/hooks/useDeleteToast';
-import { DeleteToastContainer } from '@/components/users/DeleteToast';
 import UserInfoDialog from '@/components/users/UserInfoDialog';
 import FilterButtonWithBadge from '@/components/buttons/FilterButtonWithBadges';
 import { getUsers, getUsersNextPage, UserFilters, getUsersCount } from '@/lib/firebase/user';
 import { User } from '@/lib/models/user.model';
+import { useToast } from '@/lib/providers/ToastProvider';
 const PAGE_SIZE = 10;
 
 const userHeadings: TableHeading[] = [
@@ -48,7 +47,7 @@ export default function Users() {
   const [lastDoc, setLastDoc]         = useState<any>(null);
   const [hasNextPage, setHasNextPage] = useState(false);
 
-  const { toasts, showDeleteToast } = useDeleteToast();
+  const {showToast} = useToast();
   const [counts, setCounts] = useState({
   all: 0,
   active: 0,
@@ -156,7 +155,7 @@ const handlePrev = async () => {
         return (
           <UserInfoDialog
             user={row}
-            onDelete={() => { showDeleteToast(`Deleted ${name}`); refetch(); }}
+            onDelete={() => { showToast(`Deleted ${name}`, "error");; refetch(); }}
             onSuccess={refetch}
           >
             <div className="flex items-center gap-3 cursor-pointer">
@@ -230,7 +229,6 @@ const handlePrev = async () => {
               <Download className="h-3.5 w-3.5" /> Export CSV
             </button>
           </div>
-          <DeleteToastContainer toasts={toasts} />
         </section>
 
         {/*  Filter bar  */}
@@ -307,9 +305,9 @@ const handlePrev = async () => {
             <table className="w-full">
               <thead className="bg-slate-100">
                 <tr>
-                  {userHeadings.map((h) => (
-                    <th key={h.id} className="px-6 py-4 text-left text-sm font-bold text-slate-500 first:rounded-tl-lg last:rounded-tr-lg">
-                      {h.title}
+                  {userHeadings.map((heading) => (
+                    <th key={heading.id} className="px-6 py-4 text-left text-sm font-bold text-slate-500 first:rounded-tl-lg last:rounded-tr-lg">
+                      {heading.title}
                     </th>
                   ))}
                 </tr>
@@ -324,9 +322,9 @@ const handlePrev = async () => {
                 ) : (
                   filteredData.map((row, index) => (
                     <tr key={row.id ?? index} className="hover:bg-slate-50 transition-colors">
-                      {userHeadings.map((h) => (
-                        <td key={h.id} className="px-6 py-3 text-sm text-slate-700">
-                          {renderCellContent(h, row)}
+                      {userHeadings.map((heading) => (
+                        <td key={heading.id} className="px-6 py-3 text-sm text-slate-700">
+                          {renderCellContent(heading, row)}
                         </td>
                       ))}
                     </tr>

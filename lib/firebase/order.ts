@@ -2,7 +2,8 @@ import { db } from "./config";
 import {
   collection, query, where, orderBy, limit,
   startAfter, getDocs, updateDoc, doc, arrayUnion,
-  QueryConstraint
+  QueryConstraint,
+  getCountFromServer
 } from "firebase/firestore";
 import { Order, OrderStatuses, OrderStatus } from "@/lib/models/order.model";
 import { mapOrder } from "../mappers/order.mapper";
@@ -178,4 +179,13 @@ export async function getActiveOrdersByUserId(userId: string): Promise<Order[]> 
     console.error("Error fetching active orders:", error);
     throw error;
   }
+}
+
+// get active order count
+export async function getActiveOrdersCount():Promise<number> {
+  const q = query(collection(db,"orders"), where("isDelivered", "==",false) ,
+   where("isCancelled","==",false));
+  const snapshot = await getCountFromServer(q);
+  return snapshot.data().count ?? 0;
+  
 }

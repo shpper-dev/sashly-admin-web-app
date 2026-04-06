@@ -8,6 +8,7 @@ import ServiceDialog from "@/components/products/ServiceDialog";
 import { deleteService, getServices } from "@/lib/firebase/product";
 import { Service } from "@/lib/models/product.model";
 import ConfirmActionDialog from "@/components/ConfirmActionDialog";
+import { useToast } from "@/lib/providers/ToastProvider";
 
 const serviceHeadings: TableHeading[] = [
   { id: "name", title: "NAME" },
@@ -20,6 +21,7 @@ const serviceHeadings: TableHeading[] = [
 export default function Services() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Service[]>([]);
+  const {showToast} = useToast();
 
   const fetchServices = async () => {
     setLoading(true);
@@ -30,17 +32,6 @@ export default function Services() {
       console.error("Failed to fetch services:", e);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this service?")) return;
-
-    try {
-      await deleteService(id);
-      fetchServices();
-    } catch (e) {
-      console.error("Delete failed:", e);
     }
   };
 
@@ -102,7 +93,7 @@ export default function Services() {
               description={`Are you sure you want to delete "${row.name}"? This action cannot be undone.`}
               confirmLabel="Delete"
               onConfirm={() => deleteService(row.id)}
-              onSuccess={fetchServices}
+              onSuccess={() => {showToast(`Deleted ${row.name}`, "error"); fetchServices();}}
             >
               <button className="text-red-500 hover:text-red-600 cursor-pointer">
                 <Trash2 size={16} />
