@@ -46,10 +46,14 @@ export interface ReportGroup {
   items: ReportItem[]
 }
 
-// users page (toast)
+
+// toast for all pages
+export type ToastType = "success" | "error" | "info" | "warning";
 export interface Toast {
-  id: number
-  name: string
+  id: number;
+  message: string;
+  type: ToastType;
+  leaving?: boolean;
 }
 
 export interface User {

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { createCategory, updateCategory } from "@/lib/firebase/product";
 import { Category } from "@/lib/models/product.model";
+import { useToast } from "@/lib/providers/ToastProvider";
 
 interface CategoryDialogProps {
   children: React.ReactNode;
@@ -38,6 +39,8 @@ export default function CategoryDialog({
   const [success, setSuccess]         = useState("");
   const fileInputRef                  = useRef<HTMLInputElement>(null);
   const [photoRemoved, setPhotoRemoved] = useState(false);
+
+  const {showToast} = useToast();
   useEffect(() => {
   if (mode === "edit" && category) {
     setName(category.name || "");
@@ -106,7 +109,7 @@ export default function CategoryDialog({
         photoRemoved,
       });
 
-      setSuccess(`Category updated successfully.`);
+      // setSuccess(`Category updated successfully.`);
     } 
     
     else {
@@ -117,13 +120,12 @@ export default function CategoryDialog({
         photo,
       });
 
-      setSuccess(`Category: ${name} created successfully.`);
+      // setSuccess(`Category: ${name} created successfully.`);
     }
 
     onSuccess?.();
-
-    setTimeout(() => handleClose(), 1200);
-
+    handleClose();
+    showToast(`Category: ${name} ${mode === "edit" ? "updated" : "created"} successfully.`, "success");
   } catch (err: any) {
     console.error("Category save failed:", err);
     setError("Failed to save category. Please try again.");

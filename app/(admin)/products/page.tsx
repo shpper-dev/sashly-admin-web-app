@@ -7,6 +7,7 @@ import { useMemo, useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { Item, Service } from "@/lib/models/product.model";
+import { useToast } from "@/lib/providers/ToastProvider";
 
 export default function Products() {
   const [activeFilter, setActiveFilter] = useState("All Items");
@@ -14,6 +15,7 @@ export default function Products() {
   const [items, setItems]               = useState<Item[]>([]);
   const [services, setServices]         = useState<Service[]>([]);
   const [loading, setLoading]           = useState(true);
+  const {showToast}                     = useToast();
 
   // fetch items + services 
   const fetchData = async () =>{
@@ -126,7 +128,7 @@ export default function Products() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-4">
               {filteredItems.length > 0 ? (
                 filteredItems.map((item) => (
-                  <ProductCard key={item.id} product={item} onDeleted={fetchData} onUpdated={fetchData} />
+                  <ProductCard key={item.id} product={item} onDeleted={() => { showToast(`Deleted ${item.name}`, "error"); fetchData(); }} onUpdated={ fetchData} />
                 ))
               ) : (
                 <div className="col-span-full text-center py-10 text-slate-400 font-semibold">

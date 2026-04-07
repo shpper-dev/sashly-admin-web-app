@@ -1,5 +1,5 @@
 "use client";
-import {Eye, LayoutDashboard,Search, LogOut, Megaphone, OctagonAlert, Package, Settings, Shirt, TriangleAlert, Truck, Users, Wallet, ChevronDown, TicketPercent, Tags} from "lucide-react";
+import {Eye, LayoutDashboard,Search, LogOut, Megaphone, OctagonAlert, Package, Settings, Shirt, TriangleAlert, Truck, Users, Wallet, ChevronDown, TicketPercent, Tags, Loader2, Briefcase} from "lucide-react";
 import Link from "next/link";
 import UserDropDown from "./UserDropDown";
 import { usePathname } from "next/navigation";
@@ -64,10 +64,16 @@ const navItems = [
         href:"/finance"
     },
     {
-        name:"Reports",
-        icon: OctagonAlert ,
-        href:"/reports"
+        name:"Business Accounts",
+        icon: Briefcase ,
+        href:"/business-accounts"
     }
+
+    // {
+    //     name:"Reports",
+    //     icon: OctagonAlert ,
+    //     href:"/reports"
+    // }
 ]
 
 
@@ -75,22 +81,25 @@ export default function SideBar() {
     const pathname = usePathname();
     const [productsOpen, setProductsOpen] = useState(false);
     const [admin, setAdmin] = useState<Admin | null>(null);
+    const [mounted, setMounted] = useState(false); // Add this
 
-    useEffect(()=>{
-      //fetch admin profile
-      async function fetchAdminProfile(){
-        try{
-         const current = await getCurrentUser();
-
-         setAdmin(current);
-         console.log("current user",admin)
-        }catch(error){
-          console.error("Error fetching admin profile:", error);
+    useEffect(() => {
+        setMounted(true); // Set to true once client-side
+        async function fetchAdminProfile() {
+            try {
+                const current = await getCurrentUser();
+                setAdmin(current);
+            } catch (error) {
+                console.error("Error fetching admin profile:", error);
+            }
         }
-      }
-      fetchAdminProfile();
-    }, [])
+        fetchAdminProfile();
+    }, []);
 
+    // If not mounted, return a simplified version or null to prevent ID mismatch
+    if (!mounted) return <div className="fixed flex items-center justify-center w-60 h-full border-r bg-white"><Loader2 className="h-5 w-5 text-slate-500 animate-spin" /></div>;
+
+   
   return (
     <div className={`fixed top-0 left-0 flex flex-col bg-white text-sm h-full w-60 border-r border-r-blue-500/30 ${(pathname === "/orders/delivery-manifest"|| pathname.startsWith("/disputes/resolution") || pathname.startsWith("/orders/reports")) ? "hidden" : "flex"}`}>
         <div className="flex mt-3 ml-6 w-full justify-center">
@@ -108,7 +117,7 @@ export default function SideBar() {
                      <DropdownMenu key={item.name}>
                         <DropdownMenuTrigger asChild>
                           <button
-                          onClick={()=> setProductsOpen}
+                          onClick={()=> setProductsOpen(!productsOpen)}
                             className={`flex w-full items-center justify-between px-3 py-2 rounded-lg transition-all duration-200
                             ${
                               pathname.startsWith("/products")

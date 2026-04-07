@@ -21,6 +21,7 @@ import { db } from "@/lib/firebase/config"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import { Category, Service } from "@/lib/models/product.model"
 import { createItem } from "@/lib/firebase/product"
+import { useToast } from "@/lib/providers/ToastProvider";
 
 // Types 
 interface SelectedService extends Service {
@@ -54,11 +55,15 @@ export default function AddItemDialog({ children, onSuccess }: AddItemDialogProp
   const [dataLoading, setDataLoading]           = useState(false);
 
   // ui state
+  const [open, setOpen]                         = useState(false);
   const [serviceDropdownOpen, setServiceDropdownOpen] = useState(false);
   const [loading, setLoading]                   = useState(false);
   const [error, setError]                       = useState("");
   const [success, setSuccess]                   = useState("");
   const serviceDropdownRef                      = useRef<HTMLDivElement>(null);
+
+  // toast
+  const {showToast} = useToast();
 
   // fetch on mount 
   useEffect(() => {
@@ -130,6 +135,8 @@ export default function AddItemDialog({ children, onSuccess }: AddItemDialogProp
     )
   }
 
+  const handleClose = () => { resetForm(); setOpen(false); };
+
   //  reset 
   const resetForm = () => {
     setName(""); setArabicName(""); setTagInput(""); setTags([])
@@ -162,9 +169,10 @@ export default function AddItemDialog({ children, onSuccess }: AddItemDialogProp
         selectedServices : servicesPayload
       });
 
-      setSuccess(`Item: ${name} created successfully.`)
       onSuccess?.()
-      setTimeout(() => resetForm(), 1200)
+      handleClose();
+      showToast(`Item: ${name} created successfully.`, "success");
+      
     } catch (err: any) {
       console.error("Create item failed:", err)
       setError("Failed to create item. Please try again.")
@@ -175,7 +183,11 @@ export default function AddItemDialog({ children, onSuccess }: AddItemDialogProp
 
   return (
     <TooltipProvider>
-      <Dialog>
+      <Dialog open={open}
+      onOpenChange={(v) => {
+        if (!v) handleClose();
+        else setOpen(true);
+      }}>
         <DialogTrigger asChild>{children}</DialogTrigger>
 
         <DialogContent className="max-w-180! p-0 overflow-y-auto no-scrollbar rounded-3xl max-h-[calc(100vh-10px)]!">

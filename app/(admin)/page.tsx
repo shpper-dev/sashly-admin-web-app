@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import StatsCard from "@/components/StatsCard";
 import { dashboardHeadings } from "@/constants/headings";
+import { getActiveOrdersCount } from "@/lib/firebase/order";
 import { TableHeading } from "@/lib/types";
 import { Banknote, ChevronLeft, ChevronRight, Flag, Headset, LucideIcon, MapPinX, Megaphone, PackageX, Radio } from "lucide-react";
 import Link from "next/link";
@@ -45,15 +46,25 @@ const mockData = [{
 export default function Dashboard() {
   const [loading, setLoading] = useState<boolean>(false);
   const [data, setData] = useState<any[]>([]);
+  const [activeOrdersCount, setActiveOrdersCount] = useState<number>(0);
+  const [disputesCount, setDisputesCount] = useState<number>(13);
+  const [payoutsCount, setPayoutsCount] = useState<number>(75212);
 
-  useEffect(()=>{
+ useEffect(() => {
+  const fetchData = async () => {
     setLoading(true);
-    setTimeout(()=>{
+
+    const activeCount = await getActiveOrdersCount();
+    setActiveOrdersCount(activeCount);
+
+    setTimeout(() => {
       setData(mockData);
-      setLoading(false)
-    },2000);
-    ;
-  },[]);
+      setLoading(false);
+    }, 2000);
+  };
+
+  fetchData();
+}, []);
 
 const renderCellContent = (heading:TableHeading, value:any)=>{
     if(!value || value === "-"){
@@ -108,9 +119,9 @@ const renderCellContent = (heading:TableHeading, value:any)=>{
       <main className="flex flex-col pt-12 pl-60 min-h-screen gap-3">
         {/* Stats Cards */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-           <StatsCard title="ACTIVE ORDERS" value={"1,270"} change={12} />
-           <StatsCard title="DISPUTES" value={13} change={+2} comparisonText="new alerts requires action" icon={Flag} hasAlerts={true} />
-           <StatsCard title="PENDING PAYOUTS" value={"SAR 75,212.00"} change={6} icon={Banknote } />
+           <StatsCard title="ACTIVE ORDERS" value={activeOrdersCount} change={0} />
+           <StatsCard title="DISPUTES" value={disputesCount} change={+2} comparisonText="new alerts requires action" icon={Flag} hasAlerts={true} />
+           <StatsCard title="PENDING PAYOUTS" value={`SAR ${payoutsCount?.toLocaleString()}.00`} change={6} icon={Banknote } />
         </section>
         {/* Priority Resolution Section with Side Card */}
         <section className="px-6 pb-6">

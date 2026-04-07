@@ -8,6 +8,7 @@ import CategoryDialog from '@/components/products/CategoryDialog';
 import { deleteCategory, getCategories } from '@/lib/firebase/product';
 import { Category } from '@/lib/models/product.model';
 import ConfirmActionDialog from '@/components/ConfirmActionDialog';
+import { useToast } from '@/lib/providers/ToastProvider';
 
 
 
@@ -23,6 +24,7 @@ const categoryHeadings : TableHeading[]= [
 export default function Categories() {
   const [loading , setLoading] = useState<boolean>(false);
   const [data, setData] = useState<Category[]>([]);
+  const {showToast} = useToast();
 
   const fetchCategories = async () => {
   setLoading(true);
@@ -106,7 +108,7 @@ export default function Categories() {
             description={`Are you sure you want to delete "${row.name}"? This action cannot be undone.`}
             confirmLabel="Delete"
             onConfirm={() => deleteCategory(row.id)}
-            onSuccess={fetchCategories}
+            onSuccess={() => {showToast(`Deleted ${row.name}`, "error"); fetchCategories();}}
           >
             <button className="text-red-500 hover:text-red-600 cursor-pointer">
               <Trash2 size={16} />
