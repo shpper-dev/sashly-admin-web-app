@@ -11,8 +11,8 @@ import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
 import { OrderStatuses } from "@/lib/models/order.model";
 import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import { OrderTable } from "@/components/orders/OrderTable";
-import { useDeleteToast } from "@/hooks/useDeleteToast";
 import CustomerCell from "@/components/orders/CustomerCell";
+import { useToast } from "@/lib/providers/ToastProvider";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -39,7 +39,7 @@ const cleaningReportOptions = [
 export default function OrderCleaning({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
   const [search, setSearch] = useState("");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
-  const { toasts, showDeleteToast } = useDeleteToast();
+  const {showToast} = useToast();
 
   const filtered = orders.filter((o) =>
     !search ||
@@ -86,7 +86,7 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
            userId={row.userId}
            userName={row.userName}
            userPhone={row.userPhone}
-           onDelete={() => { showDeleteToast(`Deleted ${name}`)}}
+           onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
          />
         );
 

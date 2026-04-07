@@ -11,7 +11,7 @@ import { OrderTable } from "@/components/orders/OrderTable";
 import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import { markDelivered, markDeliveryStarted } from "@/lib/firebase/order";
 import CustomerCell from "@/components/orders/CustomerCell";
-import { useDeleteToast } from "@/hooks/useDeleteToast";
+import { useToast } from "@/lib/providers/ToastProvider";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -30,7 +30,7 @@ const orderHeadings: TableHeading[] = [
 export default function OrderReady({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
   const [search, setSearch] = useState("");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
-  const { toasts, showDeleteToast } = useDeleteToast();
+  const { showToast } = useToast();
 
   const filtered = orders.filter((o) =>
     !search ||
@@ -76,7 +76,7 @@ export default function OrderReady({ orders, loading, onStatusUpdate, currentPag
            userId={row.userId}
            userName={row.userName}
            userPhone={row.userPhone}
-           onDelete={() => { showDeleteToast(`Deleted ${name}`)}}
+           onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
          />
           
         );

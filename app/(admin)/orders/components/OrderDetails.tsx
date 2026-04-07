@@ -11,7 +11,7 @@ import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import { OrderTable } from "@/components/orders/OrderTable";
 import CustomerCell from "@/components/orders/CustomerCell";
-import { useDeleteToast } from "@/hooks/useDeleteToast";
+import { useToast } from "@/lib/providers/ToastProvider";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -27,7 +27,7 @@ const orderHeadings: TableHeading[] = [
 export default function OrderDetails({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
   const [search, setSearch] = useState("");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
-  const { toasts, showDeleteToast } = useDeleteToast();
+  const { showToast } = useToast();
 
   const filtered = orders.filter((order) =>
     !search ||
@@ -74,7 +74,7 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
            userId={row.userId}
            userName={row.userName}
            userPhone={row.userPhone}
-           onDelete={() => { showDeleteToast(`Deleted ${name}`)}}
+           onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
          />
         );
 

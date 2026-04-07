@@ -5,10 +5,9 @@ import { ChevronLeft, ChevronRight, Download, EllipsisVertical, Mail, Phone, Sea
 import TableSkeleton from '@/components/skeleton/TableSkeleton';
 import { TableHeading } from '@/lib/types';
 import { ActionsDropdown } from '@/components/ActionsDropdown';
-import { useDeleteToast } from '@/hooks/useDeleteToast';
-import { DeleteToastContainer } from '@/components/users/DeleteToast';
 import FilterButtonWithBadge from '@/components/buttons/FilterButtonWithBadges';
 import DriverInfoDialog from '@/components/drivers/DriverInfoDialog';
+import { useToast } from '@/lib/providers/ToastProvider';
 
 
 const driverHeadings : TableHeading[]= [
@@ -106,6 +105,7 @@ export default function Drivers() {
   const [data, setData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
+  const {showToast}   = useToast();
   const filteredData = useMemo(() => {
       return data.filter((driver) => {
         // Category filtering
@@ -124,7 +124,6 @@ export default function Drivers() {
       });
     }, [activeFilter, searchTerm,data]);
 
-  const {toasts, showDeleteToast } = useDeleteToast();
 
   const renderCellContent = (heading: TableHeading, row: any) => {
   switch (heading.id) {
@@ -211,7 +210,7 @@ export default function Drivers() {
              onEdit={() => console.log("Edit", row.id)}
              onDelete={() => {
               setData((prevData) => prevData.filter((user) => user.id !== row.id));
-              showDeleteToast(`Deleted ${row.driver.first_name} ${row.driver.last_name}`)
+              showToast(`Deleted ${row.driver.first_name} ${row.driver.last_name}`)
              }}
             />
         </div>
@@ -248,7 +247,6 @@ export default function Drivers() {
                         + Add New Driver
                   </button>
                 </div>
-                <DeleteToastContainer toasts={toasts} />
             </section>
             <section className='flex justify-between px-8 pb-6'>
               <div className='flex bg-slate-50 border border-slate-100 shadow-inner items-center gap-3 rounded-lg p-1'>
