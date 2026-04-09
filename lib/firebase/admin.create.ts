@@ -2,7 +2,6 @@
 
 import { adminAuth, adminDb } from '@/lib/firebase/admin-config'; 
 import { FieldValue } from 'firebase-admin/firestore';
-import { auth } from './config';
 import { cookies } from 'next/headers';
 
 export async function createAdminAccount(data: {

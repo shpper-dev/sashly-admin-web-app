@@ -478,7 +478,7 @@ export default function AddItemDialog({ children, onSuccess }: AddItemDialogProp
   )
 }
 
-/* ── Reusable Components ── */
+// helpers
 
 function FormLabel({ text }: { text: string }) {
   return (

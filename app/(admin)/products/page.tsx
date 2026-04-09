@@ -8,6 +8,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { Item, Service } from "@/lib/models/product.model";
 import { useToast } from "@/lib/providers/ToastProvider";
+import ItemDialog from "@/components/products/ItemDialog";
 
 export default function Products() {
   const [activeFilter, setActiveFilter] = useState("All Items");
@@ -83,11 +84,11 @@ export default function Products() {
 
           <div className="flex gap-3 items-center">
 
-            <AddItemDialog onSuccess={fetchData}>
+            <ItemDialog mode="add" onSuccess={fetchData}>
               <button className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold transition-colors shadow-md cursor-pointer">
                 + Add Product
               </button>
-            </AddItemDialog>
+            </ItemDialog>
           </div>
         </section>
 
