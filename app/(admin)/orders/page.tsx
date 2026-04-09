@@ -7,6 +7,9 @@ import Header from "@/components/Header";
 import OrderCleaning from "./components/OrderCleaning";
 import OrderReady from "./components/OrderReady";
 import OrderPickups from "./components/OrderPickups";
+import { Download } from "lucide-react";
+import { exportToCsv } from "@/lib/utils";
+import { useToast } from "@/lib/providers/ToastProvider";
 
 export type TabKey = "detail" | "cleaning" | "ready" | "pickups" //| "all" ;
 // Tab → filters mapping
@@ -48,6 +51,9 @@ export default function OrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const cursorStack = useRef<any[]>([undefined]);
 
+  // toast 
+  const {showToast} = useToast();
+
   const pageHeadings: Record<TabKey, { main: string; sub: string }> = {
   detail: { main: "Detail", sub: "Placed orders are listed here", },
   cleaning: { main: "Cleaning", sub: "Orders that are currently cleaning",},
@@ -60,7 +66,7 @@ export default function OrdersPage() {
   // },
 };
 
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 10;
 
   const fetchPage = async (cursor: any, filters: OrderFilters) => {
     setLoading(true);
@@ -106,6 +112,52 @@ export default function OrdersPage() {
     setCurrentPage((p) => p - 1);
   };
 
+  // format orders to csv format
+  function formatOrdersForCSV(orders: Order[]) {
+  return orders.map((o) => ({
+    ID: o.id,
+    UserName: o.userName,
+    Email: o.userEmail,
+
+    // prevent scientific notation
+    Phone: `'${o.userPhone}`,
+
+    TotalPrice: o.totalPrice,
+
+    Status: o.latestStatus?.status ?? "-",
+
+    // convert items array → readable string
+    Items: o.items
+      ?.map((item) => `${item.name} x${item.count}`)
+      .join(" | ") ?? "-",
+
+    // convert status history
+    StatusHistory: o.statusHistory
+      ?.map((s) => `${s.status}`)
+      .join(" → ") ?? "-",
+
+    Paid: o.isPaid ? "Yes" : "No",
+    Delivered: o.isDelivered ? "Yes" : "No",
+    Cancelled: o.isCancelled ? "Yes" : "No",
+
+    ServiceType: o.serviceType,
+
+    // format timestamps
+    CreatedAt: new Date(o.createdAt).toLocaleString(),
+
+    // addresses (flatten important fields only)
+    PickUpAddress: o.pickUpAddress
+      ? `${o.pickUpAddress.formattedAddress ?? ""}, ${o.pickUpAddress.city ?? ""}`
+      : "-",
+
+    DeliveryAddress: o.deliveryAddress
+      ? `${o.deliveryAddress.formattedAddress ?? ""}, ${o.deliveryAddress.city ?? ""}`
+      : "-",
+
+    Payment: o.paidBy ?? "-",
+  }));
+}
+
   // Pass orders + loading + refetch + pagination down to each tab
   const tabProps: OrderTabProps = {
   orders,
@@ -145,6 +197,17 @@ return (
             {/* <Link href={"/orders/add-order"} className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors shadow-md">
               + New Order
             </Link> */}
+            {/* currently only per page orders */}
+          <button className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm cursor-pointer hover:bg-slate-50"
+          onClick={()=> {try{
+            const formattedOrders = formatOrdersForCSV(orders);
+            exportToCsv(formattedOrders,`${activeTab}-page${currentPage ?? 1}-orders.csv`);
+            showToast(`orders exported to csv successfully`,"success");
+          } catch (error) {
+            showToast(`Failed to export orders to csv`,"error");
+          }}}>
+              <Download className="h-3.5 w-3.5" /> Export CSV
+          </button>
           </div>
         </div>
         </section>
@@ -168,6 +231,7 @@ return (
               </button>
             ))}
           </div>
+          
         </div>
         </div>
         </section>

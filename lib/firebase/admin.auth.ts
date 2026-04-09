@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 
 
 // admin login
-export async function loginAdmin(email: string, password: string) : Promise<Admin>{
+export async function loginAdmin(email: string, password: string, remember: boolean ) : Promise<Admin>{
     const credential : UserCredential = await signInWithEmailAndPassword(auth, email, password);
     const uid = credential.user.uid;
 
@@ -34,7 +34,7 @@ export async function loginAdmin(email: string, password: string) : Promise<Admi
         headers :{
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({idToken}),
+        body: JSON.stringify({idToken, remember}),
     });
    
 

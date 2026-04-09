@@ -12,6 +12,8 @@ import CreateCouponDialog from "@/components/coupons/CreateCouponDialog";
 import EditCouponDialog from "@/components/coupons/EditCouponDialog";
 import { PencilLine, Trash2 } from "lucide-react";
 import DeleteCouponDialog from "@/components/coupons/DeleteCouponDialog";
+import { useToast } from "@/lib/providers/ToastProvider";
+import CouponDialog from "@/components/coupons/CouponDialog";
 
 const couponHeadings: TableHeading[] = [
   { id: "code",     title: "COUPON CODE"    },
@@ -28,6 +30,9 @@ export default function CouponsPage() {
   const [search, setSearch]             = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "expired">("all");
   const [currentPage, setCurrentPage]   = useState(1);
+
+  // toast
+  const {showToast} = useToast();
   const pageSize = 10;
 
   const fetchCoupons = async () => {
@@ -134,15 +139,15 @@ export default function CouponsPage() {
       case "actions":
         return (
           <div className="flex items-center gap-2 justify-end">
-            <EditCouponDialog coupon={row} onSuccess={fetchCoupons}>
+            <CouponDialog coupon={row} onSuccess={fetchCoupons} mode="edit" >
               <button className="p-2 bg-[#02d0ff] hover:bg-[#73def7] rounded-md transition-colors cursor-pointer">
                 <PencilLine className="w-4 h-3.5 text-white" />
               </button>
-            </EditCouponDialog>
+            </CouponDialog>
             <DeleteCouponDialog
               couponCode={row.code}
               onConfirm={() => deleteCoupon(row.id)}
-              onSuccess={fetchCoupons}
+              onSuccess={() => { showToast(`Deleted ${row.code}`, "error"); fetchCoupons(); }}
             >
               <button className="p-2 bg-red-50 rounded-md transition-colors cursor-pointer">
                 <Trash2 className="w-4 h-4 text-red-400 hover:text-red-600" />
@@ -167,11 +172,11 @@ export default function CouponsPage() {
             <h1 className="text-xl font-semibold text-slate-800">Promotions</h1>
             <p className="text-sm text-slate-500">Create and manage your promo codes and coupons</p>
           </div>
-          <CreateCouponDialog onSuccess={fetchCoupons}>
+          <CouponDialog onSuccess={fetchCoupons} mode="add">
             <button className="flex items-center gap-2 bg-[#02D0FF] hover:bg-[#00b8e0] text-white px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm transition-colors">
               <Plus className="h-4 w-4" /> Add Coupon
             </button>
-          </CreateCouponDialog>
+          </CouponDialog>
         </section>
 
         {/* Stats */}

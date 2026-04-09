@@ -9,6 +9,7 @@ export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [rememberMe, setRememberMe] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -17,7 +18,7 @@ export default function AdminLogin() {
     setError("");
     try {
       setLoading(true);
-      await loginAdmin(email, password);
+      await loginAdmin(email, password, rememberMe);
       router.push("/");
     } catch (err: any) {
       console.error("Login Failed : ", err);
@@ -117,10 +118,18 @@ export default function AdminLogin() {
             </div>
 
             {/* REMEMBER */}
-            {/* <div className="flex items-center gap-2 mb-6 text-sm text-slate-600">
-              <input type="checkbox" className="rounded border-slate-300" />
-              Remember this device
-            </div> */}
+            <div className="flex items-center gap-2 mb-6 text-sm text-slate-600">
+              <input 
+                type="checkbox"  
+                className="rounded border-slate-300 cursor-pointer" 
+                id="remember"
+                checked={rememberMe}
+                onChange={(e) => {setRememberMe(e.target.checked)}}
+              />
+              <label htmlFor="remember" className="cursor-pointer select-none">
+                Remember this device
+              </label>
+            </div>
 
             {/* LOGIN BUTTON */}
             <button

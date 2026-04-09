@@ -5,6 +5,7 @@ import  { useState } from 'react';
 import EditItemDialog from './EditItemDialog'
 import { deleteItem } from '@/lib/firebase/product'
 import ConfirmActionDialog from '../ConfirmActionDialog';
+import ItemDialog from './ItemDialog';
 
 
 interface ProductCardProps {
@@ -43,12 +44,12 @@ export default function ProductCard({ product, onDeleted, onUpdated }: ProductCa
         )}
 
         <div className='flex gap-2'>
-          {/* Edit — opens EditItemDialog */}
-          <EditItemDialog item={product} onSuccess={onUpdated}>
+          {/* Edit */}
+          <ItemDialog item={product} onSuccess={onUpdated} mode="edit">
             <button className='p-1 rounded hover:bg-slate-100 transition-colors'>
               <Pencil className='h-4 w-4 text-slate-700' />
             </button>
-          </EditItemDialog>
+          </ItemDialog>
 
           {/* Delete */}
           <ConfirmActionDialog

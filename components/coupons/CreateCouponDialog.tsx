@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { X } from "lucide-react";
 import { createCoupon } from "@/lib/firebase/coupon";
 import CouponFormFields, { EMPTY_FORM, CouponFormState, formToCoupon } from "./CouponFormFields";
+import { useToast } from "@/lib/providers/ToastProvider";
 
 interface CreateCouponDialogProps {
   children: React.ReactNode;
@@ -14,6 +15,14 @@ export default function CreateCouponDialog({ children, onSuccess }: CreateCoupon
   const [open, setOpen]   = useState(false);
   const [form, setForm]   = useState<CouponFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState<string | null>(null);
+
+  // toast
+  const {showToast} = useToast();
+
+  const handleClose = ()=>{
+    setForm(EMPTY_FORM); setOpen(false);
+  }
 
   const handleSave = async () => {
     if (!form.code || !form.discountValue || !form.startDate || !form.endDate) return;
@@ -23,8 +32,11 @@ export default function CreateCouponDialog({ children, onSuccess }: CreateCoupon
       setForm(EMPTY_FORM);
       setOpen(false);
       onSuccess();
+      handleClose();
+      showToast(`Coupon: ${form.code} created successfully`,"success");
     } catch (e) {
       console.error("Create coupon failed:", e);
+      setError("Failed to create coupon. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -38,7 +50,11 @@ export default function CreateCouponDialog({ children, onSuccess }: CreateCoupon
           <DialogTitle className="text-xl font-bold text-slate-700">Create Coupon</DialogTitle>
           <DialogClose><X className="w-5 h-5 text-slate-400 cursor-pointer" /></DialogClose>
         </DialogHeader>
-
+        {error && (
+            <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+              {error}
+            </div>
+          )}
         <CouponFormFields form={form} onChange={setForm} />
 
         <button

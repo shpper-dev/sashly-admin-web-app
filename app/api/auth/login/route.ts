@@ -4,10 +4,12 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 
-const SESSION_EXPIRES_IN = 5 * 24 * 60 * 60 * 1000;
+
 
 export async function POST(req: Request) {
-    const {idToken} = await req.json();
+    const {idToken, remember} = await req.json();
+    // if remember 5 days, else shorter window;
+    const SESSION_EXPIRES_IN = remember ? 5 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000 ;
     try{
         if(!idToken) {
             return NextResponse.json({error:"Missing id token"},{status: 401});
@@ -21,13 +23,25 @@ export async function POST(req: Request) {
             expiresIn: SESSION_EXPIRES_IN,
         });
 
-        (await cookies()).set("session",sessionCookie,{
+        const cookieOptions: any = {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "strict",
-            maxAge: SESSION_EXPIRES_IN/1000,
-            path:"/",
-        });
+            path: "/",
+        };
+
+        if (remember){
+            cookieOptions.maxAge = SESSION_EXPIRES_IN/1000;
+        }
+
+        // (await cookies()).set("session",sessionCookie,{
+        //     httpOnly: true,
+        //     secure: process.env.NODE_ENV === "production",
+        //     sameSite: "strict",
+        //     maxAge: SESSION_EXPIRES_IN/1000,
+        //     path:"/",
+        // });
+        (await cookies()).set("session", sessionCookie, cookieOptions)
 
         return NextResponse.json({uid: decoded.uid});
 
