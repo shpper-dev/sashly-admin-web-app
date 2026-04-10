@@ -53,6 +53,7 @@ export function serializeOrder(order: Partial<Order>) {
 
     paidBy: order.paidBy ?? null,
     paymentInfo: order.paymentInfo ?? null,
+    paymentDate: order.paymentDate ?? null,
 
     ratingByUser: order.ratingByUser
       ? {

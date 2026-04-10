@@ -61,10 +61,11 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
 
       case "placed":
         return (
-          <div className="flex flex-col items-start">
+          <div className="flex flex-col gap-1 items-start">
             <span className="text-xs">
               {new Date(row.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" })}
             </span>
+            <span className={`${row.serviceType === "ordinary" ? "bg-[#02d0ff]": "bg-purple-600"} py-1 px-1.5 text-[10px] text-white rounded-xl`}>{row.serviceType}</span>
           </div>
         );
 

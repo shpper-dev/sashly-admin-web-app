@@ -8,15 +8,18 @@ import {
   NotebookTabs, X, Phone, Mail,
   CreditCard, Star, Package, Truck, CheckCircle2,
   Circle, Shirt,
+  PencilLine,
 } from "lucide-react";
 import { Order, OrderStatuses } from "@/lib/models/order.model";
 import UpdateOrderDialog from "./UpdateOrderDialog";
 import { useState } from "react";
+import { OrderPriceSection } from "./OrderPriceSection";
+import OrderPaymentDialog from "./OrderPaymentDialog";
 
 interface Props {
   order: Order;
   children: React.ReactNode;
-  onStatusUpdate: (orderId: string) => void;
+  onStatusUpdate: () => void;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
@@ -64,6 +67,14 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                   Placed {fmt(order.createdAt)} · Updated {fmt(order.updatedAt)}
                 </p>
               </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-slate-400 font-semibold">Email</span>
+              <span className="text-xs text-[#02d0ff]">{order.userEmail}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-slate-400 font-semibold">Phone</span>
+              <span className="text-xs text-[#02d0ff]">{order.userPhone}</span>
             </div>
             <DialogClose asChild>
               <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
@@ -117,21 +128,36 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                 <div>
                   <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Payment</p>
                   <span className={`text-xs font-bold mt-0.5 ${order.isPaid ? "text-green-600" : "text-red-500"}`}>
-                    {order.isPaid ? `PAID · ${order.paidBy ?? ""}` : "UNPAID"}
+                    {order.isPaid ? `PAID · ${order.paidBy ?? ""} · ${fmt(order.paymentDate)}` : "UNPAID"}
                   </span>
                 </div>
 
               </div>
+              <div className="flex items-center gap-3">
+                
+              {!order.isPaid && !order.isCancelled && (
+                  <OrderPaymentDialog total={order.totalPrice} 
+                   orderId={order.id}
+                   isPaid={order.isPaid}
+                   onSuccess={onStatusUpdate}
+                   >
+                     <button className="px-4 py-2 text-xs flex items-center gap-2 bg-[#02D0FF]  hover:bg-[#10ccf7] text-white rounded-full font-bold cursor-pointer transition-colors shadow-sm">
+                       PAY
+                     </button>
+                   </OrderPaymentDialog>
+
+                )}
 
               <UpdateOrderDialog
                 orderId={order.id}
                 currentStatus={order.latestStatus.status as OrderStatuses}
-                onSuccess={() => onStatusUpdate(order.id)}
+                onSuccess={() => onStatusUpdate()}
               >
                 <button className="px-4 py-2 bg-[#02D0FF] hover:bg-[#10ccf7] text-white rounded-full text-xs font-bold cursor-pointer transition-colors shadow-sm">
                   UPDATE STATUS
                 </button>
               </UpdateOrderDialog>
+              </div>
             </div>
           </div>
 
@@ -206,13 +232,24 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
 
             {/* RIGHT column */}
             <div className=" shrink-0 overflow-y-auto px-5 py-5 flex flex-col gap-6">
-              {/* Customer */}
-              <Section title="Customer">
-                <div className="grid grid-cols-2 gap-3">
-                  <InfoRow icon={<Mail className="h-3.5 w-3.5" />}  label="Email" value={order.userEmail} />
-                  <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="Phone" value={order.userPhone} />
-                </div>
+              {/* Price breakdown */}
+              <Section title="Price Breakdown">
+                <OrderPriceSection order={order} onSuccess={onStatusUpdate} />
               </Section>
+
+              {/* Payment detail */}
+              {(order.paidBy || order.paymentInfo) && (
+                <Section title="Payment Details">
+                  <div className="grid grid-cols-2 gap-3">
+                    {order.paidBy && (
+                      <InfoRow icon={<CreditCard className="h-3.5 w-3.5" />} label="Method" value={order.paidBy} />
+                    )}
+                    {order.paymentInfo && (
+                      <InfoRow icon={<CreditCard className="h-3.5 w-3.5" />} label="Reference" value={order.paymentInfo} className="col-span-2" />
+                    )}
+                  </div>
+                </Section>
+              )}
 
               {/* Pickup & Delivery */}
               <Section title="Pickup & Delivery">
@@ -240,20 +277,6 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                   />
                 </div>
               </Section>
-
-              {/* Payment detail */}
-              {(order.paidBy || order.paymentInfo) && (
-                <Section title="Payment Details">
-                  <div className="grid grid-cols-2 gap-3">
-                    {order.paidBy && (
-                      <InfoRow icon={<CreditCard className="h-3.5 w-3.5" />} label="Method" value={order.paidBy} />
-                    )}
-                    {order.paymentInfo && (
-                      <InfoRow icon={<CreditCard className="h-3.5 w-3.5" />} label="Reference" value={order.paymentInfo} className="col-span-2" />
-                    )}
-                  </div>
-                </Section>
-              )}
 
               {/* Rating */}
               {order.ratingByUser && (

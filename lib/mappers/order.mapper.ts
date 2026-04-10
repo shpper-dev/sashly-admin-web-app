@@ -68,6 +68,7 @@ export function mapOrder(doc: QueryDocumentSnapshot<DocumentData>): Order {
 
     paidBy: data.paidBy ?? null,
     paymentInfo: data.paymentInfo ?? null,
+    paymentDate: data.paymentDate ?? null,
 
     ratingByUser: data.ratingByUser ? mapRating(data.ratingByUser) : null,
 
