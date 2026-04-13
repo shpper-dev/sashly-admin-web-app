@@ -103,26 +103,13 @@ export async function confirmOrderPayment(
   paidBy: "cash" | "card" | "wallet",
   paymentInfo?: string,
 ): Promise<void> {
-  const statusEntry: OrderStatus = {
-    status: "confirmed",
-    description: `Payment confirmed via ${paidBy}`,
-    createdAt: Date.now(),
-  };
-
-// now the order is coming in as confirmed even when unpaid..really no need to do specifically set paid true will auto change while confirming. then only update payment option via this function
-  // await updateDoc(doc(db, "orders", orderId), {
-  //   isPaid: true,
-  //   paidBy,
-  //   paymentInfo : paymentInfo ?? null,
-  //   latestStatus: statusEntry,
-  //   statusHistory: arrayUnion(statusEntry),
-  //   updatedAt: Date.now(),
-  // });
+ 
   // seperating status from payment
   await updateDoc(doc(db, "orders", orderId), {
   isPaid: true,
   paidBy,
   paymentInfo: paymentInfo ?? null,
+  paymentDate: Date.now(), //new
   updatedAt: Date.now(),
 });
 }
@@ -189,3 +176,11 @@ export async function getActiveOrdersCount():Promise<number> {
   return snapshot.data().count ?? 0;
   
 }
+
+// update order price (manual admin adjustments)
+export async function updateOrderPrice(orderId: string, total:number): Promise<void>{
+   await updateDoc(doc(db,"orders", orderId),{
+    totalPrice: total,
+   });
+}
+

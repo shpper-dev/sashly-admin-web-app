@@ -11,12 +11,12 @@ const navItems = [
   { name: "Unpaid",            href: "/metrics/unpaid"             },
   { name: "Orders",            href: "/metrics/orders"             },
   { name: "Customers",         href: "/metrics/customers"          },
-  { name: "Subscriptions",     href: "/metrics/subscriptions"      },
+  // { name: "Subscriptions",     href: "/metrics/subscriptions"      },
   { name: "Top Selling",       href: "/metrics/top-selling"      },
-  { name: "Business Accounts", href: "/metrics/business-accounts"  },
-  { name: "Staff Performance", href: "/metrics/staff-performance"  },
-  { name: "Reviews",           href: "/metrics/reviews"            },
-  { name: "Data Exports",      href: "/metrics/data-exports"       },
+  // { name: "Business Accounts", href: "/metrics/business-accounts"  },
+  // { name: "Staff Performance", href: "/metrics/staff-performance"  },
+  // { name: "Reviews",           href: "/metrics/reviews"            },
+  // { name: "Data Exports",      href: "/metrics/data-exports"       },
 ];
 
 export default function MetricsSidebar() {

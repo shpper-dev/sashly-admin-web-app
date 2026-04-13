@@ -8,15 +8,24 @@ import {
   NotebookTabs, X, Phone, Mail,
   CreditCard, Star, Package, Truck, CheckCircle2,
   Circle, Shirt,
+  PencilLine,
+  LucideIcon,
+  BellIcon,
+  BellOff,
+  Plus,
 } from "lucide-react";
 import { Order, OrderStatuses } from "@/lib/models/order.model";
 import UpdateOrderDialog from "./UpdateOrderDialog";
 import { useState } from "react";
+import { OrderPriceSection } from "./OrderPriceSection";
+import OrderPaymentDialog from "./OrderPaymentDialog";
+import OrderInvoiceDialog from "./OrderInvoiceDialog";
+import OrderChat from "./OrderChat";
 
 interface Props {
   order: Order;
   children: React.ReactNode;
-  onStatusUpdate: (orderId: string) => void;
+  onStatusUpdate: () => void;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
@@ -42,6 +51,7 @@ function fmtTime(ts?: number | null) {
 export default function OrderDetailsDialog({ order, children, onStatusUpdate }: Props) {
   const [open, setOpen] = useState(false);
   const cfg = STATUS_CONFIG[order.latestStatus.status] ?? { label: order.latestStatus.status, color: "text-slate-600", dot: "bg-slate-400" };
+  const [showNotifs, setShowNotifs] = useState(true);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -64,6 +74,14 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                   Placed {fmt(order.createdAt)} · Updated {fmt(order.updatedAt)}
                 </p>
               </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-slate-400 font-semibold">Email</span>
+              <span className="text-xs text-[#02d0ff]">{order.userEmail}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-slate-400 font-semibold">Phone</span>
+              <span className="text-xs text-[#02d0ff]">{order.userPhone}</span>
             </div>
             <DialogClose asChild>
               <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
@@ -117,31 +135,50 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                 <div>
                   <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Payment</p>
                   <span className={`text-xs font-bold mt-0.5 ${order.isPaid ? "text-green-600" : "text-red-500"}`}>
-                    {order.isPaid ? `PAID · ${order.paidBy ?? ""}` : "UNPAID"}
+                    {order.isPaid ? `PAID · ${order.paidBy ?? ""} · ${fmt(order.paymentDate)}` : "UNPAID"}
                   </span>
                 </div>
 
               </div>
+              <div className="flex items-center gap-3">
+                
+              {!order.isPaid && !order.isCancelled && (
+                  <OrderPaymentDialog total={order.totalPrice} 
+                   orderId={order.id}
+                   isPaid={order.isPaid}
+                   onSuccess={onStatusUpdate}
+                   >
+                     <button className="px-4 py-2 text-xs flex items-center gap-2 bg-[#02D0FF]  hover:bg-[#10ccf7] text-white rounded-full font-bold cursor-pointer transition-colors shadow-sm">
+                       PAY
+                     </button>
+                   </OrderPaymentDialog>
+
+                )}
 
               <UpdateOrderDialog
                 orderId={order.id}
                 currentStatus={order.latestStatus.status as OrderStatuses}
-                onSuccess={() => onStatusUpdate(order.id)}
+                onSuccess={() => onStatusUpdate()}
               >
                 <button className="px-4 py-2 bg-[#02D0FF] hover:bg-[#10ccf7] text-white rounded-full text-xs font-bold cursor-pointer transition-colors shadow-sm">
                   UPDATE STATUS
                 </button>
               </UpdateOrderDialog>
+              </div>
             </div>
           </div>
 
-          {/* Body — two column layout*/}
+          {/* Body — 3 column layout*/}
           <div className="flex-1 overflow-hidden flex">
 
             {/* LEFT column */}
             <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6 border-r border-slate-100">
                 {/* Line items */}
-              <Section title={`Line Items (${order.items.length})`}>
+              <Section title={`Line Items (${order.items.length})`} titleButton={
+                <button className="flex items-center gap-1 text-[10px] px-2 py-1 shadow-sm rounded-lg text-[#02d0ff]">
+                  <Plus className="h-3 w-3" strokeWidth={3} /> Add Item
+                </button>
+              }>
                 <div className="flex flex-col gap-2">
                   {order.items.map((item, i) => (
                     <div key={i} className="flex items-center gap-3 border border-slate-100 rounded-xl p-3 bg-white">
@@ -165,6 +202,82 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                 </div>
               </Section>
 
+               {/* Price breakdown */}
+              <Section title="Price Breakdown">
+                <OrderPriceSection order={order} onSuccess={onStatusUpdate} />
+              </Section>
+
+              {/* Payment detail */}
+              {(order.paidBy || order.paymentInfo) && (
+                <Section title="Payment Details">
+                  <div className="grid grid-cols-2 gap-3">
+                    {order.paidBy && (
+                      <InfoRow icon={<CreditCard className="h-3.5 w-3.5" />} label="Method" value={order.paidBy} />
+                    )}
+                    {order.paymentInfo && (
+                      <InfoRow icon={<CreditCard className="h-3.5 w-3.5" />} label="Reference" value={order.paymentInfo} className="col-span-2" />
+                    )}
+                  </div>
+                </Section>
+              )}
+
+              {/* Pickup & Delivery */}
+              <Section title="Pickup & Delivery">
+                <div className="flex flex-col gap-3">
+                  <AddressCard
+                    icon={<Package className="h-3.5 w-3.5 text-purple-600" />}
+                    iconBg="bg-purple-100"
+                    label="Pickup Address"
+                    address={order.pickUpAddress?.formattedAddress ?? "—"}
+                    timeLabel={`${fmt(order.pickUpStartTime)} · ${fmtTime(order.pickUpStartTime)} – ${fmtTime(order.pickUpEndTime)}`}
+                  />
+                  <AddressCard
+                    icon={<Truck className="h-3.5 w-3.5 text-[#02D0FF]" />}
+                    iconBg="bg-[#02D0FF]/10"
+                    label="Delivery Address"
+                    address={order.deliveryAddress?.formattedAddress ?? "—"}
+                    timeLabel={
+                      order.deliveryEndTime
+                        ? `Delivered: ${fmt(order.deliveryEndTime)} ${fmtTime(order.deliveryEndTime)}`
+                        : order.deliveryStartTime
+                        ? `Started: ${fmt(order.deliveryStartTime)} ${fmtTime(order.deliveryStartTime)}`
+                        : undefined
+                    }
+                    timeLabelClass={order.deliveryEndTime ? "text-green-500 font-semibold" : "text-slate-400"}
+                  />
+                </div>
+              </Section>
+
+              {/* Rating */}
+              {order.ratingByUser && (
+                <Section title="Customer Rating">
+                  <div className="p-3 bg-yellow-50 border border-yellow-100 rounded-xl flex flex-col gap-2">
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} className={`h-4 w-4 ${i < order.ratingByUser!.rating ? "text-yellow-400 fill-yellow-400" : "text-slate-200 fill-slate-200"}`} />
+                      ))}
+                      <span className="text-xs text-slate-500 ml-1">{order.ratingByUser.rating}/5</span>
+                    </div>
+                    {order.ratingByUser.feedback && (
+                      <p className="text-xs text-slate-600 italic">"{order.ratingByUser.feedback}"</p>
+                    )}
+                    {order.ratingByUser.photoUrls?.length ? (
+                      <div className="flex gap-2 flex-wrap">
+                        {order.ratingByUser.photoUrls.map((url, i) => (
+                          <img key={i} src={url} alt="rating" className="w-14 h-14 object-cover rounded-lg border" />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </Section>
+              )}  
+
+
+            </div>
+            {/* MIDDLE column */}
+            
+            <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6 border-r border-slate-100">
+               
                 {/* Status history */}
               <Section title="Status History">
                 <div className="flex flex-col gap-2">
@@ -206,80 +319,9 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
 
             {/* RIGHT column */}
             <div className=" shrink-0 overflow-y-auto px-5 py-5 flex flex-col gap-6">
-              {/* Customer */}
-              <Section title="Customer">
-                <div className="grid grid-cols-2 gap-3">
-                  <InfoRow icon={<Mail className="h-3.5 w-3.5" />}  label="Email" value={order.userEmail} />
-                  <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="Phone" value={order.userPhone} />
-                </div>
+            <Section title="Chat History">
+                <OrderChat orderId={order.id} />
               </Section>
-
-              {/* Pickup & Delivery */}
-              <Section title="Pickup & Delivery">
-                <div className="flex flex-col gap-3">
-                  <AddressCard
-                    icon={<Package className="h-3.5 w-3.5 text-purple-600" />}
-                    iconBg="bg-purple-100"
-                    label="Pickup Address"
-                    address={order.pickUpAddress?.formattedAddress ?? "—"}
-                    timeLabel={`${fmt(order.pickUpStartTime)} · ${fmtTime(order.pickUpStartTime)} – ${fmtTime(order.pickUpEndTime)}`}
-                  />
-                  <AddressCard
-                    icon={<Truck className="h-3.5 w-3.5 text-[#02D0FF]" />}
-                    iconBg="bg-[#02D0FF]/10"
-                    label="Delivery Address"
-                    address={order.deliveryAddress?.formattedAddress ?? "—"}
-                    timeLabel={
-                      order.deliveryEndTime
-                        ? `Delivered: ${fmt(order.deliveryEndTime)} ${fmtTime(order.deliveryEndTime)}`
-                        : order.deliveryStartTime
-                        ? `Started: ${fmt(order.deliveryStartTime)} ${fmtTime(order.deliveryStartTime)}`
-                        : undefined
-                    }
-                    timeLabelClass={order.deliveryEndTime ? "text-green-500 font-semibold" : "text-slate-400"}
-                  />
-                </div>
-              </Section>
-
-              {/* Payment detail */}
-              {(order.paidBy || order.paymentInfo) && (
-                <Section title="Payment Details">
-                  <div className="grid grid-cols-2 gap-3">
-                    {order.paidBy && (
-                      <InfoRow icon={<CreditCard className="h-3.5 w-3.5" />} label="Method" value={order.paidBy} />
-                    )}
-                    {order.paymentInfo && (
-                      <InfoRow icon={<CreditCard className="h-3.5 w-3.5" />} label="Reference" value={order.paymentInfo} className="col-span-2" />
-                    )}
-                  </div>
-                </Section>
-              )}
-
-              {/* Rating */}
-              {order.ratingByUser && (
-                <Section title="Customer Rating">
-                  <div className="p-3 bg-yellow-50 border border-yellow-100 rounded-xl flex flex-col gap-2">
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className={`h-4 w-4 ${i < order.ratingByUser!.rating ? "text-yellow-400 fill-yellow-400" : "text-slate-200 fill-slate-200"}`} />
-                      ))}
-                      <span className="text-xs text-slate-500 ml-1">{order.ratingByUser.rating}/5</span>
-                    </div>
-                    {order.ratingByUser.feedback && (
-                      <p className="text-xs text-slate-600 italic">"{order.ratingByUser.feedback}"</p>
-                    )}
-                    {order.ratingByUser.photoUrls?.length ? (
-                      <div className="flex gap-2 flex-wrap">
-                        {order.ratingByUser.photoUrls.map((url, i) => (
-                          <img key={i} src={url} alt="rating" className="w-14 h-14 object-cover rounded-lg border" />
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                </Section>
-              )}  
-
-              
 
             </div>
           </div>
@@ -293,9 +335,11 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                 <span className="text-xl font-bold text-slate-800">{order.totalPrice.toFixed(2)}</span>
               </div>
             </div>
-            <button className="px-6 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+            <OrderInvoiceDialog order={order} >
+              <button className="px-6 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
               PRINT RECEIPT
             </button>
+            </OrderInvoiceDialog>
           </div>
 
         </div>
@@ -305,10 +349,13 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
 }
 
 //helpers
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, titleButton }: { title: string; children: React.ReactNode; titleButton?: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{title}</p>
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{title}</p>
+        {titleButton && titleButton}
+      </div>
       {children}
     </div>
   );

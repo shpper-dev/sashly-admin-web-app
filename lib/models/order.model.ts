@@ -27,6 +27,7 @@ export interface Order {
     deliveryEndTime?: number | null;
     paidBy ?: string | null;
     paymentInfo ?: string | null;
+    paymentDate ?: number | null;
     ratingByUser ?: OrderRating | null;
     createdAt : number;
     updatedAt: number;

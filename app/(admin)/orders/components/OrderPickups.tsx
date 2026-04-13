@@ -55,10 +55,11 @@ export default function OrderPickups({ orders, loading, onStatusUpdate, currentP
 
       case "placed":
         return (
-          <div className="flex flex-col items-start">
+          <div className="flex flex-col gap-1 items-start">
             <span className="text-xs">
               {new Date(row.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" })}
             </span>
+            <span className={`${row.serviceType === "ordinary" ? "bg-[#02d0ff]": "bg-purple-600"} p-1.5 text-[10px] text-white rounded-lg`}>{row.serviceType}</span>
           </div>
         );
 
@@ -140,7 +141,12 @@ export default function OrderPickups({ orders, loading, onStatusUpdate, currentP
 
       case "paid":
         return row.isPaid ? (
-          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">PAID</span>
+          <div className="flex flex-col gap-1">
+            <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">PAID</span>
+            <span className="text-xs">
+              {new Date(row?.paymentDate ?? 0).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+            </span>
+          </div>
         ) : (
           <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-500">UNPAID</span>
         );
@@ -156,7 +162,6 @@ export default function OrderPickups({ orders, loading, onStatusUpdate, currentP
       case "actions":
         return (
           <div className="flex items-center gap-0.5 justify-end">
-            {row.isPaid ? (
               <UpdateOrderDialog
               orderId={row.id}
               currentStatus={row.latestStatus.status as OrderStatuses}
@@ -166,20 +171,8 @@ export default function OrderPickups({ orders, loading, onStatusUpdate, currentP
               PICKUP
               </button>
             </UpdateOrderDialog>
+            
 
-            ):(
-              <OrderPaymentDialog total={row.totalPrice} 
-              orderId={row.id}
-              isPaid={row.isPaid}
-              onSuccess={onStatusUpdate}
-              >
-                <button className="px-3 py-1.5 text-xs flex items-center gap-2 font-medium text-white bg-[#02D0FF] rounded-lg hover:bg-blue-200 transition-colors cursor-pointer">
-                  <PencilLine className="w-4 h-4 text-white" />
-                  PAYMENT
-                </button>
-              </OrderPaymentDialog>
-
-            )}
             
           </div>
         );

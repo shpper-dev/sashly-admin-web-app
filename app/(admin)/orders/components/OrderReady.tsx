@@ -67,6 +67,7 @@ export default function OrderReady({ orders, loading, onStatusUpdate, currentPag
             <span className="text-xs">
               {new Date(row.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" })}
             </span>
+            <span className={`${row.serviceType === "ordinary" ? "bg-[#02d0ff]": "bg-purple-600"} p-1.5 text-[10px] text-white rounded-lg`}>{row.serviceType}</span>
           </div>
         );
 
@@ -145,9 +146,14 @@ export default function OrderReady({ orders, loading, onStatusUpdate, currentPag
 
       case "paid":
         return row.isPaid ? (
-          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">PAID</span>
+         <div className="flex flex-col gap-1">
+            <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">PAID</span>
+            <span className="text-xs">
+              {new Date(row?.paymentDate ?? 0).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+            </span>
+          </div>
         ) : (
-          <span className="text-slate-400 font-bold inline-flex">NO</span>
+          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-500">UNPAID</span>
         );
 
       case "total":
