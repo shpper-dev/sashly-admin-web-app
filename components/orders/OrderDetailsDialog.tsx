@@ -9,12 +9,18 @@ import {
   CreditCard, Star, Package, Truck, CheckCircle2,
   Circle, Shirt,
   PencilLine,
+  LucideIcon,
+  BellIcon,
+  BellOff,
+  Plus,
 } from "lucide-react";
 import { Order, OrderStatuses } from "@/lib/models/order.model";
 import UpdateOrderDialog from "./UpdateOrderDialog";
 import { useState } from "react";
 import { OrderPriceSection } from "./OrderPriceSection";
 import OrderPaymentDialog from "./OrderPaymentDialog";
+import OrderInvoiceDialog from "./OrderInvoiceDialog";
+import OrderChat from "./OrderChat";
 
 interface Props {
   order: Order;
@@ -45,6 +51,7 @@ function fmtTime(ts?: number | null) {
 export default function OrderDetailsDialog({ order, children, onStatusUpdate }: Props) {
   const [open, setOpen] = useState(false);
   const cfg = STATUS_CONFIG[order.latestStatus.status] ?? { label: order.latestStatus.status, color: "text-slate-600", dot: "bg-slate-400" };
+  const [showNotifs, setShowNotifs] = useState(true);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -161,13 +168,17 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
             </div>
           </div>
 
-          {/* Body — two column layout*/}
+          {/* Body — 3 column layout*/}
           <div className="flex-1 overflow-hidden flex">
 
             {/* LEFT column */}
             <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6 border-r border-slate-100">
                 {/* Line items */}
-              <Section title={`Line Items (${order.items.length})`}>
+              <Section title={`Line Items (${order.items.length})`} titleButton={
+                <button className="flex items-center gap-1 text-[10px] px-2 py-1 shadow-sm rounded-lg text-[#02d0ff]">
+                  <Plus className="h-3 w-3" strokeWidth={3} /> Add Item
+                </button>
+              }>
                 <div className="flex flex-col gap-2">
                   {order.items.map((item, i) => (
                     <div key={i} className="flex items-center gap-3 border border-slate-100 rounded-xl p-3 bg-white">
@@ -191,48 +202,7 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                 </div>
               </Section>
 
-                {/* Status history */}
-              <Section title="Status History">
-                <div className="flex flex-col gap-2">
-                  {[...order.statusHistory].reverse().map((s, i) => {
-                    const scfg = STATUS_CONFIG[s.status] ?? { label: s.status, color: "text-slate-600", dot: "bg-slate-400" };
-                    const isLatest = i === 0;
-                    return (
-                      <div
-                        key={i}
-                        className={`flex items-start gap-3 p-3 rounded-xl border ${
-                          isLatest ? "bg-purple-50 border-purple-100" : "bg-white border-slate-100"
-                        }`}
-                      >
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${isLatest ? "bg-purple-100" : "bg-slate-100"}`}>
-                          {isLatest
-                            ? <CheckCircle2 className={`h-3.5 w-3.5 ${scfg.color}`} />
-                            : <Circle className="h-3.5 w-3.5 text-slate-300" />
-                          }
-                        </div>
-                        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className={`text-xs font-bold uppercase ${scfg.color}`}>{scfg.label}</span>
-                            {isLatest && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-600 font-bold uppercase shrink-0">
-                                Now
-                              </span>
-                            )}
-                          </div>
-                          {s.description && <p className="text-[11px] text-slate-500">{s.description}</p>}
-                          <p className="text-[10px] text-slate-400">{fmt(s.createdAt)} · {fmtTime(s.createdAt)}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Section>
-
-            </div>
-
-            {/* RIGHT column */}
-            <div className=" shrink-0 overflow-y-auto px-5 py-5 flex flex-col gap-6">
-              {/* Price breakdown */}
+               {/* Price breakdown */}
               <Section title="Price Breakdown">
                 <OrderPriceSection order={order} onSuccess={onStatusUpdate} />
               </Section>
@@ -302,7 +272,56 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                 </Section>
               )}  
 
-              
+
+            </div>
+            {/* MIDDLE column */}
+            
+            <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6 border-r border-slate-100">
+               
+                {/* Status history */}
+              <Section title="Status History">
+                <div className="flex flex-col gap-2">
+                  {[...order.statusHistory].reverse().map((s, i) => {
+                    const scfg = STATUS_CONFIG[s.status] ?? { label: s.status, color: "text-slate-600", dot: "bg-slate-400" };
+                    const isLatest = i === 0;
+                    return (
+                      <div
+                        key={i}
+                        className={`flex items-start gap-3 p-3 rounded-xl border ${
+                          isLatest ? "bg-purple-50 border-purple-100" : "bg-white border-slate-100"
+                        }`}
+                      >
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${isLatest ? "bg-purple-100" : "bg-slate-100"}`}>
+                          {isLatest
+                            ? <CheckCircle2 className={`h-3.5 w-3.5 ${scfg.color}`} />
+                            : <Circle className="h-3.5 w-3.5 text-slate-300" />
+                          }
+                        </div>
+                        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className={`text-xs font-bold uppercase ${scfg.color}`}>{scfg.label}</span>
+                            {isLatest && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-600 font-bold uppercase shrink-0">
+                                Now
+                              </span>
+                            )}
+                          </div>
+                          {s.description && <p className="text-[11px] text-slate-500">{s.description}</p>}
+                          <p className="text-[10px] text-slate-400">{fmt(s.createdAt)} · {fmtTime(s.createdAt)}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+
+            </div>
+
+            {/* RIGHT column */}
+            <div className=" shrink-0 overflow-y-auto px-5 py-5 flex flex-col gap-6">
+            <Section title="Chat History">
+                <OrderChat orderId={order.id} />
+              </Section>
 
             </div>
           </div>
@@ -316,9 +335,11 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                 <span className="text-xl font-bold text-slate-800">{order.totalPrice.toFixed(2)}</span>
               </div>
             </div>
-            <button className="px-6 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+            <OrderInvoiceDialog order={order} >
+              <button className="px-6 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
               PRINT RECEIPT
             </button>
+            </OrderInvoiceDialog>
           </div>
 
         </div>
@@ -328,10 +349,13 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
 }
 
 //helpers
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, titleButton }: { title: string; children: React.ReactNode; titleButton?: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{title}</p>
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{title}</p>
+        {titleButton && titleButton}
+      </div>
       {children}
     </div>
   );

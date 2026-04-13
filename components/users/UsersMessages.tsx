@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from "lucide-react"
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// Types 
 type Channel = "SMS" | "Email" | "Push" | "Internal Note"
 
 interface Message {
@@ -29,7 +29,7 @@ interface Message {
   timestamp: Date
 }
 
-// ── Channel config ─────────────────────────────────────────────────────────────
+// Channel config 
 const CHANNELS: { label: Channel; icon: React.ReactNode }[] = [
   { label: "SMS",           icon: <MessageSquare size={14} /> },
   { label: "Email",         icon: <Mail          size={14} /> },
@@ -44,7 +44,7 @@ const CHANNEL_COLORS: Record<Channel, string> = {
   "Internal Note": "bg-amber-500",
 }
 
-// ── Seed messages ──────────────────────────────────────────────────────────────
+// Seed messages 
 const SEED_MESSAGES: Message[] = [
   {
     id: 1,
@@ -60,7 +60,7 @@ const SEED_MESSAGES: Message[] = [
   },
 ]
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// Helpers 
 function formatTime(date: Date) {
   return date.toLocaleString("en-GB", {
     day: "2-digit",
@@ -72,7 +72,7 @@ function formatTime(date: Date) {
   })
 }
 
-// ── Component ──────────────────────────────────────────────────────────────────
+// Component 
 export default function UsersMessages() {
   const [channel, setChannel]       = useState<Channel>("Push")
   const [messages, setMessages]     = useState<Message[]>(SEED_MESSAGES)
@@ -86,7 +86,7 @@ export default function UsersMessages() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // ── Send ────────────────────────────────────────────────────────────────────
+  // Send 
   const handleSend = () => {
     const trimmed = text.trim()
     if (!trimmed) return
@@ -111,7 +111,6 @@ export default function UsersMessages() {
     }
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="h-full flex flex-col bg-white">
       
