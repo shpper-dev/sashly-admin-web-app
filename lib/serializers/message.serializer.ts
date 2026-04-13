@@ -8,6 +8,7 @@ export function serializeMessage(message: Partial<Message>){
          senderId: message.senderId ?? "",
          text: message.text ?? "",
          role: message.role ?? "user",
+         photoUrl: message.photoUrl ?? "",
          readByAdmin: message.readByAdmin ?? false,
          readByUser: message.readByUser ?? false,
          createdAt: message.createdAt ?? serverTimestamp(),
