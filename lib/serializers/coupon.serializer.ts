@@ -12,7 +12,8 @@ export function serializeCoupon(coupon: Partial<Coupon>) {
 
     startDate: coupon.startDate ?? 0,
     endDate: coupon.endDate ?? 0,
-
+    
+    isAppPromotion: coupon.isAppPromotion ?? false,
     isActive: coupon.isActive ?? true,
     createdAt: coupon.createdAt ?? Date.now(),
   };

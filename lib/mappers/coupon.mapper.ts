@@ -27,6 +27,8 @@ export function mapCoupon(doc: QueryDocumentSnapshot<DocumentData>): Coupon {
       data.endDate?.toMillis?.() ??
       data.endDate ??
       0,
+    
+    isAppPromotion: data.isAppPromotion ?? false,
 
     isActive: data.isActive ?? true,
 
