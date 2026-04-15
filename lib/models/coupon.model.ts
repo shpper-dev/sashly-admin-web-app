@@ -10,6 +10,7 @@ export interface Coupon {
   usageCount: number;
   startDate: number;               // ms timestamp
   endDate: number;                 // ms timestamp
+  isAppPromotion?: boolean | null; 
   isActive: boolean;
   createdAt: number;
 }

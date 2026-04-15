@@ -1,7 +1,6 @@
 "use client";
 import { Coupon, DiscountType } from "@/lib/models/coupon.model";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { ChevronDown } from "lucide-react";
 
 export interface CouponFormState {
   code: string;
@@ -12,6 +11,7 @@ export interface CouponFormState {
   startDate: string;   // "YYYY-MM-DD" — HTML date input
   endDate: string;
   isActive: boolean;
+  isAppPromotion: boolean;
 }
 
 export const EMPTY_FORM: CouponFormState = {
@@ -23,33 +23,36 @@ export const EMPTY_FORM: CouponFormState = {
   startDate: "",
   endDate: "",
   isActive: true,
+  isAppPromotion: false,
 };
 
 // Seed form from existing coupon for edit
 export function couponToForm(c: Coupon): CouponFormState {
   return {
-    code:          c.code,
-    discountType:  c.discountType,
-    discountValue: String(c.discountValue),
-    minOrderValue: c.minOrderValue != null ? String(c.minOrderValue) : "",
-    maxUsage:      c.maxUsage != null ? String(c.maxUsage) : "",
-    startDate:     new Date(c.startDate).toISOString().split("T")[0],
-    endDate:       new Date(c.endDate).toISOString().split("T")[0],
-    isActive:      c.isActive,
+    code:           c.code,
+    discountType:   c.discountType,
+    discountValue:  String(c.discountValue),
+    minOrderValue:  c.minOrderValue != null ? String(c.minOrderValue) : "",
+    maxUsage:       c.maxUsage != null ? String(c.maxUsage) : "",
+    startDate:      new Date(c.startDate).toISOString().split("T")[0],
+    endDate:        new Date(c.endDate).toISOString().split("T")[0],
+    isActive:       c.isActive,
+    isAppPromotion: c.isAppPromotion ?? false,
   };
 }
 
 // Convert form back to Coupon payload
 export function formToCoupon(f: CouponFormState): Omit<Coupon, "id" | "usageCount" | "createdAt"> {
   return {
-    code:          f.code.toUpperCase().trim(),
-    discountType:  f.discountType,
-    discountValue: Number(f.discountValue),
-    minOrderValue: f.minOrderValue ? Number(f.minOrderValue) : null,
-    maxUsage:      f.maxUsage ? Number(f.maxUsage) : null,
-    startDate:     new Date(f.startDate).getTime(),
-    endDate:       new Date(f.endDate).getTime(),
-    isActive:      f.isActive,
+    code:           f.code.toUpperCase().trim(),
+    discountType:   f.discountType,
+    discountValue:  Number(f.discountValue),
+    minOrderValue:  f.minOrderValue ? Number(f.minOrderValue) : null,
+    maxUsage:       f.maxUsage ? Number(f.maxUsage) : null,
+    startDate:      new Date(f.startDate).getTime(),
+    endDate:        new Date(f.endDate).getTime(),
+    isActive:       f.isActive,
+    isAppPromotion: f.isAppPromotion,
   };
 }
 
@@ -83,7 +86,6 @@ export default function CouponFormFields({ form, onChange }: CouponFormFieldsPro
         >
           <SelectTrigger className={`${inputCls} flex items-center justify-between`}>
             <SelectValue placeholder="Select type" />
-            
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="percentage">Percentage (%)</SelectItem>
@@ -149,21 +151,25 @@ export default function CouponFormFields({ form, onChange }: CouponFormFieldsPro
       </FormField>
 
       {/* Active toggle */}
-      <FormField label="Status" className="col-span-2">
-        <button
-          type="button"
-          onClick={() => set("isActive", !form.isActive)}
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium transition-all w-full ${
-            form.isActive
-              ? "bg-green-50 border-green-200 text-green-700"
-              : "bg-slate-50 border-slate-200 text-slate-500"
-          }`}
-        >
-          <div className={`w-8 h-4 rounded-full relative transition-colors ${form.isActive ? "bg-[#7F50F4]" : "bg-slate-300"}`}>
-            <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${form.isActive ? "left-4" : "left-0.5"}`} />
-          </div>
-          {form.isActive ? "Active" : "Inactive"}
-        </button>
+      <FormField label="Status">
+        <Toggle
+          enabled={form.isActive}
+          onToggle={() => set("isActive", !form.isActive)}
+          activeLabel="Active"
+          inactiveLabel="Inactive"
+          activeClass="bg-green-50 border-green-200 text-green-700"
+        />
+      </FormField>
+
+      {/* App Promotion toggle */}
+      <FormField label="App Promotion" hint="Show as a featured promotion in-app">
+        <Toggle
+          enabled={form.isAppPromotion}
+          onToggle={() => set("isAppPromotion", !form.isAppPromotion)}
+          activeLabel="Promoted"
+          inactiveLabel="Not Promoted"
+          activeClass="bg-purple-50 border-purple-200 text-purple-700"
+        />
       </FormField>
 
     </div>
@@ -171,7 +177,31 @@ export default function CouponFormFields({ form, onChange }: CouponFormFieldsPro
 }
 
 // helpers
+
 const inputCls = "w-full h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#7F50F4]";
+
+function Toggle({ enabled, onToggle, activeLabel, inactiveLabel, activeClass }: {
+  enabled: boolean;
+  onToggle: () => void;
+  activeLabel: string;
+  inactiveLabel: string;
+  activeClass: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`flex items-center gap-3 px-4 h-11 rounded-xl border text-sm font-medium transition-all w-full ${
+        enabled ? activeClass : "bg-slate-50 border-slate-200 text-slate-500"
+      }`}
+    >
+      <div className={`w-8 h-4 rounded-full relative transition-colors shrink-0 ${enabled ? "bg-[#7F50F4]" : "bg-slate-300"}`}>
+        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${enabled ? "left-4" : "left-0.5"}`} />
+      </div>
+      {enabled ? activeLabel : inactiveLabel}
+    </button>
+  );
+}
 
 function FormField({ label, hint, children, className }: {
   label: string; hint?: string; children: React.ReactNode; className?: string;

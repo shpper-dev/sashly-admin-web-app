@@ -21,6 +21,7 @@ const couponHeadings: TableHeading[] = [
   { id: "usage",    title: "USAGE"          },
   { id: "dates",    title: "EXPIRY DATE"    },
   { id: "status",   title: "STATUS"         },
+  { id: "in_app",   title: "IN APP"         },
   { id: "actions",  title: ""               },
 ];
 
@@ -134,6 +135,10 @@ export default function CouponsPage() {
         ) : (
           <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-600">PAUSED</span>
         );
+      }
+
+      case "in_app":{
+        return <span className="text-sm text-slate-600">{row.isAppPromotion ? "Yes": "No"}</span>
       }
 
       case "actions":
