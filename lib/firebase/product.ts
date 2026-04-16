@@ -1,8 +1,8 @@
 import { collection, addDoc, updateDoc, doc, deleteDoc, getDocs } from "firebase/firestore";
 import { db} from "@/lib/firebase/config";
-import { Category, Service } from "../models/product.model";
+import { Category, Item, Service } from "../models/product.model";
 import { uploadImage } from "../utils";
-import { mapCategory, mapService } from "../mappers/product.mappper";
+import { mapCategory, mapItem, mapService } from "../mappers/product.mappper";
 
 // category
 
@@ -126,7 +126,7 @@ export async function deleteService(id: string) {
   await deleteDoc(doc(db, "Services", id));
 }
 
-export const getServices = async (): Promise<Service[]> => {
+export async function getServices(): Promise<Service[]> {
   const snap = await getDocs(collection(db, "Services"));
   return snap.docs.map(mapService);
 };
@@ -198,3 +198,8 @@ export async function updateItem(id: string, data: {
 export async function deleteItem(id: string) {
   await deleteDoc(doc(db, 'Items', id));
 }
+
+export async function getItems() : Promise<Item[]>{
+  const snap = await getDocs(collection(db, "Items"));
+  return snap.docs.map(mapItem);
+};

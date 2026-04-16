@@ -176,7 +176,7 @@ const handlePrev = async () => {
         return (
           <div className="flex flex-col gap-0.5">
             <span className="text-slate-700 text-sm">{row.email ?? "—"}</span>
-            {row.phone && <span className="text-xs text-slate-400">{row.phoneCode ?? ""} {row.phone}</span>}
+            {row.phone && <span className="text-xs text-slate-400"> {row.phone}</span>}
           </div>
         );
       case "language":

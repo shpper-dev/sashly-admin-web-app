@@ -5,24 +5,25 @@ import { OrderStatuses } from "@/lib/models/order.model";
 import { advanceOrderStatus, getAllowedNextStatuses } from "@/lib/firebase/order";
 
 const STATUS_LABELS: Record<OrderStatuses, string> = {
-  unpaid:         "Unpaid",
   confirmed:      "Confirmed",
   pickedUp:       "Picked Up",
   sorting:        "Sorting",
   inProgress:     "In Progress",
   readyToDeliver: "Ready to Deliver",
   delivered:      "Delivered",
+  disputed:       "Disputed",
   cancelled:      "Cancelled",
 };
 
 interface UpdateOrderDialogProps {
   orderId: string;
+  userId?: string; //for disputes (later may change to admin id )
   currentStatus: OrderStatuses;
   onSuccess?: () => void;
   children: React.ReactNode;
 }
 
-export default function UpdateOrderDialog({ orderId, currentStatus, onSuccess, children }: UpdateOrderDialogProps) {
+export default function UpdateOrderDialog({ orderId, userId, currentStatus, onSuccess, children }: UpdateOrderDialogProps) {
   const [open, setOpen]           = useState(false);
   const [selected, setSelected]   = useState<OrderStatuses | null>(null);
   const [description, setDescription] = useState("");
@@ -34,7 +35,7 @@ export default function UpdateOrderDialog({ orderId, currentStatus, onSuccess, c
     if (!selected) return;
     setSaving(true);
     try {
-      await advanceOrderStatus(orderId, selected, description || undefined);
+      await advanceOrderStatus(orderId, selected, description || undefined, userId);
       setOpen(false);
       setSelected(null);
       setDescription("");

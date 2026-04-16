@@ -5,22 +5,25 @@ import {
   DialogTitle, DialogTrigger, DialogClose,
 } from "@/components/ui/dialog";
 import {
-  NotebookTabs, X, Phone, Mail,
+  NotebookTabs, X, 
   CreditCard, Star, Package, Truck, CheckCircle2,
   Circle, Shirt,
-  PencilLine,
-  LucideIcon,
-  BellIcon,
-  BellOff,
   Plus,
+  Pencil,
 } from "lucide-react";
 import { Order, OrderStatuses } from "@/lib/models/order.model";
 import UpdateOrderDialog from "./UpdateOrderDialog";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { OrderPriceSection } from "./OrderPriceSection";
 import OrderPaymentDialog from "./OrderPaymentDialog";
 import OrderInvoiceDialog from "./OrderInvoiceDialog";
 import OrderChat from "./OrderChat";
+import OrderItemDialog from "./OrderItemDialog";
+import ConfirmActionDialog from "../ConfirmActionDialog";
+import { deleteOrderItem } from "@/lib/firebase/order";
+import { useToast } from "@/lib/providers/ToastProvider";
+import ConfirmDeliveryDialog from "./ConfirmDeliveryDialog";
+
 
 interface Props {
   order: Order;
@@ -29,13 +32,13 @@ interface Props {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
-  unpaid:         { label: "Unpaid",          color: "text-slate-500",  dot: "bg-slate-400"  },
   confirmed:      { label: "Confirmed",        color: "text-blue-600",   dot: "bg-blue-500"   },
   pickedUp:       { label: "Picked Up",        color: "text-indigo-600", dot: "bg-indigo-500" },
   sorting:        { label: "Sorting",          color: "text-yellow-600", dot: "bg-yellow-500" },
   inProgress:     { label: "In Progress",      color: "text-orange-600", dot: "bg-orange-500" },
   readyToDeliver: { label: "Ready to Deliver", color: "text-purple-600", dot: "bg-purple-500" },
   delivered:      { label: "Delivered",        color: "text-green-600",  dot: "bg-green-500"  },
+  disputed:       { label: "Disputed",         color: "text-red-500",    dot: "bg-red-400"  },
   cancelled:      { label: "Cancelled",        color: "text-red-600",    dot: "bg-red-500"    },
 };
 
@@ -51,8 +54,9 @@ function fmtTime(ts?: number | null) {
 export default function OrderDetailsDialog({ order, children, onStatusUpdate }: Props) {
   const [open, setOpen] = useState(false);
   const cfg = STATUS_CONFIG[order.latestStatus.status] ?? { label: order.latestStatus.status, color: "text-slate-600", dot: "bg-slate-400" };
-  const [showNotifs, setShowNotifs] = useState(true);
-
+  // const [showNotifs, setShowNotifs] = useState(true);
+  
+  const {showToast} = useToast();
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -126,7 +130,16 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                 {/* Ready by */}
                 <div>
                   <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Ready By</p>
-                  <p className="font-semibold text-sm text-slate-700 mt-0.5">{fmt(order.expectedDeliveryTime)}</p>
+                  {(order.isDelivered || order.isCancelled) ? (
+                    <p className="font-semibold text-sm text-slate-700 mt-0.5">{fmt(order.expectedDeliveryTime)}</p>
+                  ):(
+                    <ConfirmDeliveryDialog 
+                    orderId={order.id} orderCreatedAt={order.createdAt} 
+                    existingExpectedDelivery={order.expectedDeliveryTime} onSuccess={onStatusUpdate} >
+                      <p className="font-semibold text-sm text-slate-700 mt-0.5 cursor-pointer hover:text-[#02d0ff]">{fmt(order.expectedDeliveryTime)}</p>
+                    </ConfirmDeliveryDialog>
+                  )}
+                  
                 </div>
 
                 <div className="w-px h-8 bg-slate-200" />
@@ -157,6 +170,7 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
 
               <UpdateOrderDialog
                 orderId={order.id}
+                userId={order.userId} //for dispute message creation, might change to adminId later
                 currentStatus={order.latestStatus.status as OrderStatuses}
                 onSuccess={() => onStatusUpdate()}
               >
@@ -175,13 +189,39 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
             <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6 border-r border-slate-100">
                 {/* Line items */}
               <Section title={`Line Items (${order.items.length})`} titleButton={
-                <button className="flex items-center gap-1 text-[10px] px-2 py-1 shadow-sm rounded-lg text-[#02d0ff]">
-                  <Plus className="h-3 w-3" strokeWidth={3} /> Add Item
+                <OrderItemDialog mode="add" orderId={order.id} onSuccess={onStatusUpdate}  >
+                  <button className="flex items-center gap-1 text-[10px] px-2 py-1 shadow-sm border border-cyan-300 rounded-lg text-[#02d0ff]">
+                  <Plus className="h-2.5 w-2.5" strokeWidth={3} /> Add Item
                 </button>
+                </OrderItemDialog>
               }>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3 mt-1">
                   {order.items.map((item, i) => (
-                    <div key={i} className="flex items-center gap-3 border border-slate-100 rounded-xl p-3 bg-white">
+                    <div key={i} className="relative flex items-center gap-3 border border-slate-100 rounded-xl p-3 bg-white">                  
+
+                      {/* Edit + Delete icons */}
+                      <div className="absolute top-[-9] right-[-10] flex items-center gap-2">
+                        <OrderItemDialog mode="edit" orderId={order.id} orderItem={item} itemIndex={i} onSuccess={onStatusUpdate}>
+                          <button className="w-5 h-5 bg-purple-100 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-400 hover:text-indigo-500 cursor-pointer transition-colors shadow-sm">
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        </OrderItemDialog>
+                        <ConfirmActionDialog
+                          title="Delete Item"
+                          description={`Delete "${item.name}-${item.serviceName}" from this order: #${order.id}?`}
+                          confirmLabel="Delete"
+                          onConfirm={async () => {
+                             await deleteOrderItem(order.id, i);
+                             showToast(`Service: ${order.id} updated successfully.`, "success");
+                          }}
+                          onSuccess={() => onStatusUpdate()}
+                        >
+                          <button className="w-5 h-5 bg-red-50 flex items-center justify-center rounded-md hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors cursor-pointer shadow-sm">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </ConfirmActionDialog>
+                      </div>                  
+
                       {item.photoUrl ? (
                         <img src={item.photoUrl} alt={item.name} className="w-9 h-9 rounded-lg object-cover shrink-0 border" />
                       ) : (
@@ -189,7 +229,7 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                           <Package className="h-4 w-4 text-slate-400" />
                         </div>
                       )}
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 pr-14">
                         <p className="text-xs font-bold text-slate-800 truncate">{item.name} · {item.arabicName}</p>
                         <p className="text-[10px] text-slate-400 truncate">{item.serviceName}</p>
                         <p className="text-[10px] text-slate-400">SAR {item.servicePrice.toFixed(2)} × {item.count}</p>

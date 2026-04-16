@@ -2,7 +2,7 @@ import { UserAddress } from "./user.model";
 
 export type ServiceType = "ordinary" | "express";
 
-export type OrderStatuses = "unpaid" | "confirmed" | "pickedUp" | "sorting" | "inProgress" | "readyToDeliver" | "delivered" | "cancelled" ;
+export type OrderStatuses = "confirmed" | "pickedUp" | "sorting" | "inProgress" | "readyToDeliver" | "delivered" | "cancelled" | "disputed" ;
 
 export interface Order {
     id: string;
@@ -17,7 +17,7 @@ export interface Order {
     isPaid: boolean;
     isDelivered: boolean;
     isCancelled: boolean;
-    serviceType: "ordinary" | "express";
+    serviceType: ServiceType;
     pickUpStartTime: number;
     pickUpEndTime: number;
     pickUpAddress: UserAddress;
