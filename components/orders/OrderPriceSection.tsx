@@ -18,7 +18,8 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps )
   const [subtotal, setSubtotal] = useState(order.totalPrice || 0);
   //there is no tax or express fee in the model as of now
   const [tax, setTax] = useState(0);
-  const [expressFee, setExpressFee] = useState(order.serviceType === "express" ? 2: 0 || 0);
+  // no express fee as of now
+  const [expressFee, setExpressFee] = useState(order.serviceType === "express" ? 0: 0 || 0);
   const [reason, setReason] = useState("");
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps )
     // update local state to match the new source of truth.
     if (!adjusting) {
       setSubtotal(order.totalPrice || 0);
-      setExpressFee(order.serviceType === "express" ? 2 : 0);
+      setExpressFee(order.serviceType === "express" ? 0 : 0);
     }
   }, [order.totalPrice, order.serviceType, adjusting]);
 
@@ -55,7 +56,7 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps )
   const handleCancel = () => {
     setSubtotal(order.totalPrice || 0);
     setTax(0);
-    setExpressFee(order.serviceType === "express" ? 2: 0 || 0);
+    setExpressFee(order.serviceType === "express" ? 0: 0 || 0);
     setReason("");
     setAdjusting(false);
   };
