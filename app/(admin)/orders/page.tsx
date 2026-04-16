@@ -66,7 +66,7 @@ export default function OrdersPage() {
   // },
 };
 
-  const PAGE_SIZE = 5;
+  const PAGE_SIZE = 10;
 
   const fetchPage = async (cursor: any, filters: OrderFilters, refetch: boolean = false) => {
     if(!refetch) setLoading(true);
