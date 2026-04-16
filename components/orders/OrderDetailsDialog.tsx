@@ -23,6 +23,7 @@ import ConfirmActionDialog from "../ConfirmActionDialog";
 import { deleteOrderItem } from "@/lib/firebase/order";
 import { useToast } from "@/lib/providers/ToastProvider";
 import ConfirmDeliveryDialog from "./ConfirmDeliveryDialog";
+import {  useOrderServiceDowngrade } from "@/hooks/useOrderServiceDowngrade";
 
 
 interface Props {
@@ -52,11 +53,13 @@ function fmtTime(ts?: number | null) {
 }
 
 export default function OrderDetailsDialog({ order, children, onStatusUpdate }: Props) {
+  useOrderServiceDowngrade(order.id, onStatusUpdate);
   const [open, setOpen] = useState(false);
   const cfg = STATUS_CONFIG[order.latestStatus.status] ?? { label: order.latestStatus.status, color: "text-slate-600", dot: "bg-slate-400" };
   // const [showNotifs, setShowNotifs] = useState(true);
   
   const {showToast} = useToast();
+  
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
