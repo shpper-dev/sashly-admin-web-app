@@ -3,7 +3,7 @@ import { updateOrderPrice } from "@/lib/firebase/order";
 import { Order } from "@/lib/models/order.model";
 import { useToast } from "@/lib/providers/ToastProvider";
 import { Check, ChevronDown, ChevronUp, Pencil } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface OrderPriceSectionProps{ 
     order: Order,
@@ -20,6 +20,15 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps )
   const [tax, setTax] = useState(0);
   const [expressFee, setExpressFee] = useState(order.serviceType === "express" ? 2: 0 || 0);
   const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    // When the order items change and total price is recalculated in the parent,
+    // update local state to match the new source of truth.
+    if (!adjusting) {
+      setSubtotal(order.totalPrice || 0);
+      setExpressFee(order.serviceType === "express" ? 2 : 0);
+    }
+  }, [order.totalPrice, order.serviceType, adjusting]);
 
   const {showToast} = useToast();
 

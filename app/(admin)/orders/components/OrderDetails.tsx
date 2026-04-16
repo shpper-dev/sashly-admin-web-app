@@ -161,18 +161,22 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>
 
-      {loading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
-        <OrderTable
-          headings={orderHeadings}
-          rows={filtered}
-          renderCell={renderCell}
-          currentPage={currentPage}
-          hasNextPage={hasNextPage}
-          onNext={onNext}
-          onPrev={onPrev}
-          pageSize={pageSize}
-          loading={loading}
-        />
+      {loading && filtered.length === 0 ? (
+        <TableSkeleton tableHeadings={orderHeadings} />
+      ) : (
+        <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+          <OrderTable
+            headings={orderHeadings}
+            rows={filtered}
+            renderCell={renderCell}
+            currentPage={currentPage}
+            hasNextPage={hasNextPage}
+            onNext={onNext}
+            onPrev={onPrev}
+            pageSize={pageSize}
+            loading={loading}
+          />
+        </div>
       )}
     </div>
   );

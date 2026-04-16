@@ -66,10 +66,10 @@ export default function OrdersPage() {
   // },
 };
 
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 5;
 
-  const fetchPage = async (cursor: any, filters: OrderFilters) => {
-    setLoading(true);
+  const fetchPage = async (cursor: any, filters: OrderFilters, refetch: boolean = false) => {
+    if(!refetch) setLoading(true);
     try {
       const result = cursor
         ? await getOrdersNextPage(cursor, PAGE_SIZE, filters)
@@ -84,10 +84,16 @@ export default function OrdersPage() {
     }
   };
 
-  const refetch = () => {
-    cursorStack.current = [undefined];
-    setCurrentPage(1);
-    fetchPage(undefined, TAB_FILTERS[activeTab]);
+  const refetch = (stayOnPage: boolean) => {
+    if(stayOnPage){
+      // get current cursor
+      const currentCursor = cursorStack.current[cursorStack.current.length -1];
+      fetchPage(currentCursor,TAB_FILTERS[activeTab]);
+    } else{
+      cursorStack.current = [undefined];
+      setCurrentPage(1);
+      fetchPage(undefined, TAB_FILTERS[activeTab],true);
+    }
   };
 
   // Refetch when tab changes
@@ -162,7 +168,7 @@ export default function OrdersPage() {
   const tabProps: OrderTabProps = {
   orders,
   loading,
-  onStatusUpdate: refetch,
+  onStatusUpdate: () => refetch(true),
   currentPage,
   hasNextPage,
   onNext: handleNext,
@@ -190,7 +196,7 @@ return (
             <Stat label="PIECES" value={orders.reduce((acc, order) => 
             acc + order.items.reduce((sum, item) => sum + item.count, 0), 0)}  />
             <Stat label="TOTAL" value={`SAR ${orders.reduce((acc, order) => acc + order.totalPrice, 0).toFixed(2)}`}  />
-            <Stat label="UNPAID" value={`SAR ${orders.filter(o=> !o.isPaid).reduce((acc,order) => acc + order.totalPrice, 0).toFixed(2)}`} danger />
+            <Stat label="UNPAID" value={`SAR ${orders.filter(o=> !o.isPaid && !o.isCancelled).reduce((acc,order) => acc + order.totalPrice, 0).toFixed(2)}`} danger />
 
             <div className="w-px h-7 bg-slate-300" />
             
