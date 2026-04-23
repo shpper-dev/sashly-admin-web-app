@@ -9,6 +9,7 @@ import { Driver } from '@/lib/models/driver.model';
 // import { updateDriver, blockDriver, unblockDriver } from '@/lib/firebase/driver'; // Assuming these exist
 import { deleteImage, uploadImage } from '@/lib/utils';
 import { updateDriver } from '@/lib/firebase/driver';
+import { Switch } from '../ui/switch';
 
 interface DriversEditProfileProps {
   driver: Driver;
@@ -18,6 +19,8 @@ interface DriversEditProfileProps {
 export default function DriversEditProfile({ driver, onSuccess }: DriversEditProfileProps) {
   const [saving, setSaving] = useState(false);
   const [blocking, setBlocking] = useState(false);
+  const [togglingOnline, setTogglingOnline] = useState(false);
+  const [isOnline, setIsOnline]             = useState(driver.isOnline ?? false);
 
   // States
   const [name, setName] = useState(driver.name ?? "");
@@ -43,6 +46,19 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
     setPendingImageFile(file);
     setPreviewUrl(URL.createObjectURL(file));
   };
+
+  const handleToggleOnline = async () => {
+  setTogglingOnline(true);
+  try {
+    await updateDriver(driver.id, { isOnline: !isOnline });
+    setIsOnline((prev) => !prev);
+    onSuccess?.();
+  } catch (e) {
+    console.error("Online toggle failed:", e);
+  } finally {
+    setTogglingOnline(false);
+  }
+};
 
   const handleSave = async () => {
     setSaving(true);
@@ -138,27 +154,46 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
           <InputWithIcon icon={Phone} value={phoneNumber} onChange={setPhoneNumber} />
         </FormField>
 
-        {/* <FormField label="Secondary Phone">
-          <InputWithIcon icon={Phone} value={secondaryPhone} onChange={setSecondaryPhone} />
-        </FormField> */}
-
         <FormField label="Email Address">
           <InputWithIcon icon={Mail} value={email} onChange={setEmail} />
         </FormField>
 
-        {/* <FormField label="City">
-          <InputWithIcon icon={MapPin} value={city} onChange={setCity} />
-        </FormField> */}
 
         {/* Read Only Designated Area */}
         <FormField label="Designated Area (Read Only)">
-          <div className="flex items-center h-11 rounded-xl border border-slate-100 bg-slate-50 px-4 gap-3 opacity-70">
-            <Route className="h-4 w-4 text-slate-400 shrink-0" />
-            <span className="text-sm text-slate-600 truncate">
-              {driver.designatedArea?.areaName ?? "No area assigned"}
-            </span>
+          <div className="flex flex-col rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 gap-1 opacity-70">
+            <div className="flex items-center gap-3">
+              <Route className="h-4 w-4 text-slate-400 shrink-0" />
+              <span className="text-sm text-slate-600 truncate">
+                {driver.designatedArea?.areaName ?? "No area assigned"}
+              </span>
+            </div>
+            {driver.designatedArea?.center && (
+              <div className="flex items-center gap-1.5 pl-7">
+                <MapPin className="h-3 w-3 text-slate-300 shrink-0" />
+                <span className="text-[10px] font-mono text-slate-400">
+                  {driver.designatedArea.center.lat.toFixed(6)}, {driver.designatedArea.center.lng.toFixed(6)}
+                </span>
+              </div>
+            )}
           </div>
         </FormField>
+
+
+       {/* Online Status */}
+       <FormField label="Online Status">
+         <div className="flex items-center h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 gap-3">
+           <Switch
+             checked={isOnline}
+             disabled={togglingOnline}
+             onCheckedChange={handleToggleOnline}
+             className="cursor-pointer data-[state=checked]:bg-purple-600!"
+           />
+           <span className={`text-sm font-semibold transition-colors ${isOnline ? "text-green-600" : "text-slate-400"}`}>
+             {togglingOnline ? "Updating…" : isOnline ? "Online" : "Offline"}
+           </span>
+         </div>
+       </FormField>
       </div>
 
       {/* Operational Section */}

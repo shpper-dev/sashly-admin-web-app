@@ -55,6 +55,31 @@ export function serializeOrder(order: Partial<Order>) {
     paymentInfo: order.paymentInfo ?? null,
     paymentDate: order.paymentDate ?? null,
 
+    // coupons
+    discountAmount: order.discountAmount ?? null,
+    appliedCoupon: order.appliedCoupon ?? null,
+
+    // driver details
+    assignedDriverId: order.assignedDriverId ?? null,
+    driverName: order.driverName ?? null,
+    driverPhone: order.driverPhone ?? null,
+    driverProfileImageUrl: order.driverProfileImageUrl ?? null,
+
+    driverAssignedAt: order.driverAssignedAt ?? null,
+    driverAcceptedAt: order.driverAcceptedAt ?? null,
+
+    driverEarnings: order.driverEarnings ?? null,
+    platformFee: order.platformFee ?? null,
+    driverFee: order.driverFee ?? null,
+
+    driverLocation: order.driverLocation
+      ? {
+          latitude: order.driverLocation.latitude,
+          longitude: order.driverLocation.longitude,
+          timestamp: order.driverLocation.timestamp,
+        }
+      : null,
+
     ratingByUser: order.ratingByUser
       ? {
           rating: order.ratingByUser.rating,

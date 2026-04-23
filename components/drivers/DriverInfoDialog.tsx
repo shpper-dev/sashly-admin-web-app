@@ -59,7 +59,7 @@ export default function DriverInfoDialog({ children, driver, onDelete, onSuccess
         </div>
       </DialogTrigger>
 
-      <DialogContent className="p-0 gap-0 border-0 overflow-hidden w-[75vw]! h-[90vh]! min-w-0! max-w-none! rounded-3xl shadow-2xl">
+      <DialogContent className="p-0 gap-0 border-0 overflow-hidden w-[80vw]! h-[90vh]! min-w-0! max-w-none! rounded-3xl shadow-2xl">
         <DialogHeader className="sr-only">
           <DialogTitle>driver Information</DialogTitle>
         </DialogHeader>
