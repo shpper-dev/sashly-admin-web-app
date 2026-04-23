@@ -1,47 +1,11 @@
 "use client"
 
+import { SearchFilters } from "@/app/(admin)/search/page"
+import { Order } from "@/lib/models/order.model"
 import { Printer, Pencil, TextSearch, Pencil as PencilIcon, X, SquarePen, ChevronLeft, ChevronRight } from "lucide-react"
 import { useState } from "react"
 
-interface OrderItem {
-  name: string
-  qty: number
-}
 
-interface Order {
-  id: string
-  customer: string
-  email: string
-  phone: string
-  placed: string
-  ready: string
-  items: OrderItem[]
-  pickedBy: string
-  cleanedBy: string
-  notes?: string
-  status: string
-  payment: string
-  amount: number
-}
-
-type SearchFilters = {
-  name: string
-  phone: string
-  email: string
-  route: string
-  rack: string
-  customerGroup: string
-  orderId: string
-  summary: string
-  notes: string
-  placedAfter: string
-  placedBefore: string
-  payment: string
-  paidAfter: string
-  paidBefore: string
-  cleanedAfter: string
-  cleanedBefore: string
-}
 
 const filterLabels: Record<keyof SearchFilters, string> = {
   name: "Name",
@@ -60,13 +24,32 @@ const filterLabels: Record<keyof SearchFilters, string> = {
   paidBefore: "Paid Before",
   cleanedAfter: "Cleaned After",
   cleanedBefore: "Cleaned Before",
+} 
+const STATUS_CONFIG: Record<string, { label: string; color: string;  }> = {
+  confirmed:      { label: "Confirmed",        color: "text-blue-600 bg-blue-50",     },
+  pickedUp:       { label: "Picked Up",        color: "text-indigo-600 bg-indigo-50",  },
+  sorting:        { label: "Sorting",          color: "text-yellow-600 bg-yellow-50",  },
+  inProgress:     { label: "In Progress",      color: "text-orange-600 bg-orange-50", },
+  readyToDeliver: { label: "Ready to Deliver", color: "text-purple-600 bg-purple-50",},
+  delivered:      { label: "Delivered",        color: "text-green-600 bg-green-50", },
+  disputed:       { label: "Disputed",         color: "text-red-500 bg-red-50",    },
+  cancelled:      { label: "Cancelled",        color: "text-red-600 bg-red-50",    },
+};
+
+function fmt(ts?: number | null) {
+  if (!ts) return "—";
+  return new Date(ts).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-interface Props {
+interface SearchResultsProps {
   orders: Order[]
   activeFilters: SearchFilters
   onEditSearch: () => void
   onRemoveFilter: (field: keyof SearchFilters) => void
+
+  currentPage: number
+  hasNext: boolean
+  onPageChange: (page: number) => void
 }
 
 const PAGE_SIZE = 10
@@ -84,14 +67,14 @@ const columns: { key: string; label: string }[] = [
 function renderCellContent(col: string, order: Order) {
   switch (col) {
     case "id":
-      return <span className="font-semibold text-slate-800">#{order.id}</span>
+      return <span className="font-semibold text-slate-800">#{order.id.slice(-13)}</span>
 
     case "customer":
       return (
         <div className="flex flex-col">
-          <span className="font-semibold text-slate-800">{order.customer}</span>
-          <span className="text-slate-500">{order.email}</span>
-          <span className="text-slate-500">{order.phone}</span>
+          <span className="font-semibold text-slate-800">{order.userName}</span>
+          <span className="text-slate-500">{order.userEmail}</span>
+          <span className="text-slate-500">{order.userPhone}</span>
         </div>
       )
 
@@ -99,8 +82,8 @@ function renderCellContent(col: string, order: Order) {
       return (
         <div className="flex flex-col">
           <span className="text-slate-400">PLACED</span>
-          <span className="text-slate-700">{order.placed}</span>
-          <span className="text-blue-500 font-semibold">READY {order.ready}</span>
+          <span className="text-slate-700">{fmt(order.createdAt)}</span>
+          <span className="text-blue-500 font-semibold">READY {fmt(order.expectedDeliveryTime)}</span>
         </div>
       )
 
@@ -110,7 +93,7 @@ function renderCellContent(col: string, order: Order) {
           {order.items.slice(0, 3).map((item, i) => (
             <div key={i} className="flex justify-between">
               <span>{item.name}</span>
-              <span>x{item.qty}</span>
+              <span>x{item.count}</span>
             </div>
           ))}
           {order.items.length > 3 && (
@@ -124,32 +107,26 @@ function renderCellContent(col: string, order: Order) {
     case "staff":
       return (
         <div className="flex flex-col gap-1 text-[11px]">
-          <span><b>PICKED:</b> {order.pickedBy}</span>
-          <span><b>CLEANED:</b> {order.cleanedBy || '—'}</span>
-          {order.notes && (
+          {/* <span><b>PICKED:</b> {order.pickedB}</span>
+          <span><b>CLEANED:</b> {order.cleanedBy || '—'}</span> */}
+          {/* {order.notes && (
             <span className="text-slate-400">NOTES: {order.notes}</span>
-          )}
+          )} */}
         </div>
       )
 
     case "status":
       return (
-        <span className={`px-2 py-1 text-[10px] font-semibold rounded-full ${
-          order.status === 'DELIVERED'
-            ? 'bg-green-100 text-green-700'
-            : order.status === 'PROCESSING'
-            ? 'bg-yellow-100 text-yellow-700'
-            : 'bg-slate-100 text-slate-600'
-        }`}>
-          {order.status}
+        <span className={`px-2 py-1 text-[10px] font-semibold rounded-full ${STATUS_CONFIG[order.latestStatus.status].color}`}>
+          {order.latestStatus.status}
         </span>
       )
 
     case "payment":
       return (
         <div className="flex flex-col gap-2">
-          <span className="font-semibold text-slate-800">SAR {order.amount}</span>
-          <span className="text-[11px] text-slate-500">{order.payment}</span>
+          <span className="font-semibold text-slate-800">SAR {order.totalPrice}</span>
+          <span className="text-[11px] text-slate-500">{order.isPaid ? "Paid" : "Unpaid"}</span>
           <div className="flex gap-2">
             <button className="p-1 rounded bg-slate-100 hover:bg-slate-200 transition-colors">
               <Printer size={14} />
@@ -166,25 +143,12 @@ function renderCellContent(col: string, order: Order) {
   }
 }
 
-export default function SearchResults({ orders, activeFilters, onEditSearch, onRemoveFilter }: Props) {
-  const [currentPage, setCurrentPage] = useState(1)
-
-  const totalRows = orders.length
-  const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE))
-  const paginatedOrders = orders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const rowStart = totalRows === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
-  const rowEnd = Math.min(currentPage * PAGE_SIZE, totalRows)
-
+export default function SearchResults({ orders, activeFilters, onEditSearch, onRemoveFilter, currentPage, hasNext, onPageChange }: SearchResultsProps) {
+  const paginatedOrders = orders;
+  
   const activePills = (Object.entries(activeFilters) as [keyof SearchFilters, string][]).filter(
     ([_, value]) => value !== ''
-  )
-
-  const getPageNumbers = (): (number | '...')[] => {
-    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1)
-    if (currentPage <= 3) return [1, 2, 3, '...', totalPages]
-    if (currentPage >= totalPages - 2) return [1, '...', totalPages - 2, totalPages - 1, totalPages]
-    return [1, '...', currentPage, '...', totalPages]
-  }
+  );
 
   return (
     <section className="px-8 flex flex-col gap-3">
@@ -269,48 +233,34 @@ export default function SearchResults({ orders, activeFilters, onEditSearch, onR
             <tfoot>
               <tr>
                 <td colSpan={columns.length}>
-                  <div className="flex flex-row justify-between items-center px-4 border-t border-slate-200 bg-white h-16.25">
+                  <div className="flex flex-row justify-end items-center px-4 border-t border-slate-200 bg-white h-16.25">
 
                     {/* Left: row count */}
-                    <span className="text-[11px] text-slate-500 shrink-0">
+                    {/* <span className="text-[11px] text-slate-500 shrink-0">
                       Showing{' '}
-                      <span className="font-semibold text-slate-700">{rowStart}–{rowEnd}</span>
+                      <span className="font-semibold text-slate-700">{}–{}</span>
                       {' '}of{' '}
-                      <span className="font-semibold text-slate-700">{totalRows}</span>
+                      <span className="font-semibold text-slate-700">{}</span>
                       {' '}results
-                    </span>
+                    </span> */}
 
                     {/* Right: pagination */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center  gap-1">
                       <button
-                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        onClick={() => onPageChange(currentPage - 1)}
                         disabled={currentPage === 1}
                         className="p-1.5 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-slate-600"
                       >
                         <ChevronLeft size={14} />
                       </button>
 
-                      {getPageNumbers().map((page, i) =>
-                        page === '...' ? (
-                          <span key={`ellipsis-${i}`} className="px-1.5 text-slate-400 text-[11px] select-none">…</span>
-                        ) : (
-                          <button
-                            key={page}
-                            onClick={() => setCurrentPage(Number(page))}
-                            className={`w-7 h-7 rounded-md text-[11px] font-medium transition-colors ${
-                              currentPage === page
-                                ? 'bg-[#02d0ff] text-white'
-                                : 'text-slate-600 hover:bg-slate-100'
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        )
-                      )}
+                      <span className="text-[11px] text-white">
+                       <span className="font-semibold px-2.5 py-1 rounded-sm bg-[#02d0ff]">{currentPage}</span>
+                      </span>
 
                       <button
-                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
+                        onClick={() => onPageChange(currentPage + 1)}
+                        disabled={!hasNext}
                         className="p-1.5 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-slate-600"
                       >
                         <ChevronRight size={14} />

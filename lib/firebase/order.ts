@@ -10,6 +10,8 @@ import {
 import { Order, OrderStatuses, OrderStatus, OrderItem } from "@/lib/models/order.model";
 import { mapOrder } from "../mappers/order.mapper";
 import { createMessage } from "./message";
+import { SearchFilters } from "@/app/(admin)/search/page";
+import { QueryDocumentSnapshot } from "firebase-admin/firestore";
 
 //Filters type
 export interface OrderFilters {
@@ -320,4 +322,87 @@ export async function deleteOrderItem(orderId: string, itemIndex: number) {
   
 }
 
+// search orders
+export async function searchOrders({
+  filters,
+  pageSize = 10,
+  lastDoc,
+}:{
+  filters: Partial<SearchFilters>;
+  pageSize?: number;
+  lastDoc?: QueryDocumentSnapshot | null;
+}) {
+  const constraints : any[] = [];
 
+  // exact match filters
+  if(filters.orderId){
+    constraints.push(where("id", "==", filters.orderId))
+  }
+  if(filters.payment === "paid"){
+    constraints.push(where("isPaid", "==", true));
+  }
+  if(filters.payment === "unpaid"){
+    constraints.push(where("isPaid", "==", false));
+  }
+  if(filters.email){
+    constraints.push(where("userEmail", "==", filters.email.trim().toLowerCase()))
+  }
+
+  // date filters
+  if(filters.placedAfter){
+    constraints.push(where("createdAt", ">=", new Date(filters.placedAfter).getTime()));
+  }
+  if(filters.placedBefore){
+    constraints.push(where("createdAt", "<=", new Date(filters.placedBefore).getTime()));
+  }
+  if(filters.paidAfter){
+    constraints.push(where("paymentDate", ">=", new Date(filters.paidAfter).getTime()));
+  }
+  if(filters.paidBefore){
+    constraints.push(where("paymentDate", "<=", new Date(filters.paidBefore).getTime()));
+  }
+
+  constraints.push(orderBy("createdAt","desc"));
+  
+  if (lastDoc) {
+    constraints.push(startAfter(lastDoc));
+  }
+
+  constraints.push(limit(pageSize));
+
+  const q = query(collection(db,"orders"),...constraints);
+  const snapshot = await getDocs(q);
+  
+  const docs = snapshot.docs;
+  let orders = docs.map(mapOrder);
+
+  // client side filtering
+  orders = applyClientFilters(orders, filters);
+  return {
+    orders,
+    lastDoc: docs.length > 0 ? docs[docs.length - 1] : null,
+    hasMore: docs.length === pageSize,
+  };
+  
+}
+
+function applyClientFilters(orders: Order[], filters: Partial<SearchFilters>) {
+  return orders.filter((order) => {
+    if (filters.name && !order.userName.toLowerCase().includes(filters.name.toLowerCase())) {
+      return false;
+    }
+
+    if (filters.phone && !order.userPhone.includes(filters.phone)) {
+      return false;
+    }
+
+    if (filters.summary) {
+      const match = order.items.some((item) =>
+        item.name.toLowerCase().includes(filters.summary!.toLowerCase())
+      );
+      if (!match) return false;
+    }
+
+    return true;
+  });
+}

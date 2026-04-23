@@ -12,8 +12,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import SearchResults from '@/components/search/SearchResults';
+import { Order } from '@/lib/models/order.model';
+import { getOrders, searchOrders } from '@/lib/firebase/order';
 
-interface SearchFilters {
+export interface SearchFilters {
   name: string;
   phone: string;
   email: string;
@@ -51,52 +53,18 @@ const defaultFilters: SearchFilters = {
   cleanedBefore: '',
 };
 
-const mockOrders = [
-  {
-    id: "4215",
-    customer: "Nouf Abdulaziz",
-    email: "nouf@test.com",
-    phone: "0551234567",
-    placed: "28/01/26",
-    ready: "29/01/26",
-    items: [
-      { name: "Jacket", qty: 1 },
-      { name: "Light Jacket", qty: 3 },
-      { name: "Socks", qty: 3 },
-      { name: "Trousers", qty: 14 },
-    ],
-    pickedBy: "Ismail",
-    cleanedBy: "Yousef",
-    notes: "",
-    status: "DELIVERED",
-    payment: "Card - Ismail",
-    amount: 321,
-  },
-  {
-    id: "4216",
-    customer: "Sarah Al-Qahtani",
-    email: "sarah@example.com",
-    phone: "966551234567",
-    placed: "27/01/26",
-    ready: "28/01/26",
-    items: [
-      { name: "Dress", qty: 2 },
-      { name: "Suit", qty: 1 },
-    ],
-    pickedBy: "Ismail",
-    cleanedBy: "",
-    notes: "Urgent processing requested",
-    status: "PROCESSING",
-    payment: "Paid",
-    amount: 185,
-  },
-]
+
 
 export default function SearchPage() {
   const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
   const [hasSearched, setHasSearched] = useState(false);
-  const [results, setResults] = useState<typeof mockOrders>([]);
+  const [results, setResults] = useState<Order[]>([]);
   const [activeFilters, setActiveFilters] = useState<SearchFilters>(defaultFilters);
+
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastDocs, setLastDocs] = useState<any[]>([]);
+  const [hasNext, setHasNext] = useState(true);
 
   const handleChange = (field: keyof SearchFilters, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
@@ -109,23 +77,40 @@ export default function SearchPage() {
     setResults([]);
   };
 
-  const runSearch = (f: SearchFilters) => {
-    const filtered = mockOrders.filter(order => {
-      if (f.orderId && order.id !== f.orderId) return false;
-      if (f.name && !order.customer.toLowerCase().includes(f.name.toLowerCase())) return false;
-      if (f.phone && !order.phone.includes(f.phone)) return false;
-      if (f.email && !order.email.includes(f.email)) return false;
-      return true;
-    });
-    setResults(filtered);
-  };
+  const runSearch = async (f: SearchFilters, page = 1) => {
+  const lastDoc = lastDocs[page - 1] ?? null;
+
+  const res = await searchOrders({
+    filters: f,
+    pageSize: PAGE_SIZE,
+    lastDoc,
+  });
+
+  setResults(res.orders);
+  setHasNext(res.hasMore);
+
+  const updated = [...lastDocs];
+  updated[page] = res.lastDoc;
+  setLastDocs(updated);
+};
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setActiveFilters({ ...filters });
-    runSearch(filters);
-    setHasSearched(true);
-  };
+  e.preventDefault();
+
+  setActiveFilters({ ...filters });
+  setHasSearched(true);
+
+  // reset pagination
+  setCurrentPage(1);
+  setLastDocs([]);
+
+  runSearch(filters, 1);
+};
+
+const handlePageChange = (page: number) => {
+  setCurrentPage(page);
+  runSearch(activeFilters, page);
+};
 
   const handleEditSearch = () => {
     setHasSearched(false);
@@ -138,7 +123,7 @@ export default function SearchPage() {
     runSearch(updated);
   };
 
-  const inputClass = 'px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 shadow-inner text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all w-full';
+  const inputClass = 'px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 shadow-inner text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all w-full disabled:cursor-not-allowed disabled:opacity-40';
   const labelClass = 'text-slate-600 text-[10px] font-semibold uppercase tracking-wide';
 
   return (
@@ -178,7 +163,7 @@ export default function SearchPage() {
                       value={filters.phone} onChange={e => handleChange('phone', e.target.value)} />
                   </div>
 
-                  <div className='flex flex-col gap-1'>
+                  <div className='flex flex-col gap-1' >
                     <label htmlFor="email" className={labelClass}>Email</label>
                     <input type="email" id="email" placeholder='Search email...' className={inputClass}
                       value={filters.email} onChange={e => handleChange('email', e.target.value)} />
@@ -187,18 +172,18 @@ export default function SearchPage() {
                   <div className='flex flex-col gap-1'>
                     <label htmlFor="route" className={labelClass}>Route #</label>
                     <input type="text" id="route" placeholder='Search route...' className={inputClass}
-                      value={filters.route} onChange={e => handleChange('route', e.target.value)} />
+                      value={filters.route} onChange={e => handleChange('route', e.target.value)} disabled />
                   </div>
 
-                  <div className='flex flex-col gap-1'>
+                  <div className='flex flex-col gap-1' >
                     <label htmlFor="rack" className={labelClass}>Rack #</label>
                     <input type="text" id="rack" placeholder='Search rack...' className={inputClass}
-                      value={filters.rack} onChange={e => handleChange('rack', e.target.value)} />
+                      value={filters.rack} onChange={e => handleChange('rack', e.target.value)} disabled />
                   </div>
 
                   <div className='flex flex-col gap-1'>
                     <label className={labelClass}>Customer Group</label>
-                    <Select value={filters.customerGroup} onValueChange={v => handleChange('customerGroup', v)}>
+                    <Select value={filters.customerGroup} onValueChange={v => handleChange('customerGroup', v)} disabled>
                       <SelectTrigger className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 shadow-inner text-xs w-full h-auto">
                         <SelectValue placeholder="Select group" />
                       </SelectTrigger>
@@ -220,13 +205,13 @@ export default function SearchPage() {
                   <div className='flex flex-col gap-1'>
                     <label htmlFor="summary" className={labelClass}>Summary</label>
                     <input type="text" id="summary" placeholder='Summary keywords...' className={inputClass}
-                      value={filters.summary} onChange={e => handleChange('summary', e.target.value)} />
+                      value={filters.summary} onChange={e => handleChange('summary', e.target.value)} disabled />
                   </div>
 
                   <div className='flex flex-col gap-1'>
                     <label htmlFor="notes" className={labelClass}>Notes</label>
                     <input type="text" id="notes" placeholder='Search notes...' className={inputClass}
-                      value={filters.notes} onChange={e => handleChange('notes', e.target.value)} />
+                      value={filters.notes} onChange={e => handleChange('notes', e.target.value)} disabled />
                   </div>
 
                   <div className='flex flex-col gap-1'>
@@ -243,15 +228,15 @@ export default function SearchPage() {
 
                   <div className='flex flex-col gap-1'>
                     <label className={labelClass}>Payment</label>
-                    <Select value={filters.payment} onValueChange={v => handleChange('payment', v)}>
+                    <Select value={filters.payment} onValueChange={v => handleChange('payment', v)} >
                       <SelectTrigger className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 shadow-inner text-xs w-full h-auto">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
                         <SelectItem value="paid" className="rounded-lg cursor-pointer text-xs">Paid</SelectItem>
                         <SelectItem value="unpaid" className="rounded-lg cursor-pointer text-xs">Unpaid</SelectItem>
-                        <SelectItem value="partial" className="rounded-lg cursor-pointer text-xs">Partial</SelectItem>
-                        <SelectItem value="refunded" className="rounded-lg cursor-pointer text-xs">Refunded</SelectItem>
+                        {/* <SelectItem value="partial" className="rounded-lg cursor-pointer text-xs">Partial</SelectItem>
+                        <SelectItem value="refunded" className="rounded-lg cursor-pointer text-xs">Refunded</SelectItem> */}
                       </SelectContent>
                     </Select>
                   </div>
@@ -259,25 +244,25 @@ export default function SearchPage() {
                   <div className='flex flex-col gap-1'>
                     <label htmlFor="paid-after" className={labelClass}>Paid After</label>
                     <input type="date" id="paid-after" className={inputClass}
-                      value={filters.paidAfter} onChange={e => handleChange('paidAfter', e.target.value)} />
+                      value={filters.paidAfter} onChange={e => handleChange('paidAfter', e.target.value)} disabled={filters.payment === "paid" ? false : true} />
                   </div>
 
                   <div className='flex flex-col gap-1'>
                     <label htmlFor="paid-before" className={labelClass}>Paid Before</label>
                     <input type="date" id="paid-before" className={inputClass}
-                      value={filters.paidBefore} onChange={e => handleChange('paidBefore', e.target.value)} />
+                      value={filters.paidBefore} onChange={e => handleChange('paidBefore', e.target.value)} disabled={filters.payment === "paid" ? false : true} />
                   </div>
 
                   <div className='flex flex-col gap-1'>
                     <label htmlFor="cleaned-after" className={labelClass}>Cleaned After</label>
                     <input type="date" id="cleaned-after" className={inputClass}
-                      value={filters.cleanedAfter} onChange={e => handleChange('cleanedAfter', e.target.value)} />
+                      value={filters.cleanedAfter} onChange={e => handleChange('cleanedAfter', e.target.value)} disabled />
                   </div>
 
                   <div className='flex flex-col gap-1'>
                     <label htmlFor="cleaned-before" className={labelClass}>Cleaned Before</label>
                     <input type="date" id="cleaned-before" className={inputClass}
-                      value={filters.cleanedBefore} onChange={e => handleChange('cleanedBefore', e.target.value)} />
+                      value={filters.cleanedBefore} onChange={e => handleChange('cleanedBefore', e.target.value)} disabled />
                   </div>
 
                 </div>
@@ -317,6 +302,9 @@ export default function SearchPage() {
             activeFilters={activeFilters}
             onEditSearch={handleEditSearch}
             onRemoveFilter={handleRemoveFilter}
+            currentPage={currentPage}
+            hasNext={hasNext}
+            onPageChange={handlePageChange}
           />
         )}
       </main>
