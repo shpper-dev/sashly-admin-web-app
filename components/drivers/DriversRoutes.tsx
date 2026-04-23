@@ -4,10 +4,8 @@ import { Plus, Trash2, Search, MapPin, Edit3, Navigation, Ban, Clock, Save } fro
 import { useEffect, useRef, useState } from "react";
 import { GoogleMap, useJsApiLoader, Polygon } from "@react-google-maps/api";
 import { DesignatedArea } from "@/lib/models/driver.model";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
 import { updateDriver } from "@/lib/firebase/driver";
-import { updateRouteCoordinates } from "@/lib/firebase/route";
+
 
 interface Slot {
   id: string;
@@ -64,17 +62,12 @@ export default function DriversRoutes({ driverId, currentArea, onUpdateArea }: D
     if (!currentArea) return;
     setSaving(true);
     try {
-      // 1. Update Driver Collection
+      //Update Driver Collection
       await updateDriver(driverId, { "designatedArea": {
         ...currentArea,
         polygon: tempPolygon,
 
       } })
-
-      // 2. Update Routes Collection (Using the Object format to avoid nested array error)
-      await updateRouteCoordinates(currentArea.areaName,{
-        "geometry.coordinates": tempPolygon.map(p => ({ lng: p.lng, lat: p.lat }))
-      });
 
       setIsEditing(false);
       alert("Route updated successfully!");
@@ -137,7 +130,7 @@ export default function DriversRoutes({ driverId, currentArea, onUpdateArea }: D
 
         <div className="grid grid-cols-3 gap-5">
           {/* MAP */}
-          <div className="col-span-2 relative rounded-xl overflow-hidden border border-slate-200 h-72 bg-slate-100 shadow-inner">
+          <div className="col-span-2 relative rounded-xl overflow-hidden border border-slate-200 h-100 bg-slate-100 shadow-inner">
            {isLoaded && (
           <GoogleMap
             mapContainerStyle={{ width: "100%", height: "100%" }}
@@ -172,7 +165,7 @@ export default function DriversRoutes({ driverId, currentArea, onUpdateArea }: D
           </div>
 
           {/* SIDE PANEL */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 h-72">
             {/* <div className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-xl bg-slate-50">
               <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <input

@@ -27,8 +27,6 @@ export async function updateDriver(driverId: string, updates:Partial<Driver>) {
     
 }
 
-// 
-
 
 export async function createDriver(data: {
   phoneNumber: string; 
@@ -61,3 +59,4 @@ export async function createDriver(data: {
 
   return driverId;
 }
+

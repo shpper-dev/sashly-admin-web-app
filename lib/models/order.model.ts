@@ -1,8 +1,9 @@
+import { Coupon } from "./coupon.model";
 import { UserAddress } from "./user.model";
 
 export type ServiceType = "ordinary" | "express";
 
-export type OrderStatuses = "confirmed" | "pickedUp" | "sorting" | "inProgress" | "readyToDeliver" | "delivered" | "cancelled" | "disputed" ;
+export type OrderStatuses = "unpaid"|"confirmed" | "pickedUp" | "sorting" | "inProgress" | "readyToDeliver" | "delivered" | "cancelled" | "disputed" ;
 
 export interface Order {
     id: string;
@@ -28,11 +29,34 @@ export interface Order {
     paidBy ?: string | null;
     paymentInfo ?: string | null;
     paymentDate ?: number | null;
+    
+    // coupons
+    discountAmount?: number | null;
+    appliedCoupon?: Coupon | null;
+
+    // driver details
+    assignedDriverId?: string | null;
+    driverName?: string | null;
+    driverPhone?: string | null;
+    driverProfileImageUrl?: string | null;
+    driverAssignedAt?: number | null;   // milliseconds
+    driverAcceptedAt?: number | null;   // milliseconds
+    driverEarnings?: number | null;
+    platformFee?: number | null;
+    driverFee?: number | null;
+    driverLocation?: DriverLocation | null;
+
     ratingByUser ?: OrderRating | null;
     createdAt : number;
     updatedAt: number;
 
 }
+
+export interface DriverLocation  {
+       latitude: number;
+       longitude: number;
+       timestamp: number; // milliseconds
+} 
 
 export interface OrderItem {
     id: string;

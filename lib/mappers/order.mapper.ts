@@ -30,7 +30,14 @@ export function mapOrder(doc: QueryDocumentSnapshot<DocumentData>): Order {
     rating: r?.rating ?? 0,
     feedback: r?.feedback ?? null,
     photoUrls: Array.isArray(r?.photoUrls) ? r.photoUrls : null,
-  });
+});
+
+  const mapDriverLocation = (loc: any) => ({
+  latitude: loc?.latitude ?? 0,
+  longitude: loc?.longitude ?? 0,
+  timestamp: loc?.timestamp ?? 0,
+});
+  
 
   return {
     id: doc.id,
@@ -69,6 +76,27 @@ export function mapOrder(doc: QueryDocumentSnapshot<DocumentData>): Order {
     paidBy: data.paidBy ?? null,
     paymentInfo: data.paymentInfo ?? null,
     paymentDate: data.paymentDate ?? null,
+
+    // coupons
+    discountAmount: data.discountAmount ?? null,
+    appliedCoupon: data.appliedCoupon ?? null,
+
+    // driver details
+    assignedDriverId: data.assignedDriverId ?? null,
+    driverName: data.driverName ?? null,
+    driverPhone: data.driverPhone ?? null,
+    driverProfileImageUrl: data.driverProfileImageUrl ?? null,
+
+    driverAssignedAt: data.driverAssignedAt ?? null,
+    driverAcceptedAt: data.driverAcceptedAt ?? null,
+
+    driverEarnings: data.driverEarnings ?? null,
+    platformFee: data.platformFee ?? null,
+    driverFee: data.driverFee ?? null,
+
+    driverLocation: data.driverLocation
+      ? mapDriverLocation(data.driverLocation)
+      : null,
 
     ratingByUser: data.ratingByUser ? mapRating(data.ratingByUser) : null,
 

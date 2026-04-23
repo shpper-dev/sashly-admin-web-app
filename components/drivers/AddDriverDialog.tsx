@@ -7,8 +7,7 @@ import { createDriver } from '@/lib/firebase/driver';
 import { DesignatedArea } from '@/lib/models/driver.model';
 import Image from 'next/image';
 import { uploadImage } from '@/lib/utils';
-import { createRoute } from '@/lib/firebase/route';
-import { serverTimestamp } from 'firebase/firestore';
+
 
 const calculateCenter = (paths: { lat: number; lng: number }[]) => {
   if (paths.length === 0) return { lat: 24.7136, lng: 46.6753 };
@@ -78,25 +77,6 @@ export default function AddDriverDialog({onSuccess}:AddDriverDialogProps) {
       profileImageUrl = await uploadImage(imageFile, path);
     }
 
-    // Prepare GeoJSON Route Document
-    // GeoJSON coordinates MUST be [lng, lat]
-    const geoJsonRoute = {
-      type: "Feature",
-      properties: {
-        areaName: areaName || "Unnamed Area",
-        driverId: phoneNumber.trim(),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      },
-      geometry: {
-        type: "Polygon",
-        // array of objects coz firebase supports that(later when using geotoolkit , convert back to array of arrays)
-        coordinates: polygon.map(p => ({ lng: p.lng, lat: p.lat }))
-      }
-    };
-
-    // Write to 'routes' collection
-    await createRoute(geoJsonRoute);
 
     // Prepare Driver Object
     const designatedArea: DesignatedArea = {

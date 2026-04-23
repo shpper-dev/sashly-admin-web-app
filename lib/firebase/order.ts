@@ -62,6 +62,7 @@ export async function getOrdersNextPage(
 //Status advancement 
 // Valid transitions enforced here — UI calls this, not updateDoc directly
 const STATUS_TRANSITIONS: Record<OrderStatuses, OrderStatuses[]> = {
+  unpaid:          ["confirmed", "cancelled"],
   confirmed:       ["pickedUp", "cancelled"],
   pickedUp:        ["sorting", "cancelled"],
   sorting:         ["inProgress", "cancelled"],
@@ -318,4 +319,5 @@ export async function deleteOrderItem(orderId: string, itemIndex: number) {
 
   
 }
+
 

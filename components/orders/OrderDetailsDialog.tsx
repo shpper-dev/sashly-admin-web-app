@@ -20,7 +20,7 @@ import OrderInvoiceDialog from "./OrderInvoiceDialog";
 import OrderChat from "./OrderChat";
 import OrderItemDialog from "./OrderItemDialog";
 import ConfirmActionDialog from "../ConfirmActionDialog";
-import { deleteOrderItem } from "@/lib/firebase/order";
+import {  deleteOrderItem } from "@/lib/firebase/order";
 import { useToast } from "@/lib/providers/ToastProvider";
 import ConfirmDeliveryDialog from "./ConfirmDeliveryDialog";
 import {  useOrderServiceDowngrade } from "@/hooks/useOrderServiceDowngrade";
@@ -162,7 +162,10 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                   <OrderPaymentDialog total={order.totalPrice} 
                    orderId={order.id}
                    isPaid={order.isPaid}
-                   onSuccess={onStatusUpdate}
+                   onSuccess={()=>{
+                    onStatusUpdate();
+                   
+                   }}
                    >
                      <button className="px-4 py-2 text-xs flex items-center gap-2 bg-[#02D0FF]  hover:bg-[#10ccf7] text-white rounded-full font-bold cursor-pointer transition-colors shadow-sm">
                        PAY
