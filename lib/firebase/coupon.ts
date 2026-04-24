@@ -1,6 +1,7 @@
 import {
   collection, getDocs, addDoc, updateDoc,
-  deleteDoc, doc, query, orderBy, where
+  deleteDoc, doc, query, orderBy, where,
+  runTransaction
 } from "firebase/firestore";
 import { db } from "./config";
 import { Coupon } from "@/lib/models/coupon.model";
@@ -18,14 +19,26 @@ export async function getCoupons(activeOnly = false): Promise<Coupon[]> {
 }
 
 // Create 
+
 export async function createCoupon(
   data: Omit<Coupon, "id" | "usageCount" | "createdAt">
-): Promise<void> {
-  await addDoc(collection(db, "coupons"), {
-    ...data,
-    code: data.code.toUpperCase().trim(),
-    usageCount: 0,
-    createdAt: Date.now(),
+) {
+  const code = data.code.toUpperCase().trim();
+  const ref = doc(db, "coupons", code);
+
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+
+    if (snap.exists()) {
+      throw new Error("Coupon code already exists");
+    }
+
+    transaction.set(ref, {
+      ...data,
+      code,
+      usageCount: 0,
+      createdAt: Date.now(),
+    });
   });
 }
 

@@ -49,9 +49,13 @@ export default function CouponDialog({children, mode, coupon, onSuccess}: Coupon
       }
       onSuccess?.();
       handleClose();
-    } catch (e) {
+    } catch (e:any) {
       console.error(`${isEdit ? "Update" : "Create"} coupon failed:`, e);
+      if (e.message === "Coupon code already exists") {
+      setError("This coupon code already exists. Please choose a different code.");
+    } else {
       setError(`Failed to ${isEdit ? "update" : "create"} coupon. Please try again.`);
+    }
     } finally {
       setLoading(false);
     }
@@ -61,7 +65,7 @@ export default function CouponDialog({children, mode, coupon, onSuccess}: Coupon
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-w-lg rounded-2xl p-8">
         <DialogHeader className="flex flex-row items-center justify-between mb-4">
-          <DialogTitle className="text-xl font-bold text-slate-700">Create Coupon</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-slate-700">{isEdit ? "Edit":"Create"} Coupon</DialogTitle>
           <DialogClose><X className="w-5 h-5 text-slate-400 cursor-pointer" /></DialogClose>
         </DialogHeader>
         {error && (
@@ -73,7 +77,7 @@ export default function CouponDialog({children, mode, coupon, onSuccess}: Coupon
 
         <button
            onClick={handleSave}
-           disabled={loading || !form.code || !form.discountValue}
+           disabled={loading || !form.code || !form.discountValue || !form.endDate || !form.startDate}
            className="px-5 py-2 text-sm font-semibold text-white bg-linear-to-r from-cyan-500 to-blue-500 rounded-lg hover:opacity-90 transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
          >
            {loading ? (
