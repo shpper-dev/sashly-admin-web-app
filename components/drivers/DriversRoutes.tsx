@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { GoogleMap, useJsApiLoader, Polygon } from "@react-google-maps/api";
 import { DesignatedArea } from "@/lib/models/driver.model";
 import { updateDriver } from "@/lib/firebase/driver";
+import AddShiftDialog from "./AddShiftDialog";
+import ConfirmActionDialog from "../ConfirmActionDialog";
 
 
 interface Slot {
@@ -93,10 +95,12 @@ export default function DriversRoutes({ driverId, currentArea, onUpdateArea }: D
               Manage driver availability and operational shifts.
             </p>
           </div>
+          <AddShiftDialog >
           <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition-colors">
             <Plus className="w-4 h-4" />
             Add Slot
           </button>
+          </AddShiftDialog>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -111,12 +115,13 @@ export default function DriversRoutes({ driverId, currentArea, onUpdateArea }: D
                   <p className="text-xs text-slate-400">{slot.time}</p>
                 </div>
               </div>
+              <ConfirmActionDialog onConfirm={async () => removeSlot(slot.id)}  title={"Delete Shift"} description={`Are you sure you want to delete this shift of ${driverId}`} confirmLabel={"Delete"}>
               <button
-                onClick={() => removeSlot(slot.id)}
                 className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5 text-slate-400 hover:text-red-500 transition-colors" />
               </button>
+              </ConfirmActionDialog>
             </div>
           ))}
         </div>

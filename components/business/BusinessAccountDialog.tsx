@@ -169,7 +169,7 @@ export default function BusinessAccountDialog({ mode, business, children, onSucc
                 onClick={() => setTab(t)}
                 className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
                   tab === t
-                    ? "bg-white text-purple-700 shadow"
+                    ? "bg-white text-purple-600 shadow"
                     : "text-slate-700 hover:text-slate-300"
                 }`}
               >
