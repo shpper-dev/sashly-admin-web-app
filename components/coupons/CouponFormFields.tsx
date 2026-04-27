@@ -99,9 +99,21 @@ export default function CouponFormFields({ form, onChange }: CouponFormFieldsPro
         <input
           type="number"
           value={form.discountValue}
-          onChange={(e) => set("discountValue", e.target.value)}
+          onChange={(e) => {
+            let value = e.target.value;
+
+            if (form.discountType === "percentage") {
+              if (Number(value) > 100) value = "100";
+              if (Number(value) < 0) value = "0";
+            } else {
+              if (Number(value) < 0) value = "0";
+            }
+
+            set("discountValue", value);
+          }}
           placeholder={form.discountType === "percentage" ? "e.g. 20" : "e.g. 50"}
           min="0"
+          max={form.discountType === "percentage" ? "100" : undefined}
           className={inputCls}
         />
       </FormField>
