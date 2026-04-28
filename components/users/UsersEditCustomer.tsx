@@ -275,7 +275,7 @@ export default function UsersEditCustomer({ user, onDelete, onSuccess }: UsersEd
         </div>
       </div>
 
-      {/* ── System Info ───────────────────────────────────────────────────── */}
+      {/*  System Info  */}
       <div className="mt-7">
         <SectionLabel>System Info</SectionLabel>
         <div className="grid grid-cols-3 gap-3">
@@ -293,7 +293,7 @@ export default function UsersEditCustomer({ user, onDelete, onSuccess }: UsersEd
         </div>
       </div>
 
-      {/* ── Bottom actions ────────────────────────────────────────────────── */}
+      {/*  Bottom actions*/}
       <div className="flex items-center justify-between mt-8 pt-5 border-t border-slate-100">
         {user.isDeleted ? (
           <button onClick={handleRestore} disabled={deleting}
@@ -320,7 +320,7 @@ export default function UsersEditCustomer({ user, onDelete, onSuccess }: UsersEd
   );
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// helpers
 
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (

@@ -38,6 +38,7 @@ export async function deleteImage(url: string): Promise<void> {
   }
 }
 
+
 // to export to csv
 export function exportToCsv(data:any[], filename: string){
   if(!data.length) return;

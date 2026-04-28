@@ -78,6 +78,7 @@ export default function CategoryDialog({
     if (!file) return;
     setPhoto(file);
     setPhotoPreview(URL.createObjectURL(file));
+    setPhotoRemoved(false);
   };
 
   //reset

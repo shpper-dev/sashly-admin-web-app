@@ -77,6 +77,7 @@ export default function Drivers() {
       setData((prev) =>
         prev.map((d) => d.id === driver.id ? { ...d, isActive: !d.isActive } : d)
       );
+      showToast(`Driver ${driver.id} ${!driver.isActive ? "UNBLOCKED" : "BLOCKED"}`,`${!driver.isActive ? "success": "error"}`);
     } catch (e) {
       console.error("Failed to update driver:", e);
       showToast("Failed to update driver status.", "error");

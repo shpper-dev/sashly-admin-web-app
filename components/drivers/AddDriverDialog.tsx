@@ -78,12 +78,14 @@ export default function AddDriverDialog({onSuccess}:AddDriverDialogProps) {
     }
 
 
-    // Prepare Driver Object
-    const designatedArea: DesignatedArea = {
-      areaName: areaName || "Unnamed Area",
-      polygon: polygon,
-      center: calculateCenter(polygon)
-    };
+    const designatedArea: DesignatedArea | null =
+  polygon.length >= 3
+    ? {
+        areaName: areaName || "Unnamed Area",
+        polygon,
+        center: calculateCenter(polygon),
+      }
+    : null;
 
     await createDriver({
       name,

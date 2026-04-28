@@ -135,7 +135,7 @@ export default function DriverInfoDialog({ children, driver, onDelete, onSuccess
               <div className="flex-1 overflow-y-auto">
                 {activeTab === "orders" && <DriversOrders />}
                 {activeTab === "edit profile" && <DriversEditProfile driver={driver} onSuccess={onSuccess}  />}
-                {activeTab === "routes" && <DriversRoutes driverId={driver.id} currentArea={driver?.designatedArea ?? null}  />}
+                {activeTab === "routes" && <DriversRoutes driverId={driver.id} currentArea={driver?.designatedArea ?? null} onSuccess={onSuccess} />}
                 {/* Add other tab components here as needed */}
               </div>
             </div>
