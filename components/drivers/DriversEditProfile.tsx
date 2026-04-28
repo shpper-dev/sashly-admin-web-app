@@ -66,10 +66,22 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
       let finalImageUrl = profileImageUrl;
 
       if (pendingImageFile) {
-        finalImageUrl = await uploadImage(pendingImageFile, "driverProfile");
-        setPendingImageFile(null);
-        setProfileImageUrl(finalImageUrl);
+
+      // delete old image first
+      if (profileImageUrl) {
+        try {
+          await deleteImage(profileImageUrl);
+        } catch (err) {
+          console.error("Old image delete failed:", err);
+        }
       }
+
+    // upload new image
+    finalImageUrl = await uploadImage(pendingImageFile, "driverProfile");
+  
+    setPendingImageFile(null);
+    setProfileImageUrl(finalImageUrl);
+}
 
       await updateDriver(driver.id, {
         name,

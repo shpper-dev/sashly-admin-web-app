@@ -1,7 +1,7 @@
 import { collection, addDoc, updateDoc, doc, deleteDoc, getDocs } from "firebase/firestore";
 import { db} from "@/lib/firebase/config";
 import { Category, Item, Service } from "../models/product.model";
-import { uploadImage } from "../utils";
+import { deleteImage, uploadImage } from "../utils";
 import { mapCategory, mapItem, mapService } from "../mappers/product.mappper";
 
 // category
@@ -50,12 +50,18 @@ export const updateCategory = async (
 
   // Upload new photo if provided
   if (data.photo) {
+    // first delete existing photot
+    if(data.existingPhotoUrl){
+      await deleteImage(data.existingPhotoUrl);
+    }
     photoUrl = await uploadImage(data.photo, "categories");
   }
 
   // Remove photo
-  if (data.photoRemoved) {
+  if (data.photoRemoved && data.existingPhotoUrl) {
+    await deleteImage(data.existingPhotoUrl);
     photoUrl = null;
+  
   }
 
   await updateDoc(doc(db, "Categories", id), {
@@ -68,7 +74,6 @@ export const updateCategory = async (
 
 export async function deleteCategory(id: string) {
   await deleteDoc(doc(db, "Categories", id));
-  
 }
 
 export async function getCategories(): Promise<Category[]> {
@@ -178,10 +183,17 @@ export async function updateItem(id: string, data: {
   let photoUrl: string | null = data.existingPhotoUrl ?? null
 
   if (data.photo) {
+    // remove existing photo from storage
+    if(data.existingPhotoUrl){
+      await deleteImage(data.existingPhotoUrl);
+    }
     photoUrl = await uploadImage(data.photo, "items")
   }
 
-  if (data.photoRemoved) photoUrl = null
+  if (data.photoRemoved && data.existingPhotoUrl){
+    await deleteImage(data.existingPhotoUrl);
+    photoUrl = null
+  } 
 
   await updateDoc(doc(db, "Items", id), {
     name: data.name,

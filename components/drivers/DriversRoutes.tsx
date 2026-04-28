@@ -1,8 +1,8 @@
 "use client";
 
-import { Plus, Trash2, Search, MapPin, Edit3, Navigation, Ban, Clock, Save } from "lucide-react";
+import { Plus, Trash2, Search, MapPin, Edit3, Navigation, Ban, Clock, Save, PenLine } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { GoogleMap, useJsApiLoader, Polygon } from "@react-google-maps/api";
+import { GoogleMap, useJsApiLoader, Polygon, DrawingManager } from "@react-google-maps/api";
 import { DesignatedArea } from "@/lib/models/driver.model";
 import { updateDriver } from "@/lib/firebase/driver";
 import AddShiftDialog from "./AddShiftDialog";
@@ -23,18 +23,23 @@ const initialSlots: Slot[] = [
 interface DriversRoutesProps {
   driverId: string;
   currentArea?: DesignatedArea | null;
-  onUpdateArea?: (newArea: DesignatedArea) => void;
+  // onUpdateArea?: (newArea: DesignatedArea) => void;
+  onSuccess?: ()=> void;
 }
 
-export default function DriversRoutes({ driverId, currentArea, onUpdateArea }: DriversRoutesProps) {
+export default function DriversRoutes({ driverId, currentArea,onSuccess }: DriversRoutesProps) {
   const [slots, setSlots] = useState(initialSlots);
   const [search, setSearch] = useState("");
 
   // map states
-  const [isEditing, setIsEditing] = useState(false);
-  const [tempPolygon, setTempPolygon] = useState(currentArea?.polygon || []);
-  const [saving, setSaving] = useState(false);
+  const [isEditing,    setIsEditing]    = useState(false);
+  const [isDrawing,    setIsDrawing]    = useState(false);
+  const [areaName,     setAreaName]     = useState("");
+  const [tempPolygon,  setTempPolygon]  = useState(currentArea?.polygon || []);
+  const [saving,       setSaving]       = useState(false);
   const polygonRef = useRef<google.maps.Polygon | null>(null);
+
+  const hasArea = !!currentArea;
 
   // Sync temp state if the parent prop changes
   useEffect(() => {
@@ -60,25 +65,61 @@ export default function DriversRoutes({ driverId, currentArea, onUpdateArea }: D
   setTempPolygon(newCoords);
 };
 
+  // Called when user finishes drawing a new polygon
+  const onPolygonComplete = (poly: google.maps.Polygon) => {
+    const path = poly.getPath();
+    const coords: { lat: number; lng: number }[] = [];
+    for (let i = 0; i < path.getLength(); i++) {
+      coords.push({ lat: path.getAt(i).lat(), lng: path.getAt(i).lng() });
+    }
+    setTempPolygon(coords);
+    // Remove the drawn overlay so our controlled Polygon takes over
+    poly.setMap(null);
+    setIsDrawing(false);
+  };
+
   const handleSave = async () => {
-    if (!currentArea) return;
+    if (!hasArea && (!areaName.trim() || tempPolygon.length < 3)) return;
+    if (hasArea && !currentArea) return;
     setSaving(true);
     try {
+      const center = tempPolygon.length > 0
+        ? {
+            lat: tempPolygon.reduce((s, p) => s + p.lat, 0) / tempPolygon.length,
+            lng: tempPolygon.reduce((s, p) => s + p.lng, 0) / tempPolygon.length,
+          }
+        : currentArea?.center ?? { lat: 24.7, lng: 46.6 };
+
       //Update Driver Collection
       await updateDriver(driverId, { "designatedArea": {
-        ...currentArea,
-        polygon: tempPolygon,
-
-      } })
+        areaName: hasArea ? currentArea!.areaName : areaName.trim(),
+        polygon:  tempPolygon,
+        center,
+      } });
 
       setIsEditing(false);
-      alert("Route updated successfully!");
+      setAreaName("");
+      alert(hasArea ? "Route updated successfully!" : "Area added successfully!");
+      if(!hasArea) {
+        onSuccess?.();
+      }
     } catch (e) {
       console.error(e);
       alert("Failed to save changes");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCancelDraw = () => {
+    setIsDrawing(false);
+    setTempPolygon([]);
+    setAreaName("");
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setTempPolygon(currentArea?.polygon || []);
   };
 
   return (
@@ -143,34 +184,63 @@ export default function DriversRoutes({ driverId, currentArea, onUpdateArea }: D
             zoom={13}
             options={{ disableDefaultUI: true, zoomControl: true }}
           >
-            <Polygon
-              paths={tempPolygon}
-              editable={isEditing}
-              draggable={isEditing}
-              // 1. Capture the instance
-              onLoad={(poly) => (polygonRef.current = poly)} 
-              // 2. Pass the reference to  handler
-              onMouseUp={() => isEditing && onEdit(polygonRef.current!)}
-              onDragEnd={() => isEditing && onEdit(polygonRef.current!)}
-              options={{
-                fillColor: isEditing ? "#EAB308" : "#7F50F4",
-                fillOpacity: 0.3,
-                strokeColor: isEditing ? "#CA8A04" : "#7F50F4",
-                strokeWeight: 2,
-              }}
-            />
+            {/* Drawing manager — only active when adding a new area */}
+            {isDrawing && (
+              <DrawingManager
+                drawingMode={google.maps.drawing.OverlayType.POLYGON}
+                onPolygonComplete={onPolygonComplete}
+                options={{
+                  drawingControl: false,
+                  polygonOptions: {
+                    fillColor:    "#02D0FF",
+                    fillOpacity:  0.25,
+                    strokeColor:  "#02D0FF",
+                    strokeWeight: 2,
+                    editable:     true,
+                  },
+                }}
+              />
+            )}
+
+            {/* Show polygon when not in drawing mode and coords exist */}
+            {!isDrawing && tempPolygon.length > 0 && (
+              <Polygon
+                paths={tempPolygon}
+                editable={isEditing}
+                draggable={isEditing}
+                // 1. Capture the instance
+                onLoad={(poly) => (polygonRef.current = poly)} 
+                // 2. Pass the reference to  handler
+                onMouseUp={() => isEditing && onEdit(polygonRef.current!)}
+                onDragEnd={() => isEditing && onEdit(polygonRef.current!)}
+                options={{
+                  fillColor:    isEditing ? "#EAB308" : "#7F50F4",
+                  fillOpacity:  0.3,
+                  strokeColor:  isEditing ? "#CA8A04" : "#7F50F4",
+                  strokeWeight: 2,
+                }}
+              />
+            )}
           </GoogleMap>
         )}
-            {currentArea && (
+
+            {/* Drawing mode hint banner */}
+            {isDrawing && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-[#02D0FF] text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-md flex items-center gap-2 uppercase tracking-widest pointer-events-none whitespace-nowrap">
+                <PenLine className="w-3 h-3 shrink-0" /> Click on the map to draw the area boundary
+              </div>
+            )}
+
+            {hasArea && !isDrawing && (
               <div className="absolute bottom-4 left-4 bg-white px-3 py-1.5 rounded-full text-[10px] font-bold shadow-md border border-slate-100 flex items-center gap-2 uppercase tracking-widest">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shrink-0" />
-                Active Zone: {currentArea.areaName}
+                Active Zone: {currentArea!.areaName}
               </div>
             )}
           </div>
 
           {/* SIDE PANEL */}
-          <div className="flex flex-col gap-3 h-72">
+          <div className="flex flex-col gap-3 h-100">
             {/* <div className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-xl bg-slate-50">
               <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <input
@@ -186,12 +256,12 @@ export default function DriversRoutes({ driverId, currentArea, onUpdateArea }: D
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
                   Assigned Route
                 </p>
-                {currentArea ? (
+                {hasArea ? (
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
                       <MapPin className="w-4 h-4 text-purple-600" />
                     </div>
-                    <span className="text-sm font-semibold text-slate-700">{currentArea.areaName}</span>
+                    <span className="text-sm font-semibold text-slate-700">{currentArea!.areaName}</span>
                   </div>
                 ) : (
                   <p className="text-xs text-slate-400 italic">Unassigned</p>
@@ -200,33 +270,93 @@ export default function DriversRoutes({ driverId, currentArea, onUpdateArea }: D
 
               <div className="h-px bg-slate-100" />
 
+              {/* Area name input — only shown when adding a new area after drawing */}
+              {!hasArea && tempPolygon.length > 0 && !isDrawing && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Area Name</label>
+                  <input
+                    value={areaName}
+                    onChange={(e) => setAreaName(e.target.value)}
+                    placeholder="e.g. Al Barsha"
+                    className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs text-slate-700 outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all"
+                  />
+                </div>
+              )}
+
               {/* Action Buttons */}
-              <div className="flex gap-3">
-                {!isEditing ? (
-                  <button 
-                    onClick={() => setIsEditing(true)}
-                    className="flex items-center w-full gap-2 px-4 py-2 bg-purple-100 rounded-lg text-purple-600 text-sm font-bold"
-                  >
-                    <Edit3 className="w-4 h-4" /> Edit Route
-                  </button>
-                ) : (
-                  <div  className="flex items-center gap-2 w-full justify-center">
-                    <button 
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold"
-                    >
-                      <Save className="w-4 h-4" /> {saving ? "Saving..." : "Save"}
-                    </button>
-                    {!saving && (
-                      <button 
-                      onClick={() => { setIsEditing(false); setTempPolygon(currentArea?.polygon || []); }}
-                      className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold"
-                    >
-                      Cancel
-                    </button>
+              <div className="flex flex-col gap-2 mt-auto">
+
+                {/* ── Has area: Edit / Save / Cancel ── */}
+                {hasArea && !isDrawing && (
+                  <>
+                    {!isEditing ? (
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="flex items-center w-full justify-center gap-2 px-4 py-2 bg-purple-100 rounded-lg text-purple-600 text-sm font-bold hover:bg-purple-200 transition-colors"
+                      >
+                        <Edit3 className="w-4 h-4" /> Edit Route
+                      </button>
+                    ) : (
+                      <div  className="flex items-center gap-2 w-full justify-center">
+                        <button 
+                          onClick={handleSave}
+                          disabled={saving}
+                          className="flex flex-1 items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold disabled:opacity-50"
+                        >
+                          <Save className="w-4 h-4" /> {saving ? "Saving..." : "Save"}
+                        </button>
+                        {!saving && (
+                          <button
+                            onClick={handleCancelEdit}
+                            className="flex-1 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
                     )}
-                  </div>
+                  </>
+                )}
+
+                {/* ── No area: Add Route / Cancel Drawing / Save Area + Redraw ── */}
+                {!hasArea && (
+                  <>
+                    {!isDrawing && tempPolygon.length === 0 && (
+                      <button
+                        onClick={() => setIsDrawing(true)}
+                        className="flex items-center w-full justify-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-bold transition-colors"
+                      >
+                        <PenLine className="w-4 h-4" /> Add Route
+                      </button>
+                    )}
+
+                    {isDrawing && (
+                      <button
+                        onClick={handleCancelDraw}
+                        className="flex items-center w-full justify-center gap-2 px-4 py-2 bg-red-50 text-red-500 border border-red-100 rounded-lg text-sm font-bold"
+                      >
+                        Cancel Drawing
+                      </button>
+                    )}
+
+                    {!isDrawing && tempPolygon.length > 0 && (
+                      <div className="flex items-center gap-2 w-full">
+                        <button
+                          onClick={handleSave}
+                          disabled={saving || !areaName.trim()}
+                          className="flex flex-1 items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold disabled:opacity-50"
+                        >
+                          <Save className="w-4 h-4" /> {saving ? "Saving..." : "Save Area"}
+                        </button>
+                        <button
+                          onClick={handleCancelDraw}
+                          className="flex-1 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-200 transition-colors"
+                        >
+                          Redraw
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

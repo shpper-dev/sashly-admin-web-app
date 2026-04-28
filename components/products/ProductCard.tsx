@@ -2,10 +2,10 @@ import { Item } from '@/lib/models/product.model'
 import { Pencil, Trash2 } from 'lucide-react'
 import Image from 'next/image'
 import  { useState } from 'react';
-import EditItemDialog from './EditItemDialog'
 import { deleteItem } from '@/lib/firebase/product'
 import ConfirmActionDialog from '../ConfirmActionDialog';
 import ItemDialog from './ItemDialog';
+import { deleteImage } from '@/lib/utils';
 
 
 interface ProductCardProps {
@@ -18,13 +18,20 @@ export default function ProductCard({ product, onDeleted, onUpdated }: ProductCa
   const [deleting, setDeleting] = useState(false)
 
   const handleDelete = async () => {
-    if (!confirm(`Delete "${product.name}"? This cannot be undone.`)) return
     setDeleting(true)
     try {
+      try{
+        if(product.photoUrl){
+        await deleteImage(product.photoUrl)
+      }
+      }catch(imgErr){
+        throw new Error("Failed to delete image")
+      }
+  
       await deleteItem(product.id);
-      onDeleted?.()
     } catch (e) {
       console.error('Delete failed:', e)
+      throw new Error("Item Deletion failed")
     } finally {
       setDeleting(false)
     }
@@ -56,7 +63,7 @@ export default function ProductCard({ product, onDeleted, onUpdated }: ProductCa
             title="Delete Item"
             description={`Are you sure you want to delete "${product.name}"? This action cannot be undone.`}
             confirmLabel="Delete"
-            onConfirm={() => deleteItem(product.id)}
+            onConfirm={() => handleDelete()}
             onSuccess={onDeleted}
           >
             <button className="text-red-500 hover:text-red-600 cursor-pointer">

@@ -9,6 +9,7 @@ import { deleteCategory, getCategories } from '@/lib/firebase/product';
 import { Category } from '@/lib/models/product.model';
 import ConfirmActionDialog from '@/components/ConfirmActionDialog';
 import { useToast } from '@/lib/providers/ToastProvider';
+import { deleteImage } from '@/lib/utils';
 
 
 
@@ -33,21 +34,24 @@ export default function Categories() {
     setData(rows);
   } catch (e) {
     console.error("Failed to fetch categories:", e);
+    showToast(`Failed to load categories`, "error");
   } finally {
     setLoading(false);
   }
 };
 
-//  const handleDelete = async (id: string) => {
-//   if (!confirm("Delete this category?")) return;
-
-//   try {
-//     await deleteCategory(id);
-//     fetchCategories();
-//   } catch (e) {
-//     console.error("Delete failed:", e);
-//   }
-// };
+ const handleDelete = async (id: string, photoUrl?: string) => {
+  try {
+    if (photoUrl) {
+      await deleteImage(photoUrl);
+    }
+    await deleteCategory(id);
+    await fetchCategories();
+  } catch (e) {
+    console.error("Delete failed:", e);
+    showToast(`Failed to delete category`, "error");
+  }
+};
 
   const renderCellContent = (heading: TableHeading, row: any) => {
   switch (heading.id) {
@@ -107,7 +111,7 @@ export default function Categories() {
             title="Delete Category"
             description={`Are you sure you want to delete "${row.name}"? This action cannot be undone.`}
             confirmLabel="Delete"
-            onConfirm={() => deleteCategory(row.id)}
+            onConfirm={() => handleDelete(row.id, row.photoUrl)}
             onSuccess={() => {showToast(`Deleted ${row.name}`, "error"); fetchCategories();}}
           >
             <button className="text-red-500 hover:text-red-600 cursor-pointer">
