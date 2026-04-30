@@ -62,7 +62,7 @@ export default function OrderChat({ orderId }: { orderId: string }) {
   const processImageUpload = async (file: File) => {
     try {
       setIsUploading(true);
-      const url = await uploadImage(file, `orders/${orderId}/chat`);
+      const url = await uploadImage(file, `order_chat_photos/${orderId}`);
       await handleSend(url);
     } catch (error) {
       console.error("Upload error:", error);
