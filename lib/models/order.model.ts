@@ -27,7 +27,7 @@ export interface Order {
     deliveryStartTime?: number | null;
     deliveryEndTime?: number | null;
     paidBy ?: string | null;
-    paymentInfo ?: string | null;
+    paymentInfo ?: any | null;
     paymentDate ?: number | null;
     
     // coupons

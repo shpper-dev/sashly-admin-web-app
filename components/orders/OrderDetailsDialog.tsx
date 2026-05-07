@@ -261,7 +261,9 @@ export default function OrderDetailsDialog({ order, children, onStatusUpdate }: 
                       <InfoRow icon={<CreditCard className="h-3.5 w-3.5" />} label="Method" value={order.paidBy} />
                     )}
                     {order.paymentInfo && (
-                      <InfoRow icon={<CreditCard className="h-3.5 w-3.5" />} label="Reference" value={order.paymentInfo} className="col-span-2" />
+                      <InfoRow icon={<CreditCard className="h-3.5 w-3.5" />} label="Reference" value={   typeof order.paymentInfo === "string"
+                      ? order.paymentInfo
+                      : order.paymentInfo?.message || null} className="col-span-2" />
                     )}
                   </div>
                 </Section>
