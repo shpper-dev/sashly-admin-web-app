@@ -27,7 +27,7 @@ export interface Order {
     deliveryStartTime?: number | null;
     deliveryEndTime?: number | null;
     paidBy ?: string | null;
-    paymentInfo ?: string | null;
+    paymentInfo ?: any | null;
     paymentDate ?: number | null;
     
     // coupons
@@ -41,10 +41,22 @@ export interface Order {
     driverProfileImageUrl?: string | null;
     driverAssignedAt?: number | null;   // milliseconds
     driverAcceptedAt?: number | null;   // milliseconds
+
+    // earnings
     driverEarnings?: number | null;
     platformFee?: number | null;
     driverFee?: number | null;
+
+    // driver tracking
     driverLocation?: DriverLocation | null;
+    estimatedPickupTime?: number| null;
+    estimatedDeliveryTime?: number | null;
+    deliveryNotes?:string   | null;
+    pickupPhotoUrl?: string | null;
+    deliveryPhotoUrl?: string | null;
+    customerSignatureUrl?: string | null;
+    driverActivePhase?: "headingToPickup" | "headingToDelivery" |  null;
+
 
     ratingByUser ?: OrderRating | null;
     createdAt : number;

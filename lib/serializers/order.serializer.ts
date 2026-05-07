@@ -79,6 +79,15 @@ export function serializeOrder(order: Partial<Order>) {
           timestamp: order.driverLocation.timestamp,
         }
       : null,
+    
+    estimatedPickupTime: order.estimatedPickupTime ?? null,
+    estimatedDeliveryTime: order.estimatedDeliveryTime ?? null,
+    deliveryNotes: order.deliveryNotes ?? null,
+    pickupPhotoUrl: order.pickupPhotoUrl ?? null,
+    deliveryPhotoUrl: order.deliveryPhotoUrl ?? null,
+    customerSignatureUrl: order.customerSignatureUrl ?? null,
+    driverActivePhase: order.driverActivePhase ?? null,
+
 
     ratingByUser: order.ratingByUser
       ? {
