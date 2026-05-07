@@ -97,6 +97,13 @@ export function mapOrder(doc: QueryDocumentSnapshot<DocumentData>): Order {
     driverLocation: data.driverLocation
       ? mapDriverLocation(data.driverLocation)
       : null,
+    estimatedPickupTime: data.estimatedPickupTime ?? null,
+    estimatedDeliveryTime: data.estimatedDeliveryTime ?? null,
+    deliveryNotes: data.deliveryNotes ?? null,
+    pickupPhotoUrl: data.pickupPhotoUrl ?? null,
+    deliveryPhotoUrl: data.deliveryPhotoUrl ?? null,
+    customerSignatureUrl: data.customerSignatureUrl ?? null,
+    driverActivePhase: data.driverActivePhase ?? null,
 
     ratingByUser: data.ratingByUser ? mapRating(data.ratingByUser) : null,
 
