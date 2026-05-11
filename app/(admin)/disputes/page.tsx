@@ -75,10 +75,10 @@ const RESOLVED_HEADINGS: TableHeading[] = [
   { id: "orderId",               title: "Order ID"    },
   { id: "issueType",             title: "Category"    },
   { id: "resolution_action",     title: "Resolution"  },
-  { id: "resolution_amount",     title: "Amount"      },
   { id: "resolution_resolvedBy", title: "Resolved By" },
   { id: "resolution_resolvedAt", title: "Resolved At" },
   { id: "status",                title: "Status"      },
+  { id: "actions",               title: "Actions"    },
 ];
 
 //  utilities
@@ -138,7 +138,7 @@ function renderCellContent(heading: TableHeading, dispute: Dispute): React.React
           href={`/disputes/resolution/${dispute.id}`}
           className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 hover:text-purple-800 transition-colors"
         >
-          Resolve
+          {(dispute.status === "rejected" || dispute.status === "resolved") ? "View": "Resolve"}
           <ChevronRight className="h-3.5 w-3.5" />
         </Link>
       );
@@ -162,7 +162,7 @@ function renderCellContent(heading: TableHeading, dispute: Dispute): React.React
     case "resolution_resolvedBy":
       return dispute.resolution?.resolvedBy ? (
         <AdminAvatar
-          id={dispute.resolution.resolvedBy}
+          id={dispute.resolution.resolvedBy.slice(0,6)}
           className="bg-slate-100 text-slate-600"
         />
       ) : (
@@ -299,7 +299,7 @@ function WaitTimeBadge({ createdAt }: { createdAt: number }) {
 function StatusBadge({ status }: { status: Dispute["status"] }) {
   const map: Record<NonNullable<Dispute["status"]>, { label: string; className: string }> = {
     open:      { label: "Open",      className: "bg-blue-50 text-blue-700"     },
-    in_review: { label: "In Review", className: "bg-yellow-50 text-yellow-700" },
+    in_review: { label: "Review", className: "bg-yellow-50 text-yellow-700" },
     resolved:  { label: "Resolved",  className: "bg-green-50 text-green-700"   },
     rejected:  { label: "Rejected",  className: "bg-red-50 text-red-600"       },
   };

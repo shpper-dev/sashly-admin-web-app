@@ -1,14 +1,18 @@
 "use client";
+import ConfirmActionDialog from "@/components/ConfirmActionDialog";
+import InReviewAndAdminDialog from "@/components/disputes/InReviewAndAdminDialog";
 import OrderChat from "@/components/orders/OrderChat";
 import { getCurrentUser } from "@/lib/firebase/admin.auth";
 import { subscribeToDispute, updateDispute } from "@/lib/firebase/dispute";
 import { getOrderById } from "@/lib/firebase/order";
+import { Admin } from "@/lib/models/admin.model";
 import { Dispute } from "@/lib/models/dispute.model";
 import { Order } from "@/lib/models/order.model";
 import {
   ArrowLeft,
   Bell,
   Check,
+  CheckCircle2,
   CircleAlert,
   Clock,
   Loader2,
@@ -27,21 +31,6 @@ import {
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 
-// types 
-
-interface OrderDoc {
-  id: string;
-  serviceType?: string;
-  totalAmount?: number;
-  customerName?: string;
-  customerPhone?: string;
-  customerAddress?: string;
-  driverName?: string;
-  driverId?: string;
-  driverNote?: string;
-  deliveryPhotoUrl?: string;
-  pickupPhotoUrl?: string;
-}
 
 //utilities
 
@@ -54,8 +43,6 @@ function formatTimestamp(ts: number) {
   }).format(new Date(ts));
 }
 
-
-
 export default function DisputesResolutionDetails({
   params,
 }: {
@@ -67,7 +54,7 @@ export default function DisputesResolutionDetails({
   const [order, setOrder]       = useState<Order | null>(null);
   const [auditNote, setAuditNote] = useState("");
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
-  const [currentAdminId, setCurrentAdminId] = useState<string | null>(null);
+  const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
 
   //  Real-time dispute subscription 
   useEffect(() => {
@@ -86,49 +73,19 @@ export default function DisputesResolutionDetails({
   //  Get current admin 
   useEffect(() => {
     getCurrentUser()
-      .then((u) => setCurrentAdminId(u?.uid ?? null))
+      .then((u) => {
+        // Fetch full admin profile to get the name, not just UID
+        if (u) setCurrentAdmin(u as Admin); 
+      })
       .catch(console.error);
   }, []);
 
   //  Action helpers 
-  const handleMarkInReview = async () => {
-    if (!dispute || !currentAdminId) return;
-    setLoadingAction("review");
-    try {
-      await updateDispute(dispute.id, {
-        status: "in_review",
-        isAssigned: true,
-        assignedTo: currentAdminId,
-        updatedAt: Date.now(),
-      });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingAction(null);
-    }
-  };
 
-  const handleChangeAdmin = async () => {
-    // Placeholder: will update to admin picker modal
-    // For now, reassign to current admin
-    if (!dispute || !currentAdminId) return;
-    setLoadingAction("change-admin");
-    try {
-      await updateDispute(dispute.id, {
-        assignedTo: currentAdminId,
-        updatedAt: Date.now(),
-      });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingAction(null);
-    }
-  };
-
-  const handleResolve = async (
+   const handleResolve = async (
     action: NonNullable<Dispute["resolution"]>["action"]
   ) => {
-    if (!dispute || !currentAdminId || !auditNote.trim()) return;
+    if (!dispute || !currentAdmin?.uid || !auditNote.trim()) return;
     setLoadingAction(action);
     try {
       await updateDispute(dispute.id, {
@@ -137,7 +94,7 @@ export default function DisputesResolutionDetails({
         resolution: {
           action,
           note: auditNote,
-          resolvedBy: currentAdminId,
+          resolvedBy: currentAdmin.uid,
           resolvedAt: Date.now(),
           amount: null,
         },
@@ -151,7 +108,7 @@ export default function DisputesResolutionDetails({
   };
 
   const handleReject = async () => {
-    if (!dispute || !currentAdminId || !auditNote.trim()) return;
+    if (!dispute || !currentAdmin?.uid || !auditNote.trim()) return;
     setLoadingAction("reject");
     try {
       await updateDispute(dispute.id, {
@@ -160,7 +117,7 @@ export default function DisputesResolutionDetails({
         resolution: {
           action: "no_action",
           note: auditNote,
-          resolvedBy: currentAdminId,
+          resolvedBy: currentAdmin.uid,
           resolvedAt: Date.now(),
           amount: null,
         },
@@ -177,7 +134,7 @@ export default function DisputesResolutionDetails({
   const isOpen     = dispute?.status === "open";
   const isInReview = dispute?.status === "in_review";
   const isClosed   = dispute?.status === "resolved" || dispute?.status === "rejected";
-  const actionsEnabled = isInReview && !isClosed;
+  const actionsEnabled = isInReview && !isClosed && auditNote.trim();
   const missingNote    = !auditNote.trim();
 
   //  Loading state 
@@ -476,96 +433,68 @@ export default function DisputesResolutionDetails({
             <div className="bg-white border border-blue-200/60 rounded-2xl p-4 flex flex-col gap-2">
               <SectionLabel>Manual Action Panel</SectionLabel>
 
-              {/*  OPEN STATE: show Mark In Review, disable actions  */}
+              {/* 1. STATE: OPEN (Needs Review) */}
               {isOpen && (
-                <>
-                  <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-100 rounded-xl mb-1">
-                    <CircleAlert className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                    <p className="text-[10px] text-blue-600 leading-relaxed">
-                      Mark this dispute in review to assign it and unlock resolution actions.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={handleMarkInReview}
-                    disabled={loadingAction === "review"}
-                    className="flex items-center justify-between w-full px-4 py-2.5 bg-[#7F50F4] hover:bg-[#6B3FD4] disabled:opacity-60 rounded-xl text-xs font-bold text-white transition-colors"
-                  >
-                    {loadingAction === "review" ? (
-                      <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                    ) : (
-                      <>Mark In Review <UserCheck className="h-4 w-4" /></>
-                    )}
+                <InReviewAndAdminDialog 
+                  dispute={dispute} 
+                  currentAdminId={currentAdmin?.uid || ""}
+                  currentAdminName={currentAdmin?.firstName}
+                >
+                  <button className="flex items-center justify-between w-full px-4 py-2.5 bg-[#7F50F4] hover:bg-[#6B3FD4] rounded-xl text-xs font-bold text-white transition-colors">
+                    Mark In Review <UserCheck className="h-4 w-4" />
                   </button>
-
-                  <div className="h-px bg-slate-100 my-0.5" />
-                </>
+                </InReviewAndAdminDialog>
               )}
 
-              {/*  IN_REVIEW STATE: assigned admin info + change  */}
+              {/* 2. STATE: IN REVIEW (Active Actions) */}
               {isInReview && (
-                <div className="flex items-center justify-between bg-yellow-50 border border-yellow-100 rounded-xl px-3 py-2 mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="h-6 w-6 rounded-full bg-violet-100 text-violet-700 text-[10px] font-bold flex items-center justify-center uppercase shrink-0">
-                      {dispute.assignedTo?.charAt(0) ?? "A"}
-                    </span>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-700">
-                        {dispute.assignedTo ?? "Unassigned"}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between bg-yellow-50 border border-yellow-100 rounded-xl px-3 py-2 mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="h-6 w-6 rounded-full bg-violet-100 text-violet-700 text-[10px] font-bold flex items-center justify-center uppercase shrink-0">
+                        {dispute.assignedTo?.charAt(0) ?? "A"}
                       </span>
-                      <span className="text-[9px] text-slate-400">Assigned reviewer</span>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-slate-700">{dispute.assignedTo}</span>
+                        <span className="text-[9px] text-slate-400">Assigned Admin</span>
+                      </div>
                     </div>
+                    <InReviewAndAdminDialog 
+                      dispute={dispute} 
+                      currentAdminId={currentAdmin?.uid || ""}
+                    >
+                      <button className="text-[10px] font-semibold text-[#7F50F4] hover:underline flex items-center gap-1">
+                        <UserCog className="h-3 w-3" /> Change
+                      </button>
+                    </InReviewAndAdminDialog>
                   </div>
-                  <button
-                    onClick={handleChangeAdmin}
-                    disabled={loadingAction === "change-admin"}
-                    className="flex items-center gap-1 text-[10px] font-semibold text-[#7F50F4] hover:underline transition-colors disabled:opacity-50"
+
+                  {/* Wrapped Actions */}
+                  <ConfirmActionDialog
+                    title="Issue Full Refund?"
+                    description="This will return the full order amount to the customer's original payment method."
+                    confirmLabel="Confirm Refund"
+                    onConfirm={() => handleResolve("full_refund")}
                   >
-                    {loadingAction === "change-admin"
-                      ? <Loader2 className="h-3 w-3 animate-spin" />
-                      : <><UserCog className="h-3 w-3" /> Change</>
-                    }
-                  </button>
-                </div>
-              )}
+                     <button
+                       disabled={!actionsEnabled || loadingAction !== null}
+                       className="flex items-center justify-between w-full px-4 py-2.5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl text-xs font-semibold text-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {loadingAction === "full_refund"
+                        ? <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                        : <><span>Issue Full Refund</span><Undo2 className="h-4 w-4 text-red-500" /></>
+                      }
+                    </button>
+                  </ConfirmActionDialog>
 
-              {/*  Closed state banner  */}
-              {isClosed && (
-                <div className={`flex items-center gap-2 p-3 rounded-xl mb-1 border ${
-                  dispute.status === "rejected"
-                    ? "bg-red-50 border-red-100"
-                    : "bg-green-50 border-green-100"
-                }`}>
-                  <Check className={`h-3.5 w-3.5 shrink-0 ${
-                    dispute.status === "rejected" ? "text-red-500" : "text-green-500"
-                  }`} />
-                  <p className={`text-[10px] leading-relaxed ${
-                    dispute.status === "rejected" ? "text-red-600" : "text-green-700"
-                  }`}>
-                    This dispute has been{" "}
-                    <span className="font-bold">
-                      {dispute.status === "rejected" ? "rejected" : "resolved"}
-                    </span>{" "}
-                    and is now closed.
-                  </p>
-                </div>
-              )}
-
-              {/*  Action Buttons  */}
-              <button
+                  <ConfirmActionDialog
+                    title="Grant Wallet Credit?"
+                    description="The amount will be added to the customer's app wallet immediately."
+                    confirmLabel="Add Credit"
+                    onConfirm={() => handleResolve("wallet_credit")}
+                  >
+                    <button
                 disabled={!actionsEnabled || loadingAction !== null}
-                onClick={() => handleResolve("full_refund")}
-                className="flex items-center justify-between w-full px-4 py-2.5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl text-xs font-semibold text-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {loadingAction === "full_refund"
-                  ? <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                  : <><span>Issue Full Refund</span><Undo2 className="h-4 w-4 text-red-500" /></>
-                }
-              </button>
-
-              <button
-                disabled={!actionsEnabled || loadingAction !== null}
-                onClick={() => handleResolve("wallet_credit")}
                 className="flex items-center justify-between w-full px-4 py-2.5 bg-[#02D0FF] hover:bg-[#00BAE0] rounded-xl text-xs font-bold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loadingAction === "wallet_credit"
@@ -573,10 +502,16 @@ export default function DisputesResolutionDetails({
                   : <><span>Add Wallet Credit</span><Wallet className="h-4 w-4" /></>
                 }
               </button>
+                  </ConfirmActionDialog>
 
-              <button
+                  <ConfirmActionDialog
+                    title="Re Attempt Delivery?"
+                    description="The missing item/s will be delivered soon."
+                    confirmLabel="Reattempt Delivery"
+                    onConfirm={() => handleResolve("reattempt")}
+                  >
+                    <button
                 disabled={!actionsEnabled || loadingAction !== null}
-                onClick={() => handleResolve("reattempt")}
                 className="flex items-center justify-between w-full px-4 py-2.5 bg-[#7F50F4] hover:bg-[#6B3FD4] rounded-xl text-xs font-bold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loadingAction === "reattempt"
@@ -584,23 +519,28 @@ export default function DisputesResolutionDetails({
                   : <><span>Re-attempt Delivery</span><ShoppingCart className="h-4 w-4" /></>
                 }
               </button>
+                  </ConfirmActionDialog>
 
-              <div className="h-px bg-slate-100 my-0.5" />
+                  <div className="h-px bg-slate-100 my-0.5" />
 
-              <button
+                  <button
+                    disabled={!actionsEnabled || loadingAction !== null}
+                    className="flex items-center justify-between w-full px-4 py-2.5 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-xl text-xs font-semibold text-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Delivery Penalty / Warning
+                    <TriangleAlert className="h-4 w-4 text-orange-500" />
+                  </button>
+
+                  <div className="h-px bg-slate-100 my-0.5" />
+
+                  <ConfirmActionDialog
+                    title="Resolve Dispute?"
+                    description="This will close the case with no further action. The customer will be notified."
+                    confirmLabel="Resolve & Close"
+                    onConfirm={() => handleResolve("no_action")} 
+                  >
+                    <button
                 disabled={!actionsEnabled || loadingAction !== null}
-                className="flex items-center justify-between w-full px-4 py-2.5 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-xl text-xs font-semibold text-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Delivery Penalty / Warning
-                <TriangleAlert className="h-4 w-4 text-orange-500" />
-              </button>
-
-              <div className="h-px bg-slate-100 my-0.5" />
-
-              {/* Confirm & Resolve */}
-              <button
-                disabled={!actionsEnabled || missingNote || loadingAction !== null}
-                onClick={() => handleResolve("no_action")}
                 title={missingNote ? "Add an audit note before resolving" : undefined}
                 className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-xs font-bold text-white transition-all bg-linear-to-r from-[#7F50F4] to-[#02D0FF] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               >
@@ -609,11 +549,16 @@ export default function DisputesResolutionDetails({
                   : <><Check className="h-4 w-4" strokeWidth={3} /> Confirm &amp; Resolve Case</>
                 }
               </button>
+                  </ConfirmActionDialog>
 
-              {/* Reject & Close */}
-              <button
+                  <ConfirmActionDialog
+                    title="Reject Dispute?"
+                    description="This will close the case with no further action. The customer will be notified."
+                    confirmLabel="Reject & Close"
+                    onConfirm={() => handleReject()} 
+                  >
+                    <button
                 disabled={!actionsEnabled || missingNote || loadingAction !== null}
-                onClick={handleReject}
                 title={missingNote ? "Add an audit note before rejecting" : undefined}
                 className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 border border-slate-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
@@ -622,12 +567,36 @@ export default function DisputesResolutionDetails({
                   : <><X className="h-4 w-4" /> Reject &amp; Close</>
                 }
               </button>
+                  </ConfirmActionDialog>
+                </div>
+              )}
 
-              {/* Hint when note is missing */}
-              {actionsEnabled && missingNote && (
-                <p className="text-center text-[9px] text-slate-400 mt-0.5">
-                  Add an audit note above to enable resolve &amp; reject
-                </p>
+              {/* 3. STATE: RESOLVED (Summary View) */}
+              {isClosed && (
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-col gap-3">
+                  <div className="flex items-center gap-2 text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span className="text-xs font-bold uppercase tracking-tight">Resolution Details</span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-slate-400 font-medium">Resolution Type</span>
+                      <span className="text-[10px] font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200">
+                        {dispute.resolution?.action.replace("_", " ")}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-slate-400 font-medium">Processed By</span>
+                      <span className="text-[10px] font-bold text-slate-700">{dispute.resolution?.resolvedBy}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-slate-400 font-medium">Date</span>
+                      <span className="text-[10px] font-bold text-slate-700">
+                        {formatTimestamp(dispute.resolution?.resolvedAt || 0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
              {/* Card: Admin Chat */}
@@ -640,7 +609,7 @@ export default function DisputesResolutionDetails({
                   Communicate with the customer
                 </p>
               </div>
-              <div className="h-72">
+              <div className="h-[60vh]">
                 <OrderChat orderId={dispute.orderId} />
               </div>
             </div>
@@ -663,11 +632,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function StatusBadge({ status }: { status: Dispute["status"] }) {
   const map: Record<string, { label: string; className: string }> = {
-    OPEN:      { label: "Open",      className: "bg-blue-50 text-blue-700 border-blue-200"       },
-    IN_REVIEW: { label: "In Review", className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
-    RESOLVED:  { label: "Resolved",  className: "bg-green-50 text-green-700 border-green-200"    },
-    REJECTED:  { label: "Rejected",  className: "bg-red-50 text-red-600 border-red-200"          },
-  };
+  open:      { label: "Open",      className: "bg-blue-50 text-blue-700 border-blue-200"       },
+  in_review: { label: "In Review", className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
+  resolved:  { label: "Resolved",  className: "bg-green-50 text-green-700 border-green-200"    },
+  rejected:  { label: "Rejected",  className: "bg-red-50 text-red-600 border-red-200"          },
+};
   if (!status || !map[status]) return null;
   const { label, className } = map[status];
   return (

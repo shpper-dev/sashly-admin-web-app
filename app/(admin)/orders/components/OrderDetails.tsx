@@ -46,7 +46,7 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
       case "id":
-        return <span className="text-xs text-slate-500">#{row.id.slice(-6)}</span>;
+        return <span className="text-xs text-slate-500">#{row.id.slice(0,6)}</span>;
 
       case "ready_by":
         return (
