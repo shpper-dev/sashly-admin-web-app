@@ -13,6 +13,7 @@ const STATUS_LABELS: Record<OrderStatuses, string> = {
   readyToDeliver: "Ready to Deliver",
   delivered:      "Delivered",
   disputed:       "Disputed",
+  disputeResolved: "Dispute Resolved",
   cancelled:      "Cancelled",
 };
 

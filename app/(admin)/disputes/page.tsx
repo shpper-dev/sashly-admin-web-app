@@ -1,6 +1,8 @@
 "use client";
+import StatusBadge from "@/components/disputes/StatusBadge";
 import Header from "@/components/Header";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
+import { useAdminName } from "@/hooks/useAdminName";
 import { getDisputes } from "@/lib/firebase/dispute";
 import { Dispute } from "@/lib/models/dispute.model";
 import { TableHeading } from "@/lib/types";
@@ -54,11 +56,11 @@ const ISSUE_TYPE_CONFIG: Record<
 };
 
 const RESOLUTION_LABELS: Record<string, string> = {
-  FULL_REFUND: "Full Refund",
-  PARTIAL_REFUND: "Partial Refund",
-  WALLET_CREDIT: "Wallet Credit",
-  REATTEMPT: "Reattempt",
-  NO_ACTION: "No Action",
+  full_refund: "Full Refund",
+  partial_refund: "Partial Refund",
+  wallet_credit: "Wallet Credit",
+  reattempt: "Reattempt",
+  no_action: "No Action",
 };
 
 const QUEUE_HEADINGS: TableHeading[] = [
@@ -162,7 +164,7 @@ function renderCellContent(heading: TableHeading, dispute: Dispute): React.React
     case "resolution_resolvedBy":
       return dispute.resolution?.resolvedBy ? (
         <AdminAvatar
-          id={dispute.resolution.resolvedBy.slice(0,6)}
+          id={dispute.resolution.resolvedBy}
           className="bg-slate-100 text-slate-600"
         />
       ) : (
@@ -296,22 +298,6 @@ function WaitTimeBadge({ createdAt }: { createdAt: number }) {
   );
 }
 
-function StatusBadge({ status }: { status: Dispute["status"] }) {
-  const map: Record<NonNullable<Dispute["status"]>, { label: string; className: string }> = {
-    open:      { label: "Open",      className: "bg-blue-50 text-blue-700"     },
-    in_review: { label: "Review", className: "bg-yellow-50 text-yellow-700" },
-    resolved:  { label: "Resolved",  className: "bg-green-50 text-green-700"   },
-    rejected:  { label: "Rejected",  className: "bg-red-50 text-red-600"       },
-  };
-  if (!status || !(status in map)) return <Dash />;
-  const { label, className } = map[status];
-  return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${className}`}>
-      {label}
-    </span>
-  );
-}
-
 function PriorityBadge({ priority }: { priority: Dispute["priority"] }) {
   const map: Record<NonNullable<Dispute["priority"]>, { label: string; className: string }> = {
     high:   { label: "High",   className: "bg-red-50 text-red-600"         },
@@ -328,14 +314,15 @@ function PriorityBadge({ priority }: { priority: Dispute["priority"] }) {
 }
 
 function AdminAvatar({ id, className = "bg-violet-100 text-violet-700" }: { id: string; className?: string }) {
+  const adminName = useAdminName(id);
   return (
     <span className="inline-flex items-center gap-1.5 text-sm text-slate-600">
       <span
         className={`h-5 w-5 rounded-full text-[10px] font-bold flex items-center justify-center uppercase ${className}`}
       >
-        {id.charAt(0)}
+        {adminName.charAt(0).toUpperCase()}
       </span>
-      {id}
+      {adminName}
     </span>
   );
 }

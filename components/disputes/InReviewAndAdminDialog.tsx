@@ -8,12 +8,22 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { updateDispute } from "@/lib/firebase/dispute";
 import { Dispute } from "@/lib/models/dispute.model";
-import { Admin } from "@/lib/models/admin.model"; 
-import { ChevronDown, Loader2, UserCheck, UserCog, X } from "lucide-react";
+import { Admin } from "@/lib/models/admin.model";
+import { Loader2, UserCheck, UserCog, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getAdmins } from "@/lib/firebase/admin.auth";
+import { useAdminName } from "@/hooks/useAdminName";
 
 interface InReviewAndAdminDialogProps {
   children: React.ReactNode;
@@ -37,16 +47,16 @@ export default function InReviewAndAdminDialog({
   const isOpen     = dispute.status === "open";
   const isInReview = dispute.status === "in_review";
 
-  // Load admins when dialog opens
+  const assignedAdminName = useAdminName(isInReview ? dispute.assignedTo : null);
+
   useEffect(() => {
     if (!open) return;
     setFetching(true);
     getAdmins()
       .then((list) => {
         setAdmins(list);
-        // Pre-select current admin or already-assigned admin
         const preselect = isInReview && dispute.assignedTo
-          ? list.find((a) => a.firstName === dispute.assignedTo)?.uid ?? currentAdminId
+          ? list.find((a) => a.uid === dispute.assignedTo)?.uid ?? currentAdminId
           : currentAdminId;
         setSelectedId(preselect);
       })
@@ -63,7 +73,7 @@ export default function InReviewAndAdminDialog({
       await updateDispute(dispute.id, {
         status: "in_review",
         isAssigned: true,
-        assignedTo: selectedAdmin.uid, 
+        assignedTo: selectedAdmin.uid,
         updatedAt: Date.now(),
       });
       setOpen(false);
@@ -73,6 +83,9 @@ export default function InReviewAndAdminDialog({
       setLoading(false);
     }
   };
+
+  const selfAdmin  = admins.find((a) => a.uid === currentAdminId);
+  const otherAdmins = admins.filter((a) => a.uid !== currentAdminId);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -107,14 +120,14 @@ export default function InReviewAndAdminDialog({
             </div>
           )}
 
-          {/* Current assignment info for IN_REVIEW */}
+          {/* Current assignment banner for IN_REVIEW */}
           {isInReview && dispute.assignedTo && (
             <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-100 rounded-xl px-3.5 py-3">
               <span className="h-6 w-6 rounded-full bg-violet-100 text-violet-700 text-[10px] font-bold flex items-center justify-center uppercase shrink-0">
-                {dispute.assignedTo.charAt(0)}
+                {assignedAdminName.charAt(0)}
               </span>
               <div>
-                <p className="text-xs font-semibold text-slate-700">{dispute.assignedTo}</p>
+                <p className="text-xs font-semibold text-slate-700">{assignedAdminName}</p>
                 <p className="text-[10px] text-slate-400">Currently assigned</p>
               </div>
             </div>
@@ -131,36 +144,53 @@ export default function InReviewAndAdminDialog({
                 <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
               </div>
             ) : (
-              <div className="relative">
-                <select
-                  value={selectedId}
-                  onChange={(e) => setSelectedId(e.target.value)}
-                  className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#7F50F4]/30 focus:border-[#7F50F4]/40 transition pr-8"
-                >
-                  <option value="" disabled>Select an admin…</option>
+              <Select value={selectedId} onValueChange={setSelectedId}>
+                <SelectTrigger className="w-full bg-slate-50 border-slate-200 rounded-xl text-xs text-slate-700 focus:ring-2 focus:ring-[#7F50F4]/30 focus:border-[#7F50F4]/40 h-10">
+                  <SelectValue placeholder="Select an admin…" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-200 shadow-lg">
 
-                  {/* Self / current user always first */}
-                  {admins
-                    .filter((a) => a.uid === currentAdminId)
-                    .map((a) => (
-                      <option key={a.uid} value={a.uid}>
-                        {a.firstName} (You)
-                      </option>
-                    ))}
+                  {/* Self first */}
+                  {selfAdmin && (
+                    <SelectItem
+                      value={selfAdmin.uid}
+                      className="text-xs rounded-lg cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="h-5 w-5 rounded-full bg-violet-100 text-violet-700 text-[10px] font-bold flex items-center justify-center uppercase shrink-0">
+                          {selfAdmin.firstName.charAt(0)}
+                        </span>
+                        <span>{selfAdmin.firstName}</span>
+                        <span className="text-slate-400 text-[10px]">(You)</span>
+                      </div>
+                    </SelectItem>
+                  )}
 
-                  {/* Divider-like separator group */}
-                  <optgroup label="Other admins">
-                    {admins
-                      .filter((a) => a.uid !== currentAdminId)
-                      .map((a) => (
-                        <option key={a.uid} value={a.uid}>
-                          {a.firstName}
-                        </option>
+                  {/* Other admins */}
+                  {otherAdmins.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel className="text-[10px] text-slate-400 uppercase tracking-widest px-2 py-1.5">
+                        Other admins
+                      </SelectLabel>
+                      {otherAdmins.map((a) => (
+                        <SelectItem
+                          key={a.uid}
+                          value={a.uid}
+                          className="text-xs rounded-lg cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="h-5 w-5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold flex items-center justify-center uppercase shrink-0">
+                              {a.firstName.charAt(0)}
+                            </span>
+                            <span>{a.firstName}</span>
+                          </div>
+                        </SelectItem>
                       ))}
-                  </optgroup>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-              </div>
+                    </SelectGroup>
+                  )}
+
+                </SelectContent>
+              </Select>
             )}
           </div>
 

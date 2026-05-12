@@ -1,10 +1,12 @@
 "use client";
 import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import InReviewAndAdminDialog from "@/components/disputes/InReviewAndAdminDialog";
+import StatusBadge from "@/components/disputes/StatusBadge";
 import OrderChat from "@/components/orders/OrderChat";
+import { useAdminName } from "@/hooks/useAdminName";
 import { getCurrentUser } from "@/lib/firebase/admin.auth";
 import { subscribeToDispute, updateDispute } from "@/lib/firebase/dispute";
-import { getOrderById } from "@/lib/firebase/order";
+import { advanceOrderStatus, getOrderById } from "@/lib/firebase/order";
 import { Admin } from "@/lib/models/admin.model";
 import { Dispute } from "@/lib/models/dispute.model";
 import { Order } from "@/lib/models/order.model";
@@ -55,6 +57,7 @@ export default function DisputesResolutionDetails({
   const [auditNote, setAuditNote] = useState("");
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
+  const assignedAdminName = useAdminName(dispute?.assignedTo);
 
   //  Real-time dispute subscription 
   useEffect(() => {
@@ -100,6 +103,7 @@ export default function DisputesResolutionDetails({
         },
         updatedAt: Date.now(),
       });
+      await advanceOrderStatus(dispute.orderId,"disputeResolved");
     } catch (e) {
       console.error(e);
     } finally {
@@ -123,6 +127,7 @@ export default function DisputesResolutionDetails({
         },
         updatedAt: Date.now(),
       });
+      await advanceOrderStatus(dispute.orderId,"disputeResolved");
     } catch (e) {
       console.error(e);
     } finally {
@@ -289,7 +294,7 @@ export default function DisputesResolutionDetails({
                       Assigned for Review
                     </span>
                     <span className="text-[10px] text-slate-400">
-                      {dispute.assignedTo}
+                      {assignedAdminName}
                     </span>
                   </div>
                 )}
@@ -452,10 +457,10 @@ export default function DisputesResolutionDetails({
                   <div className="flex items-center justify-between bg-yellow-50 border border-yellow-100 rounded-xl px-3 py-2 mb-1">
                     <div className="flex items-center gap-2">
                       <span className="h-6 w-6 rounded-full bg-violet-100 text-violet-700 text-[10px] font-bold flex items-center justify-center uppercase shrink-0">
-                        {dispute.assignedTo?.charAt(0) ?? "A"}
+                        {assignedAdminName.charAt(0).toUpperCase()}
                       </span>
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-700">{dispute.assignedTo}</span>
+                        <span className="text-[10px] font-bold text-slate-700">{assignedAdminName}</span>
                         <span className="text-[9px] text-slate-400">Assigned Admin</span>
                       </div>
                     </div>
@@ -587,7 +592,7 @@ export default function DisputesResolutionDetails({
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-[10px] text-slate-400 font-medium">Processed By</span>
-                      <span className="text-[10px] font-bold text-slate-700">{dispute.resolution?.resolvedBy}</span>
+                      <span className="text-[10px] font-bold text-slate-700">{assignedAdminName}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-[10px] text-slate-400 font-medium">Date</span>
@@ -630,18 +635,3 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function StatusBadge({ status }: { status: Dispute["status"] }) {
-  const map: Record<string, { label: string; className: string }> = {
-  open:      { label: "Open",      className: "bg-blue-50 text-blue-700 border-blue-200"       },
-  in_review: { label: "In Review", className: "bg-yellow-50 text-yellow-700 border-yellow-200" },
-  resolved:  { label: "Resolved",  className: "bg-green-50 text-green-700 border-green-200"    },
-  rejected:  { label: "Rejected",  className: "bg-red-50 text-red-600 border-red-200"          },
-};
-  if (!status || !map[status]) return null;
-  const { label, className } = map[status];
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${className}`}>
-      {label}
-    </span>
-  );
-}
