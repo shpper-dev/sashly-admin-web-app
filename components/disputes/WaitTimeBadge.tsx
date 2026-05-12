@@ -1,25 +1,21 @@
-import { Timer } from 'lucide-react';
-
-export default function WaitTimeBadge({time}:{time:string}) {
-    function getWaitTimeColor(time: string){
-        // convert string to total minutes
-        const hourMatch = time.match(/(\d+)h/);
-        const minuteMatch = time.match(/(\d+)m/);
-        
-        const hours = hourMatch ? parseInt(hourMatch[1]) : 0;
-        const minutes = minuteMatch ? parseInt(minuteMatch[1]) : 0;
-        const totalMinutes = hours * 60 + minutes;
-
-        if (totalMinutes < 45) return "text-purple-600";
-        if(totalMinutes <= 90) return "text-yellow-600";
-        return "text-red-600";
-    } 
+function formatWaitTime(createdAt: number): string {
+  const totalMins = Math.floor((Date.now() - createdAt) / 60000);
+  if (totalMins < 60) return `${totalMins}m`;
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+export default function WaitTimeBadge({ createdAt }: { createdAt: number }) {
+  const totalMins = Math.floor((Date.now() - createdAt) / 60000);
+  const cls =
+    totalMins >= 120
+      ? "bg-red-50 text-red-600"
+      : totalMins >= 30
+      ? "bg-yellow-50 text-yellow-700"
+      : "bg-slate-100 text-slate-600";
   return (
-     <div className="flex items-center">
-          <Timer className={`h-4 w-4 ${getWaitTimeColor(time)}`} />
-          <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${getWaitTimeColor(time)}`}>
-            {time}
-          </span>
-        </div>
-  )
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${cls}`}>
+      {formatWaitTime(createdAt)}
+    </span>
+  );
 }

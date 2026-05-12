@@ -122,7 +122,9 @@ export async function advanceOrderStatus(
         orderId,
         userId: senderId,
         issueType: "missing_item",
-        description:"Shorts is missing"}
+        description:"Shorts is missing",
+        priority:"high"
+      },
       )
       
     } catch (msgError) {
