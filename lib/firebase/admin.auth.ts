@@ -127,4 +127,12 @@ export async function getAdmins(): Promise<Admin[]> {
     return admins
 }
 
+export async function getAdminById(adminId: string) {
+    const adminSnap = await getDoc(doc(db,"admins",adminId));
+    const adminData = adminSnap.data() as Admin;
+
+    return adminData
+    
+}
+
 

@@ -40,6 +40,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string 
   readyToDeliver: { label: "Ready to Deliver", color: "text-purple-600", dot: "bg-purple-500" },
   delivered:      { label: "Delivered",        color: "text-green-600",  dot: "bg-green-500"  },
   disputed:       { label: "Disputed",         color: "text-red-500",    dot: "bg-red-400"  },
+  disputeResolved:{ label: "Dispute Resolved", color: "text-green-500",  dot: "bg-green-400"  },
   cancelled:      { label: "Cancelled",        color: "text-red-600",    dot: "bg-red-500"    },
 };
 

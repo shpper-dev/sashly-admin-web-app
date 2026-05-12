@@ -12,6 +12,7 @@ import { mapOrder } from "../mappers/order.mapper";
 import { createMessage } from "./message";
 import { SearchFilters } from "@/app/(admin)/search/page";
 import { QueryDocumentSnapshot } from "firebase-admin/firestore";
+import { createDispute } from "./dispute";
 
 //Filters type
 export interface OrderFilters {
@@ -71,8 +72,9 @@ const STATUS_TRANSITIONS: Record<OrderStatuses, OrderStatuses[]> = {
   inProgress:      ["readyToDeliver", "cancelled"],
   readyToDeliver:  ["delivered", "cancelled"],
   delivered:       ["disputed"],
+  disputed:        ["disputeResolved"],
+  disputeResolved:        [],
   cancelled:       [],
-  disputed:        []
 };
 
 export function getAllowedNextStatuses(current: OrderStatuses): OrderStatuses[] {
@@ -114,6 +116,15 @@ export async function advanceOrderStatus(
         readByUser: false,
         readByAdmin: true,
       });
+
+      // temp dispute creation
+      await createDispute({
+        orderId,
+        userId: senderId,
+        issueType: "missing_item",
+        description:"Shorts is missing"}
+      )
+      
     } catch (msgError) {
       console.error("Failed to create dispute message:", msgError);
       throw new Error("Failed to create message.")
@@ -405,4 +416,16 @@ function applyClientFilters(orders: Order[], filters: Partial<SearchFilters>) {
 
     return true;
   });
+}
+
+// get order by id
+export async function getOrderById(
+  orderId: string
+): Promise<Order | null> {
+    const orderRef = doc(db, "orders", orderId);
+    const snapshot = await getDoc(orderRef);
+    if (!snapshot.exists()) {
+      return null;
+    }
+    return mapOrder(snapshot as any);
 }
