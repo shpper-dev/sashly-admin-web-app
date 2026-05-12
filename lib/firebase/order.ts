@@ -72,8 +72,9 @@ const STATUS_TRANSITIONS: Record<OrderStatuses, OrderStatuses[]> = {
   inProgress:      ["readyToDeliver", "cancelled"],
   readyToDeliver:  ["delivered", "cancelled"],
   delivered:       ["disputed"],
+  disputed:        ["disputeResolved"],
+  disputeResolved:        [],
   cancelled:       [],
-  disputed:        []
 };
 
 export function getAllowedNextStatuses(current: OrderStatuses): OrderStatuses[] {
