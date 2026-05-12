@@ -1,5 +1,6 @@
 "use client";
 import StatusBadge from "@/components/disputes/StatusBadge";
+import WaitTimeBadge from "@/components/disputes/WaitTimeBadge";
 import Header from "@/components/Header";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { useAdminName } from "@/hooks/useAdminName";
@@ -19,36 +20,36 @@ const RESOLVED_PAGE_SIZE = 10;
 
 // issue Category Config 
 
-const ISSUE_TYPE_CONFIG: Record<
+export const ISSUE_TYPE_CONFIG: Record<
   string,
   { label: string; icon: React.ReactNode; className: string }
 > = {
-  MISSING_ITEM: {
+  missing_item: {
     label: "Missing Item",
     icon: <PackageX className="h-3.5 w-3.5" />,
     className: "bg-orange-50 text-orange-600",
   },
-  DAMAGED: {
+  damaged: {
     label: "Damaged",
     icon: <Shirt className="h-3.5 w-3.5" />,
     className: "bg-red-50 text-red-600",
   },
-  WRONG_SERVICE: {
+  wrong_service: {
     label: "Wrong Service",
     icon: <RefreshCcw className="h-3.5 w-3.5" />,
     className: "bg-blue-50 text-blue-600",
   },
-  DRIVER_BEHAVIOR: {
+  driver_behavious: {
     label: "Driver Behavior",
     icon: <UserX className="h-3.5 w-3.5" />,
     className: "bg-yellow-50 text-yellow-700",
   },
-  DELIVERY_PROBLEM: {
+  delivery_problem: {
     label: "Delivery Problem",
     icon: <AlertTriangle className="h-3.5 w-3.5" />,
     className: "bg-amber-50 text-amber-600",
   },
-  OTHER: {
+  other: {
     label: "Other",
     icon: <HelpCircle className="h-3.5 w-3.5" />,
     className: "bg-slate-100 text-slate-500",
@@ -84,13 +85,7 @@ const RESOLVED_HEADINGS: TableHeading[] = [
 ];
 
 //  utilities
-function formatWaitTime(createdAt: number): string {
-  const totalMins = Math.floor((Date.now() - createdAt) / 60000);
-  if (totalMins < 60) return `${totalMins}m`;
-  const h = Math.floor(totalMins / 60);
-  const m = totalMins % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
+
 
 function formatDateTime(ts: number): string {
   return new Intl.DateTimeFormat("en-GB", {
@@ -279,21 +274,6 @@ function IssueCategoryBadge({ issueType }: { issueType: string }) {
     >
       {config.icon}
       {config.label}
-    </span>
-  );
-}
-
-function WaitTimeBadge({ createdAt }: { createdAt: number }) {
-  const totalMins = Math.floor((Date.now() - createdAt) / 60000);
-  const cls =
-    totalMins >= 120
-      ? "bg-red-50 text-red-600"
-      : totalMins >= 30
-      ? "bg-yellow-50 text-yellow-700"
-      : "bg-slate-100 text-slate-600";
-  return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${cls}`}>
-      {formatWaitTime(createdAt)}
     </span>
   );
 }

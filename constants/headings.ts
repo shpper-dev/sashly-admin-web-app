@@ -1,16 +1,16 @@
 import { TableHeading } from "@/lib/types";
 
 export const dashboardHeadings : TableHeading[]= [{
-    id: "issue_id",
-    title: "ISSUE ID"
+    id: "dispute_id",
+    title: "DISPUTE ID"
 },
 {
     id: "order_id",
     title: "ORDER ID"
 },
 {
-    id: "flag_reason",
-    title: "FLAG REASON"
+    id: "issue_category",
+    title: "ISSUE CATEGORY"
 },
 {
     id: "time_elapsed",
