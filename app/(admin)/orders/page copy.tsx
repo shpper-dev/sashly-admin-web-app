@@ -1,201 +1,287 @@
-"use client";
-import Header from '@/components/Header'
-import TableSkeleton from '@/components/skeleton/TableSkeleton';
-import { TableHeading } from '@/lib/types';
-import { ChevronLeft, ChevronRight, Download, ListFilter } from 'lucide-react';
-import { useEffect, useState} from "react";
+// "use client";
+// import { getOrders, getOrdersNextPage, OrderFilters } from "@/lib/firebase/order";
+// import { Order } from "@/lib/models/order.model";
+// import { useEffect, useRef, useState } from "react";
+// import OrderDetails from "./components/OrderDetails";
+// import Header from "@/components/Header";
+// import OrderCleaning from "./components/OrderCleaning";
+// import OrderReady from "./components/OrderReady";
+// import OrderPickups from "./components/OrderPickups";
+// import { Download } from "lucide-react";
+// import { exportToCsv } from "@/lib/utils";
+// import { useToast } from "@/lib/providers/ToastProvider";
 
-const orderHeadings : TableHeading[]= [
-{
-    id: "order_id",
-    title: "ORDER ID"
-},
-{
-    id: "order_date",
-    title: "ORDER DATE"
-},
-{
-    id: "service_type",
-    title: "SERVICE TYPE"
-},
-{
-    id: "categories",
-    title: "CATEGORIES"
-},
-{
-    id:"total_amount",
-    title:"TOTAL AMOUNT"
-},
-{
-    id:"status",
-    title:"STATUS"
-}
-]
-const mockData = [{
-  id:1,
-  order_id: "#4267",
-  order_date:"17 Feb 2026",
-  service_type: "Ordinary",
-  categories:"ORD-7953",
-  total_amount: "45.00",
-  status:"Pickup",
+// export type TabKey = "detail" | "cleaning" | "ready" | "pickups" //| "all" ;
+// // Tab → filters mapping
+// const TAB_FILTERS: Record<TabKey, OrderFilters> = {
+//   detail:  {}, //all
+//   pickups: { status: "confirmed" },    //once confirmed..next to be picked up                                 
+//   cleaning:{ status: "inProgress" }, //after pickup in progress
+//   ready:   { status: "readyToDeliver" }, //ready for delivery
+  
+// };
 
-},
-{
-  id:2,
-  order_id: "#5251",
-  order_date:"11 Mar 2026",
-  service_type: "Express",
-  categories:  "ORD-623G",
-  total_amount:"55.00",
-  status: "Delivered",
-},
-{
-  id:3,
-  order_id: "#7262",
-  order_date:"28 Apr 2026",
-  service_type: "Ordinary",
-  categories:"ORD-32QQ",
-  total_amount: "61.00",
-  status:"Pickup",
-}]
-export default function Orders() {
-    const [loading, setLoading] = useState<boolean>(true);
-    const [data, setData] = useState<any[]>([]);
+// const tabs: { key: TabKey; label: string }[] = [
+//   { key: "detail", label: "Detail" },
+//   { key: "pickups", label: "Pickups" },
+//   { key: "cleaning", label: "Cleaning" },
+//   { key: "ready", label: "Ready" },
+  
+//   // { key: "all", label: "All" },
+// ];
 
-    // helper function to render cell content with styling
-    const renderCellContent = (heading:TableHeading, value:any) =>{
-        if(!value || value ==="-"){
-            return <span className='text-slate-400'>-</span>
-        }
+// export interface OrderTabProps {
+//   orders: Order[];
+//   loading: boolean;
+//   onStatusUpdate: () => void;
+//   // pagination
+//   currentPage: number;
+//   hasNextPage: boolean;
+//   onNext: () => void;
+//   onPrev: () => void;
+//   pageSize: number;
+// }
 
-        switch(heading.id) {
-            case "service_type":
-                return(
-                    <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium text-white ${
-                        value.toLowerCase() === "ordinary" ? "bg-blue-400" : "bg-linear-to-r from-purple-800 to-blue-400"
-                    }`}>
-                        {value}
-                    </span>
-                );
-            case "status":
-                const statusColours: Record<string,string> ={
-                    pickup : "bg-purple-100/50 text-purple-700",
-                    delivered: "bg-green-100/50 text-green-700",
-                    cancelled: "bg-red-100/50 text-red-700"
-                };
-                const colourClass = statusColours[value.toLowerCase()] || "bg-slate-100 text-slate-700";
+// export default function OrdersPage() {
+//   const [activeTab, setActiveTab]     = useState<TabKey>("detail");
+//   const [loading, setLoading]         = useState(false);
+//   const [orders, setOrders]           = useState<Order[]>([]);
+//   const [lastDoc, setLastDoc]         = useState<any>(null);
+//   const [hasNextPage, setHasNextPage] = useState(false);
+//   const [currentPage, setCurrentPage] = useState(1);
+//   const cursorStack = useRef<any[]>([undefined]);
 
-                return (
-                    <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs  ${colourClass}`}>
-                        {value}
-                    </span>
-                );
+//   // toast 
+//   const {showToast} = useToast();
 
-            case "total_amount":
-                return (
-                    <span className='font-semibold text-purple-600'>
-                        {value} SAR
-                    </span>
-                );
-            default :
-            return value;
-        }
-    }
+//   const pageHeadings: Record<TabKey, { main: string; sub: string }> = {
+//   detail: { main: "Detail", sub: "Placed orders are listed here", },
+//   cleaning: { main: "Cleaning", sub: "Orders that are currently cleaning",},
+//   ready: { main: "Ready", sub: "Ready laundry to send for pickups", },
+//   pickups: { main: "Pickups", sub: "All the pickups are listed here",},
 
-    useEffect(()=>{
-        setLoading(true);
-        setTimeout(()=>{
-           setData(mockData);
-           setLoading(false)
-        },2000);
-    ;
-  },[])
-  return (
-    <div className='min-h-screen bg-slate-50'>
-        <Header/>
-        <main className='flex flex-col pt-16 pl-60 min-h-screen gap-3'>
-            <section className='px-6 pb-6'>
-                <div className='flex gap-3 mb-4 justify-between'>
-                    <div>
-                        <h2 className='text-xl font-bold text-slate-800'>Manage Orders</h2>
-                        <p className='text-sm text-slate-500'>Reviewing 1248 active operational requests from all regions</p>
-                    </div>
-                    <div className='flex gap-2 items-center'>
-                        <button className='flex gap-2 items-center bg-white px-3 py-2 text-sm rounded-md '>
-                            <ListFilter className='h-3 w-3' />
-                            Filter</button>
-                    <button className='flex gap-2 items-center bg-[#7F50F4] px-3 py-2 text-white text-sm rounded-md'>
-                        <Download className='h-3 w-3' />
-                        Export Report</button>
-                    </div>
-                    
-                </div>
-                <div>
-                    {loading ? (
-                        <TableSkeleton tableHeadings={orderHeadings}/>
-                    ):(
-                        <table className='w-full'>
-                            <thead className='bg-slate-200/50'>
-                                <tr>
-                                    {orderHeadings.map((heading)=>(
-                                        <th key={heading.id}
-                                        className='px-6 py-3 text-left text-sm font-semibold text-slate-700 first:rounded-tl-lg last:rounded-tr-lg'>
-                                            {heading.title}
-                                        </th>
+//   // all: {
+//   //   main: "All Orders",
+//   //   sub: "All orders across statuses",
+//   // },
+// };
 
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-slate-200">
-                                {data.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={orderHeadings.length}
-                                        className="px-6 py-12 text-center text-sm text-slate-500 ">
-                                            No data available
-                                        </td>
-                                    </tr>
-                                ):(
-                                    data.map((row,index)=>(
-                                        <tr key={row.id || index} className="hover:bg-slate-50 transition-colors">
-                                        {orderHeadings.map((heading)=>(
-                                            <td key={heading.id}
-                                            className={`px-6 py-3 text-sm text-slate-700`}>
-                                                {renderCellContent(heading, row[heading.id])}
-                                            </td>
-                                        ))}
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                            <tfoot className='bg-slate-200/50'>
-                            <tr>
-                                <td colSpan={orderHeadings.length} className='px-6 py-3 first:rounded-bl-lg last:rounded-br-lg'>
-                                    <div className='flex items-center justify-between'>
-                                        {/* left : showing text */}
-                                        <div className='text-left text-sm text-slate-600'>
-                                            showing <b>1</b>-<b>3</b> of <b>{data.length}</b> orders
-                                        </div>
-                                        {/* Right: pagination controls */}
-                                        <div className='flex items-center gap-2'>
-                                            <button>
-                                                <ChevronLeft className='h-3 w-3 text-slate-700' />
-                                            </button>
-                                            <button>
-                                                <ChevronRight className='h-3 w-3 text-slate-700'/>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    
-                                </td>
-                            </tr>
-                                
-                            </tfoot>
-                        </table>
-                    )}
-                </div>
-            </section>
-        </main>
-    </div>
-  )
-}
+//   const PAGE_SIZE = 10;
+
+//   const fetchPage = async (cursor: any, filters: OrderFilters, refetch: boolean = false) => {
+//     if(!refetch) setLoading(true);
+//     try {
+//       const result = cursor
+//         ? await getOrdersNextPage(cursor, PAGE_SIZE, filters)
+//         : await getOrders(PAGE_SIZE, filters);
+//       setOrders(result.rows);
+//       setLastDoc(result.lastDoc);
+//       setHasNextPage(result.rows.length === PAGE_SIZE);
+//     } catch (e) {
+//       console.error(e);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const refetch = (stayOnPage: boolean) => {
+//     if(stayOnPage){
+//       // get current cursor
+//       const currentCursor = cursorStack.current[cursorStack.current.length -1];
+//       fetchPage(currentCursor,TAB_FILTERS[activeTab]);
+//     } else{
+//       cursorStack.current = [undefined];
+//       setCurrentPage(1);
+//       fetchPage(undefined, TAB_FILTERS[activeTab],true);
+//     }
+//   };
+
+//   // Refetch when tab changes
+//   useEffect(() => {
+//     cursorStack.current = [undefined];
+//     setCurrentPage(1);
+//     fetchPage(undefined, TAB_FILTERS[activeTab]);
+//   }, [activeTab]);
+
+//   const handleNext = async () => {
+//     if (!hasNextPage || !lastDoc) return;
+//     cursorStack.current.push(lastDoc);
+//     await fetchPage(lastDoc, TAB_FILTERS[activeTab]);
+//     setCurrentPage((p) => p + 1);
+//   };
+
+//   const handlePrev = async () => {
+//     if (currentPage <= 1) return;
+//     cursorStack.current.pop();
+//     const prev = cursorStack.current[cursorStack.current.length - 1];
+//     await fetchPage(prev, TAB_FILTERS[activeTab]);
+//     setCurrentPage((p) => p - 1);
+//   };
+
+//   // format orders to csv format
+//   function formatOrdersForCSV(orders: Order[]) {
+//   return orders.map((o) => ({
+//     ID: o.id,
+//     UserName: o.userName,
+//     Email: o.userEmail,
+
+//     // prevent scientific notation
+//     Phone: `'${o.userPhone}`,
+
+//     TotalPrice: o.totalPrice,
+
+//     Status: o.latestStatus?.status ?? "-",
+
+//     // convert items array → readable string
+//     Items: o.items
+//       ?.map((item) => `${item.name} x${item.count}`)
+//       .join(" | ") ?? "-",
+
+//     // convert status history
+//     StatusHistory: o.statusHistory
+//       ?.map((s) => `${s.status}`)
+//       .join(" → ") ?? "-",
+
+//     Paid: o.isPaid ? "Yes" : "No",
+//     Delivered: o.isDelivered ? "Yes" : "No",
+//     Cancelled: o.isCancelled ? "Yes" : "No",
+
+//     ServiceType: o.serviceType,
+
+//     // format timestamps
+//     CreatedAt: new Date(o.createdAt).toLocaleString(),
+
+//     // addresses (flatten important fields only)
+//     PickUpAddress: o.pickUpAddress
+//       ? `${o.pickUpAddress.formattedAddress ?? ""}, ${o.pickUpAddress.city ?? ""}`
+//       : "-",
+
+//     DeliveryAddress: o.deliveryAddress
+//       ? `${o.deliveryAddress.formattedAddress ?? ""}, ${o.deliveryAddress.city ?? ""}`
+//       : "-",
+
+//     Payment: o.paidBy ?? "-",
+//   }));
+// }
+
+//   // Pass orders + loading + refetch + pagination down to each tab
+//   const tabProps: OrderTabProps = {
+//   orders,
+//   loading,
+//   onStatusUpdate: () => refetch(true),
+//   currentPage,
+//   hasNextPage,
+//   onNext: handleNext,
+//   onPrev: handlePrev,
+//   pageSize: PAGE_SIZE,
+// };
+// return (
+//     <div className="min-h-screen bg-white">
+//       <Header />
+
+//       <main className="pt-16 pl-60 pb-10">
+//         {/* PAGE HEADER */}
+//         <section className="mb-6 px-8">
+//             <div className="flex justify-between items-start ">
+//                <div>
+//             <h1 className="text-2xl font-bold text-slate-800">{pageHeadings[activeTab].main}</h1>
+//             <p className="text-sm text-slate-500">
+//               {pageHeadings[activeTab].sub}
+//             </p>
+//           </div>
+
+//           {/* STATS */}
+//           <div className="flex items-center gap-8">
+//             <Stat label="ORDERS" value={orders.length} />
+//             <Stat label="PIECES" value={orders.reduce((acc, order) => 
+//             acc + order.items.reduce((sum, item) => sum + item.count, 0), 0)}  />
+//             <Stat label="TOTAL" value={`SAR ${orders.reduce((acc, order) => acc + order.totalPrice, 0).toFixed(2)}`}  />
+//             <Stat label="UNPAID" value={`SAR ${orders.filter(o=> !o.isPaid && !o.isCancelled).reduce((acc,order) => acc + order.totalPrice, 0).toFixed(2)}`} danger />
+
+//             <div className="w-px h-7 bg-slate-300" />
+            
+//             {/* <Link href={"/orders/add-order"} className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors shadow-md">
+//               + New Order
+//             </Link> */}
+//             {/* currently only per page orders */}
+//           <button className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm cursor-pointer hover:bg-slate-50"
+//           onClick={()=> {try{
+//             const formattedOrders = formatOrdersForCSV(orders);
+//             exportToCsv(formattedOrders,`${activeTab}-page${currentPage ?? 1}-orders.csv`);
+//             showToast(`orders exported to csv successfully`,"success");
+//           } catch (error) {
+//             showToast(`Failed to export orders to csv`,"error");
+//           }}}>
+//               <Download className="h-3.5 w-3.5" /> Export CSV
+//           </button>
+//           </div>
+//         </div>
+//         </section>
+//         <section className="">
+//         {/* TABS */}
+//         <div className="border-b border-slate-200 mb-6">
+//         <div className="flex items-center justify-between pr-8">
+//           {/* Tabs */}
+//           <div className="flex items-center gap-8">
+//             {tabs.map((tab) => (
+//               <button
+//                 key={tab.key}
+//                 onClick={() => setActiveTab(tab.key)}
+//                 className={`py-3 px-4 text-sm font-medium transition-colors cursor-pointer first:ml-10 ${
+//                   activeTab === tab.key
+//                     ? "text-purple-600 border-b-2 border-purple-600 -mb-px"
+//                     : "text-slate-500 hover:text-slate-700"
+//                 }`}
+//               >
+//                 {tab.label}
+//               </button>
+//             ))}
+//           </div>
+          
+//         </div>
+//         </div>
+//         </section>
+//         <section>
+//         {/* FILTER ROW */}
+//         {activeTab === "detail"   && <OrderDetails  {...tabProps} />}
+//         {activeTab === "pickups"  && <OrderPickups  {...tabProps} />}
+//         {activeTab === "cleaning" && <OrderCleaning {...tabProps} />}
+//         {activeTab === "ready"    && <OrderReady    {...tabProps} />}
+        
+        
+//         {/* for now disabling all */}
+//         {/* {activeTab === "all" &&(
+//             <OrderDetails />
+//         )} */}
+       
+//         </section>
+//       </main>
+//     </div>
+//   );
+
+// }
+
+// //  helpers
+// function Stat({
+//   label,
+//   value,
+//   danger,
+// }: {
+//   label: string;
+//   value: string  | number;
+//   danger?: boolean;
+// }) {
+//   return (
+//     <div className="text-center">
+//       <div className="text-xs font-medium text-slate-400 ">{label}</div>
+//       <div
+//         className={`text-md font-bold ${
+//           danger ? "text-red-500" : "text-slate-800"
+//         }`}
+//       >
+//         {value}
+//       </div>
+//     </div>
+//   );
+// }
+

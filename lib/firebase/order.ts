@@ -5,7 +5,8 @@ import {
   QueryConstraint,
   getCountFromServer,
   getDoc,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot
 } from "firebase/firestore";
 import { Order, OrderStatuses, OrderStatus, OrderItem } from "@/lib/models/order.model";
 import { mapOrder } from "../mappers/order.mapper";
@@ -430,4 +431,30 @@ export async function getOrderById(
       return null;
     }
     return mapOrder(snapshot as any);
+}
+
+// real time firestore orders sync
+export function subscribeToOrders(
+  callback: (orders: Order[], lastDoc: any) => void,
+  filters: OrderFilters = {},
+  pageSize = 20,
+  cursor?: any
+) {
+  const constraints = buildOrderConstraints(filters, pageSize);
+
+  // pagination support
+  if (cursor) {
+    constraints.splice(constraints.length - 1, 0, startAfter(cursor));
+  }
+
+  const q = query(collection(db, "orders"), ...constraints);
+
+  return onSnapshot(q, (snapshot) => {
+    const rows = snapshot.docs.map(mapOrder);
+
+    callback(
+      rows,
+      snapshot.docs[snapshot.docs.length - 1] ?? null
+    );
+  });
 }
