@@ -1,5 +1,5 @@
 "use client";
-import { getOrders, getOrdersNextPage, OrderFilters } from "@/lib/firebase/order";
+import { getOrders, getOrdersNextPage, OrderFilters, subscribeToOrders } from "@/lib/firebase/order";
 import { Order } from "@/lib/models/order.model";
 import { useEffect, useRef, useState } from "react";
 import OrderDetails from "./components/OrderDetails";
@@ -50,7 +50,8 @@ export default function OrdersPage() {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const cursorStack = useRef<any[]>([undefined]);
-
+  
+  const unsubscribeRef = useRef<(() => void) | null>(null);
   // toast 
   const {showToast} = useToast();
 
@@ -60,63 +61,85 @@ export default function OrdersPage() {
   ready: { main: "Ready", sub: "Ready laundry to send for pickups", },
   pickups: { main: "Pickups", sub: "All the pickups are listed here",},
 
-  // all: {
-  //   main: "All Orders",
-  //   sub: "All orders across statuses",
-  // },
+  
 };
 
   const PAGE_SIZE = 10;
 
-  const fetchPage = async (cursor: any, filters: OrderFilters, refetch: boolean = false) => {
-    if(!refetch) setLoading(true);
-    try {
-      const result = cursor
-        ? await getOrdersNextPage(cursor, PAGE_SIZE, filters)
-        : await getOrders(PAGE_SIZE, filters);
-      setOrders(result.rows);
-      setLastDoc(result.lastDoc);
-      setHasNextPage(result.rows.length === PAGE_SIZE);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const refetch = (stayOnPage: boolean) => {
-    if(stayOnPage){
-      // get current cursor
-      const currentCursor = cursorStack.current[cursorStack.current.length -1];
-      fetchPage(currentCursor,TAB_FILTERS[activeTab]);
-    } else{
-      cursorStack.current = [undefined];
-      setCurrentPage(1);
-      fetchPage(undefined, TAB_FILTERS[activeTab],true);
-    }
-  };
-
-  // Refetch when tab changes
   useEffect(() => {
-    cursorStack.current = [undefined];
-    setCurrentPage(1);
-    fetchPage(undefined, TAB_FILTERS[activeTab]);
-  }, [activeTab]);
+  setLoading(true);
+
+  // cleanup old listener
+  unsubscribeRef.current?.();
+
+  cursorStack.current = [undefined];
+  setCurrentPage(1);
+
+  const unsubscribe = subscribeToOrders(
+    (rows, newLastDoc) => {
+      setOrders(rows);
+      setLastDoc(newLastDoc);
+      setHasNextPage(rows.length === PAGE_SIZE);
+      setLoading(false);
+    },
+    TAB_FILTERS[activeTab],
+    PAGE_SIZE
+  );
+
+  unsubscribeRef.current = unsubscribe;
+
+  return () => unsubscribe();
+}, [activeTab]);
 
   const handleNext = async () => {
-    if (!hasNextPage || !lastDoc) return;
-    cursorStack.current.push(lastDoc);
-    await fetchPage(lastDoc, TAB_FILTERS[activeTab]);
-    setCurrentPage((p) => p + 1);
-  };
+  if (!hasNextPage || !lastDoc) return;
+
+  cursorStack.current.push(lastDoc);
+
+  unsubscribeRef.current?.();
+
+  const unsubscribe = subscribeToOrders(
+    (rows, newLastDoc) => {
+      setOrders(rows);
+      setLastDoc(newLastDoc);
+      setHasNextPage(rows.length === PAGE_SIZE);
+    },
+    TAB_FILTERS[activeTab],
+    PAGE_SIZE,
+    lastDoc
+  );
+
+  unsubscribeRef.current = unsubscribe;
+
+  setCurrentPage((p) => p + 1);
+};
 
   const handlePrev = async () => {
-    if (currentPage <= 1) return;
-    cursorStack.current.pop();
-    const prev = cursorStack.current[cursorStack.current.length - 1];
-    await fetchPage(prev, TAB_FILTERS[activeTab]);
-    setCurrentPage((p) => p - 1);
-  };
+  if (currentPage <= 1) return;
+
+  cursorStack.current.pop();
+
+  const prevCursor =
+    cursorStack.current[cursorStack.current.length - 1];
+
+  unsubscribeRef.current?.();
+
+  const unsubscribe = subscribeToOrders(
+    (rows, newLastDoc) => {
+      setOrders(rows);
+      setLastDoc(newLastDoc);
+      setHasNextPage(rows.length === PAGE_SIZE);
+    },
+    TAB_FILTERS[activeTab],
+    PAGE_SIZE,
+    prevCursor
+  );
+
+  unsubscribeRef.current = unsubscribe;
+
+  setCurrentPage((p) => p - 1);
+};
 
   // format orders to csv format
   function formatOrdersForCSV(orders: Order[]) {
@@ -168,7 +191,7 @@ export default function OrdersPage() {
   const tabProps: OrderTabProps = {
   orders,
   loading,
-  onStatusUpdate: () => refetch(true),
+  onStatusUpdate: () => {},
   currentPage,
   hasNextPage,
   onNext: handleNext,
