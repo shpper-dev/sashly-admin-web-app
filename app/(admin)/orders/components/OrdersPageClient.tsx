@@ -1,5 +1,5 @@
 "use client";
-import { getOrders, getOrdersNextPage, OrderFilters, subscribeToOrders } from "@/lib/firebase/order";
+import {  OrderFilters, subscribeToOrders } from "@/lib/firebase/order";
 import { Order } from "@/lib/models/order.model";
 import { useEffect, useRef, useState } from "react";
 import Header from "@/components/Header";

@@ -3,7 +3,6 @@ import { PencilLine, Search } from "lucide-react";
 import React, { useState } from "react";
 import { Order } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
-import { OrderTabProps } from "../page";
 import FilterDropdown from "@/components/buttons/FilterDropdown";
 // import CustomerCell from "@/components/orders/CustomerCell";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
@@ -13,6 +12,7 @@ import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import { OrderTable } from "@/components/orders/OrderTable";
 import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
+import { OrderTabProps } from "./OrdersPageClient";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },

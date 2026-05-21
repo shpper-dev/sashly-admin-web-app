@@ -3,7 +3,7 @@ import { FileText, PencilLine } from "lucide-react";
 import React, { useState } from "react";
 import { Order, OrderStatuses } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
-import { OrderTabProps } from "../page";
+import { OrderTabProps } from "./OrdersPageClient";
 import FilterButton from "@/components/buttons/FilterDropdown";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
