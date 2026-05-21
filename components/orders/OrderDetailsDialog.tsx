@@ -30,6 +30,8 @@ interface Props {
   order: Order;
   children: React.ReactNode;
   onStatusUpdate: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
@@ -53,16 +55,29 @@ function fmtTime(ts?: number | null) {
   return new Date(ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function OrderDetailsDialog({ order, children, onStatusUpdate }: Props) {
+export default function OrderDetailsDialog({  order, children, onStatusUpdate, open: controlledOpen, onOpenChange }: Props) {
   useOrderServiceDowngrade(order.id, onStatusUpdate);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  const isControlled = controlledOpen !== undefined;
+  const isOpen       = isControlled ? controlledOpen : internalOpen;
+
+  const handleOpenChange = (val: boolean) => {
+    if (isControlled) {
+      onOpenChange?.(val);
+    } else {
+      setInternalOpen(val);
+    }
+  };
   const cfg = STATUS_CONFIG[order.latestStatus.status] ?? { label: order.latestStatus.status, color: "text-slate-600", dot: "bg-slate-400" };
   // const [showNotifs, setShowNotifs] = useState(true);
+
+
   
   const {showToast} = useToast();
   
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
 
       <DialogContent className="p-0 gap-0 border-0 overflow-hidden w-[95vw]! max-w-none! h-[95vh]! min-w-0! rounded-2xl shadow-2xl">

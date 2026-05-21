@@ -10,6 +10,7 @@ import OrderPickups from "./components/OrderPickups";
 import { Download } from "lucide-react";
 import { exportToCsv } from "@/lib/utils";
 import { useToast } from "@/lib/providers/ToastProvider";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export type TabKey = "detail" | "cleaning" | "ready" | "pickups" //| "all" ;
 // Tab → filters mapping
@@ -40,6 +41,7 @@ export interface OrderTabProps {
   onNext: () => void;
   onPrev: () => void;
   pageSize: number;
+  autoOpenOrderId?: string | null;
 }
 
 export default function OrdersPage() {
@@ -50,6 +52,16 @@ export default function OrdersPage() {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const cursorStack = useRef<any[]>([undefined]);
+
+  const searchParams      = useSearchParams();
+  const router            = useRouter();
+
+  // Read orderId set by the notification link, then immediately clean the URL
+  const autoOpenOrderId   = searchParams.get("orderId");
+
+  useEffect(() => {
+    if (autoOpenOrderId) router.replace("/orders");
+  }, [autoOpenOrderId]);
   
   const unsubscribeRef = useRef<(() => void) | null>(null);
   // toast 
@@ -197,6 +209,7 @@ export default function OrdersPage() {
   onNext: handleNext,
   onPrev: handlePrev,
   pageSize: PAGE_SIZE,
+  autoOpenOrderId: autoOpenOrderId ?? null,
 };
 return (
     <div className="min-h-screen bg-white">

@@ -1,6 +1,6 @@
 "use client";
 import { FileText, PencilLine, Search } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Order } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
 import { OrderTabProps } from "../page";
@@ -12,6 +12,7 @@ import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import { OrderTable } from "@/components/orders/OrderTable";
 import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
+import { getOrderById } from "@/lib/firebase/order";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -24,10 +25,28 @@ const orderHeadings: TableHeading[] = [
   { id: "actions",      title: ""             },
 ];
 
-export default function OrderDetails({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
+export default function OrderDetails({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize, autoOpenOrderId }: OrderTabProps) {
   const [search, setSearch] = useState("");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
+
+  // Auto-open dialog state
+  const [autoOrder, setAutoOrder] = useState<Order | null>(null);
+
+  // When orders load, find the target order — fallback fetch if not on current page
+  useEffect(() => {
+    if (!autoOpenOrderId) return;
+
+    const found = orders.find((o) => o.id === autoOpenOrderId);
+    if (found) {
+      setAutoOrder(found);
+    } else if (!loading) {
+      // Not in current page — fetch directly
+      getOrderById(autoOpenOrderId)
+        .then(setAutoOrder)
+        .catch(console.error);
+    }
+  }, [autoOpenOrderId, orders, loading]);
 
   const filtered = orders.filter((order) =>
     !search ||
@@ -151,6 +170,16 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
 
   return (
     <div>
+      {autoOrder && (
+        <OrderDetailsDialog
+          order={autoOrder}
+          open={true}
+          onOpenChange={(open) => { if (!open) setAutoOrder(null); }}
+          onStatusUpdate={onStatusUpdate}
+        >
+          <span />
+        </OrderDetailsDialog>
+      )}
       {/* Filter bar */}
       <div className="flex justify-between items-center mb-4 px-8">
         <div className="flex gap-3">
