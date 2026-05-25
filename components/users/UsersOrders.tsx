@@ -1,7 +1,9 @@
 "use client";
-import { Order } from '@/lib/models/order.model';
+import { Order, OrderStatuses } from '@/lib/models/order.model';
+import { advanceOrderStatus, getAllowedNextStatuses } from '@/lib/firebase/order';
 import { Calendar, ClockCheck, ClockIcon, Loader2, LucideIcon, ShoppingBag, Timer, Truck } from 'lucide-react';
-import  { useState } from 'react';
+import Link from 'next/link';
+import { useState } from 'react';
 
 interface UsersOrdersProps {
   orders?: Order[];
@@ -11,13 +13,29 @@ interface UsersOrdersProps {
 export default function UsersOrders({ orders, loading }: UsersOrdersProps) {
   const [activeFilter, setActiveFilter] = useState<"All" | "Active" | "Drafts">("Active");
 
-  const readyForPickup = orders?.filter((o) =>
-    o.latestStatus.status === "confirmed"
+  const activeOrders =
+  orders?.filter(
+    (o) =>
+      !o.isDelivered &&
+      !o.isCancelled
   ) ?? [];
 
-  const readyForDelivery = orders?.filter((o) =>
-    o.latestStatus.status === "readyToDeliver"
-  ) ?? [];
+const allOrders = orders ?? [];
+
+const displayedOrders =
+  activeFilter === "Active"
+    ? activeOrders
+    : activeFilter === "All"
+    ? allOrders
+    : [];
+
+const readyForPickup = activeOrders.filter(
+  (o) => o.latestStatus.status === "confirmed"
+);
+
+const readyForDelivery = activeOrders.filter(
+  (o) => o.latestStatus.status === "readyToDeliver"
+);
 
   return (
     <div className="flex-1 overflow-y-auto px-8 py-6 bg-white">
@@ -49,9 +67,11 @@ export default function UsersOrders({ orders, loading }: UsersOrdersProps) {
           </div>
         ) : activeFilter === "Drafts" ? (
           <div className="text-center py-10 text-slate-400 text-sm">No Drafts Available</div>
-        ) : orders && orders.length > 0 ? (
-          orders.map((order) => <OrderCard key={order.id} order={order} />)
-        ) : (
+        ) : displayedOrders.length > 0 ? (
+  displayedOrders.map((order) => (
+    <OrderCard key={order.id} order={order} />
+  ))
+) : (
           <div className="text-center py-10 text-slate-400 text-sm">No orders found</div>
         )}
       </div>
@@ -110,8 +130,22 @@ export default function UsersOrders({ orders, loading }: UsersOrdersProps) {
   );
 }
 
+// Status label map — human-readable next action label keyed by the status being advanced TO
+const NEXT_STATUS_LABEL: Partial<Record<OrderStatuses, string>> = {
+  pickedUp:        "Mark Picked Up",
+  sorting:         "Mark Sorting",
+  inProgress:      "Mark In Progress",
+  readyToDeliver:  "Mark Ready",
+  delivered:       "Mark Delivered",
+  disputed:        "Mark Disputed",
+  disputeResolved: "Mark Resolved",
+  cancelled:       "Cancel Order",
+};
+
 // OrderCard (in progress) 
 function OrderCard({ order }: { order: Order }) {
+  const [advancing, setAdvancing] = useState(false);
+
   const groupedItems = Object.values(
     order.items.reduce<Record<string, { name: string; arabicName: string; count: number }>>((acc, item) => {
       const key = item.name;
@@ -122,6 +156,24 @@ function OrderCard({ order }: { order: Order }) {
   );
 
   const totalPieces = order.items.reduce((acc, item) => acc + item.count, 0);
+
+  // Derive the primary next status (first allowed transition, skipping "cancelled")
+  const currentStatus = order.latestStatus.status as OrderStatuses;
+  const nextStatuses  = getAllowedNextStatuses(currentStatus);
+  const nextStatus    = nextStatuses.find((s) => s !== "cancelled") ?? null;
+  const nextLabel     = nextStatus ? (NEXT_STATUS_LABEL[nextStatus] ?? `Mark ${nextStatus}`) : null;
+
+  const handleAdvance = async () => {
+    if (!nextStatus) return;
+    setAdvancing(true);
+    try {
+      await advanceOrderStatus(order.id, nextStatus);
+    } catch (e) {
+      console.error("Failed to advance order status:", e);
+    } finally {
+      setAdvancing(false);
+    }
+  };
 
   return (
     <div className="bg-white text-[#101828] rounded-2xl p-5 flex items-start justify-between shadow-md border border-slate-100">
@@ -162,12 +214,27 @@ function OrderCard({ order }: { order: Order }) {
         </div>
       </div>
       <div className="flex flex-col gap-2 ml-4 shrink-0">
-        <button className="px-6 py-2 rounded-xl text-xs bg-[#7F50F4] hover:bg-[#6B3FD4] text-white font-bold transition-colors">
-          Mark Cleaned
-        </button>
-        <button className="px-6 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+        {/* Next status button — label derived from STATUS_TRANSITIONS, hidden when no valid transition */}
+        {nextLabel && (
+          <button
+            onClick={handleAdvance}
+            disabled={advancing}
+            className="px-6 py-2 rounded-xl text-xs bg-[#7F50F4] hover:bg-[#6B3FD4] text-white font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+          >
+            {advancing
+              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Updating…</>
+              : nextLabel
+            }
+          </button>
+        )}
+
+        {/* Details — navigates to orders page and auto-opens the dialog for this order */}
+        <Link
+          href={`/orders?orderId=${order.id}`}
+          className="px-6 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors text-center"
+        >
           Details
-        </button>
+        </Link>
       </div>
     </div>
   );

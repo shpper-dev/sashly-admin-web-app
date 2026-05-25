@@ -458,3 +458,24 @@ export function subscribeToOrders(
     );
   });
 }
+
+// subscribe to orders by user ud
+export function subscribeToActiveOrdersByUserId(
+  userId: string,
+  callback: (orders: Order[]) => void
+) {
+  const q = query(
+    collection(db, "orders"),
+    where("userId", "==", userId),
+    orderBy("createdAt", "desc")
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const orders = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Order[];
+
+    callback(orders);
+  });
+}
