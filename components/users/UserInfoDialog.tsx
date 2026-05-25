@@ -5,12 +5,11 @@ import { Calendar, Camera, ChartNoAxesColumn,  CreditCard,LucideIcon, Mail, Mess
 import UsersOrders from './UsersOrders';
 import UsersEditCustomer from './UsersEditCustomer';
 import UsersStats from './UsersStats';
-import UsersPayment from './UsersPayment';
 import UsersMessages from './UsersMessages';
 import UsersPickups from './UsersPickups';
 import UsersPhotos from './UsersPhotos';
 import { User } from '@/lib/models/user.model';
-import { getActiveOrdersByUserId } from "@/lib/firebase/order";
+import { getActiveOrdersByUserId, subscribeToActiveOrdersByUserId } from "@/lib/firebase/order";
 import { Order } from '@/lib/models/order.model';
 import UsersWallet from './UsersWallet';
 
@@ -29,9 +28,9 @@ const HEADER_TABS: HeaderTabDef[] = [
   { name: "Edit Customer",   key: "edit customer",   icon: PencilLine        },
   { name: "Wallet",          key: "wallet",          icon: Wallet            },
   // { name: "Payments",        key: "payments",        icon: CreditCard        },
-  { name: "Messages",        key: "messages",        icon: MessageCircle     },
-  { name: "Pickups",         key: "pickups",         icon: Truck             },
-  { name: "Photos",          key: "photos",          icon: Camera            },
+  // { name: "Messages",        key: "messages",        icon: MessageCircle     },
+  // { name: "Pickups",         key: "pickups",         icon: Truck             },
+  // { name: "Photos",          key: "photos",          icon: Camera            },
 ];
 
 
@@ -65,21 +64,19 @@ if (user) {
 }
 
 useEffect(() => {
-  const fetchOrders = async () => {
-    if (!user || !open) return;
+  if (!user || !open) return;
 
-    try {
-      setLoadingOrders(true);
-      const data = await getActiveOrdersByUserId(user.userId);
+  setLoadingOrders(true);
+
+  const unsubscribe = subscribeToActiveOrdersByUserId(
+    user.userId,
+    (data) => {
       setOrders(data);
-    } catch (err) {
-      console.error("Error fetching orders:", err);
-    } finally {
       setLoadingOrders(false);
     }
-  };
+  );
 
-  fetchOrders();
+  return () => unsubscribe();
 }, [user, open]);
  
 
@@ -231,11 +228,11 @@ useEffect(() => {
               {activeTab === "orders" && <UsersOrders orders={orders} loading={loadingOrders} />}
               {activeTab === "edit customer" && <UsersEditCustomer onDelete={onDelete} user={user} onSuccess={onSuccess} />}
               {activeTab === "wallet" && <UsersWallet userId={user.userId} />}
-              {activeTab === "stats" && <UsersStats />}
+              {activeTab === "stats" && <UsersStats orders={orders} />}
               {/* {activeTab === "payments" && <UsersPayment />} */}
-              {activeTab === "messages" && <UsersMessages />}
+              {/* {activeTab === "messages" && <UsersMessages />}
               {activeTab === "pickups" && <UsersPickups />}
-              {activeTab === "photos" && <UsersPhotos />}
+              {activeTab === "photos" && <UsersPhotos />} */}
             </div>
 
           </div>
