@@ -269,6 +269,37 @@ export async function addItemToOrder(orderId: string, newItem: OrderItem) {
   });
 }
 
+// multiple items added together
+export async function addItemsToOrder(orderId: string, newItems: OrderItem[]) {
+  const orderRef  = doc(db, "orders", orderId);
+  const orderSnap = await getDoc(orderRef);
+  if (!orderSnap.exists()) throw new Error("Order not found");
+
+  let updatedItems = [...(orderSnap.data().items as OrderItem[])];
+
+  for (const newItem of newItems) {
+    const existingIdx = updatedItems.findIndex(
+      (item) => item.id === newItem.id && item.serviceName === newItem.serviceName
+    );
+    if (existingIdx > -1) {
+      updatedItems[existingIdx] = {
+        ...updatedItems[existingIdx],
+        count: updatedItems[existingIdx].count + newItem.count,
+      };
+    } else {
+      updatedItems = [...updatedItems, newItem];
+    }
+  }
+
+  const total = updatedItems.reduce((acc, item) => acc + item.servicePrice * item.count, 0);
+
+  await updateDoc(orderRef, {
+    items: updatedItems,
+    totalPrice: total,
+    updatedAt: Date.now(),
+  });
+}
+
 
 // update existing order item
 export async function updateOrderItem(orderId: string, itemIndex: number, updatedItem: OrderItem) {
