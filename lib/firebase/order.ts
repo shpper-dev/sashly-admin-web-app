@@ -18,8 +18,11 @@ import { createDispute } from "./dispute";
 //Filters type
 export interface OrderFilters {
   status?: OrderStatuses;
+  statuses?: OrderStatuses[];
   isPaid?: boolean;
   isCancelled?: boolean;
+  isDelivered?: boolean;
+  hasDriver?: boolean;
   serviceType?: "ordinary" | "express";
 }
 
@@ -29,10 +32,16 @@ function buildOrderConstraints(filters: OrderFilters, pageSize: number): QueryCo
 
   if (filters.status)
     constraints.push(where("latestStatus.status", "==", filters.status));
+  if (filters.statuses?.length)
+    constraints.push(where("latestStatus.status", "in", filters.statuses));
   if (filters.isPaid !== undefined)
     constraints.push(where("isPaid", "==", filters.isPaid));
   if (filters.isCancelled !== undefined)
     constraints.push(where("isCancelled", "==", filters.isCancelled));
+  if (filters.isDelivered !== undefined)
+    constraints.push(where("isDelivered", "==", filters.isDelivered));
+  if (filters.hasDriver)
+    constraints.push(where("assignedDriverId","!=", null))
   if (filters.serviceType)
     constraints.push(where("serviceType", "==", filters.serviceType));
 
