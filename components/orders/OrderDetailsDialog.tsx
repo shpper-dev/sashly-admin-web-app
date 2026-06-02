@@ -213,7 +213,7 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
               <Section title={`Line Items (${order.items.length})`} titleButton={
                 <OrderItemDialog mode="add" orderId={order.id} onSuccess={onStatusUpdate}  >
                   <button className="flex items-center gap-1 text-[10px] px-2 py-1 shadow-sm border border-cyan-300 rounded-lg text-[#02d0ff]">
-                  <Plus className="h-2.5 w-2.5" strokeWidth={3} /> Add Item
+                  <Plus className="h-2.5 w-2.5" strokeWidth={3} /> Add Item(s)
                 </button>
                 </OrderItemDialog>
               }>
@@ -228,20 +228,12 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
                             <Pencil className="h-3 w-3" />
                           </button>
                         </OrderItemDialog>
-                        <ConfirmActionDialog
-                          title="Delete Item"
-                          description={`Delete "${item.name}-${item.serviceName}" from this order: #${order.id}?`}
-                          confirmLabel="Delete"
-                          onConfirm={async () => {
+                          <button className="w-5 h-5 bg-red-50 flex items-center justify-center rounded-md hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors cursor-pointer shadow-sm"
+                          onClick={async () => {
                              await deleteOrderItem(order.id, i);
-                             showToast(`Service: ${order.id} updated successfully.`, "success");
-                          }}
-                          onSuccess={() => onStatusUpdate()}
-                        >
-                          <button className="w-5 h-5 bg-red-50 flex items-center justify-center rounded-md hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors cursor-pointer shadow-sm">
+                          }}>
                             <X className="h-3 w-3" />
                           </button>
-                        </ConfirmActionDialog>
                       </div>                  
 
                       {item.photoUrl ? (
