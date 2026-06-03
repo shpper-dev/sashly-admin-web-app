@@ -1,138 +1,18 @@
 "use client";
 import Header from "@/components/Header";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  ChevronLeft, ChevronRight, Download, Search, SlidersHorizontal,
-  MapPin, Phone, Star, X, WashingMachine, Wind, Shirt, Sparkles, Package,
-  Pencil, Trash2, Plus,
-  PencilLine,
+  ChevronLeft, ChevronRight, Download, Search, SlidersHorizontal,Phone, Star, Pencil, Trash2, Plus,
+  Loader2,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
-import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { TableHeading } from "@/lib/types";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose,
-} from "@/components/ui/dialog";
 import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import BusinessAccountDialog from "@/components/business/BusinessAccountDialog";
 import { PricingDialog } from "@/components/business/PricingDialog";
-
-//Types
-
-interface ServicePrice {
-  serviceId: string;
-  serviceName: string;
-  unit: string;        // e.g. "per kg", "per item"
-  price: number;       // SAR
-  enabled: boolean;
-}
-
-export interface Business {
-  id: string;
-  name: string;
-  arabicName: string;
-  ownerName: string;
-  email: string;
-  phone: string;
-  city: string;
-  area: string;
-  logoUrl?: string;
-  rating: number;
-  totalOrders: number;
-  status: "active" | "suspended" | "pending";
-  joinedAt: string;
-  pricing: ServicePrice[];
-}
-
-//Mock Data 
-
-const DEFAULT_SERVICES: Omit<ServicePrice, "price" | "enabled">[] = [
-  { serviceId: "wash_fold",   serviceName: "Wash & Fold",    unit: "per kg"   },
-  { serviceId: "dry_clean",   serviceName: "Dry Cleaning",   unit: "per item" },
-  { serviceId: "ironing",     serviceName: "Ironing",        unit: "per item" },
-  { serviceId: "dryer",       serviceName: "Dryer Only",     unit: "per kg"   },
-  { serviceId: "express",     serviceName: "Express (4 hr)", unit: "per kg"   },
-];
-
-const MOCK_BUSINESSES: Business[] = [
-  {
-    id: "b001", name: "Sparkle Laundry",      arabicName: "غسيل سباركل",
-    ownerName: "Ahmed Al Mansoori", email: "ahmed@sparkle.ae", phone: "+971 50 123 4567",
-    city: "Dubai",   area: "Al Barsha",    rating: 4.8, totalOrders: 1240, status: "active",
-    joinedAt: "2023-03-15",
-    pricing: [
-      { serviceId: "wash_fold", serviceName: "Wash & Fold",    unit: "per kg",   price: 12,  enabled: true  },
-      { serviceId: "dry_clean", serviceName: "Dry Cleaning",   unit: "per item", price: 25,  enabled: true  },
-      { serviceId: "ironing",   serviceName: "Ironing",        unit: "per item", price: 5,   enabled: true  },
-      { serviceId: "dryer",     serviceName: "Dryer Only",     unit: "per kg",   price: 8,   enabled: true  },
-      { serviceId: "express",   serviceName: "Express (4 hr)", unit: "per kg",   price: 20,  enabled: true  },
-    ],
-  },
-  {
-    id: "b002", name: "Clean Wave",           arabicName: "موجة نظيفة",
-    ownerName: "Sara Khalid",       email: "sara@cleanwave.ae",  phone: "+971 55 987 6543",
-    city: "Abu Dhabi", area: "Khalidiyah",  rating: 4.5, totalOrders: 876,  status: "active",
-    joinedAt: "2023-06-02",
-    pricing: [
-      { serviceId: "wash_fold", serviceName: "Wash & Fold",    unit: "per kg",   price: 10,  enabled: true  },
-      { serviceId: "dry_clean", serviceName: "Dry Cleaning",   unit: "per item", price: 22,  enabled: true  },
-      { serviceId: "ironing",   serviceName: "Ironing",        unit: "per item", price: 4,   enabled: true  },
-      { serviceId: "dryer",     serviceName: "Dryer Only",     unit: "per kg",   price: 7,   enabled: false },
-      { serviceId: "express",   serviceName: "Express (4 hr)", unit: "per kg",   price: 18,  enabled: false },
-    ],
-  },
-  {
-    id: "b003", name: "Fresh Press",          arabicName: "كوي فريش",
-    ownerName: "Mohammed Raza",     email: "mo@freshpress.ae",   phone: "+971 52 456 7890",
-    city: "Sharjah", area: "Al Nahda",     rating: 4.2, totalOrders: 530,  status: "active",
-    joinedAt: "2023-09-20",
-    pricing: [
-      { serviceId: "wash_fold", serviceName: "Wash & Fold",    unit: "per kg",   price: 9,   enabled: true  },
-      { serviceId: "dry_clean", serviceName: "Dry Cleaning",   unit: "per item", price: 20,  enabled: false },
-      { serviceId: "ironing",   serviceName: "Ironing",        unit: "per item", price: 3.5, enabled: true  },
-      { serviceId: "dryer",     serviceName: "Dryer Only",     unit: "per kg",   price: 6,   enabled: true  },
-      { serviceId: "express",   serviceName: "Express (4 hr)", unit: "per kg",   price: 15,  enabled: false },
-    ],
-  },
-  {
-    id: "b004", name: "Royal Wash",           arabicName: "الغسيل الملكي",
-    ownerName: "Fatima Al Hashmi",  email: "fatima@royalwash.ae", phone: "+971 56 321 0987",
-    city: "Dubai",   area: "Downtown",    rating: 4.9, totalOrders: 3100, status: "active",
-    joinedAt: "2022-11-10",
-    pricing: [
-      { serviceId: "wash_fold", serviceName: "Wash & Fold",    unit: "per kg",   price: 15,  enabled: true  },
-      { serviceId: "dry_clean", serviceName: "Dry Cleaning",   unit: "per item", price: 35,  enabled: true  },
-      { serviceId: "ironing",   serviceName: "Ironing",        unit: "per item", price: 7,   enabled: true  },
-      { serviceId: "dryer",     serviceName: "Dryer Only",     unit: "per kg",   price: 10,  enabled: true  },
-      { serviceId: "express",   serviceName: "Express (4 hr)", unit: "per kg",   price: 28,  enabled: true  },
-    ],
-  },
-  {
-    id: "b005", name: "QuickDry Pro",         arabicName: "كويك دراي",
-    ownerName: "Tariq Siddiqui",    email: "tariq@quickdry.ae",  phone: "+971 54 654 3210",
-    city: "Ajman",   area: "Al Rashidiya", rating: 3.9, totalOrders: 210,  status: "suspended",
-    joinedAt: "2024-01-05",
-    pricing: [
-      { serviceId: "wash_fold", serviceName: "Wash & Fold",    unit: "per kg",   price: 8,   enabled: true  },
-      { serviceId: "dry_clean", serviceName: "Dry Cleaning",   unit: "per item", price: 18,  enabled: false },
-      { serviceId: "ironing",   serviceName: "Ironing",        unit: "per item", price: 3,   enabled: true  },
-      { serviceId: "dryer",     serviceName: "Dryer Only",     unit: "per kg",   price: 5,   enabled: true  },
-      { serviceId: "express",   serviceName: "Express (4 hr)", unit: "per kg",   price: 14,  enabled: false },
-    ],
-  },
-  {
-    id: "b006", name: "Bubble & Steam",       arabicName: "بابل وستيم",
-    ownerName: "Noor Al Zaabi",     email: "noor@bubblesteam.ae", phone: "+971 50 789 1234",
-    city: "Dubai",   area: "Jumeirah",    rating: 4.6, totalOrders: 0,    status: "pending",
-    joinedAt: "2025-02-18",
-    pricing: [
-      { serviceId: "wash_fold", serviceName: "Wash & Fold",    unit: "per kg",   price: 11,  enabled: true  },
-      { serviceId: "dry_clean", serviceName: "Dry Cleaning",   unit: "per item", price: 28,  enabled: true  },
-      { serviceId: "ironing",   serviceName: "Ironing",        unit: "per item", price: 6,   enabled: true  },
-      { serviceId: "dryer",     serviceName: "Dryer Only",     unit: "per kg",   price: 8,   enabled: false },
-      { serviceId: "express",   serviceName: "Express (4 hr)", unit: "per kg",   price: 22,  enabled: true  },
-    ],
-  },
-];
+import { Business } from "@/lib/models/business.model";
+import { blockBusiness, getBusinesses, restoreBusiness } from "@/lib/firebase/business";
 
 //  Constants 
 
@@ -149,30 +29,50 @@ const businessHeadings: TableHeading[] = [
   { id: "actions",     title: "ACTIONS"        },
 ];
 
-const STATUS_FILTERS = ["All", "Active", "Suspended", "Pending"] as const;
+const STATUS_FILTERS = ["All", "Active", "Suspended"] as const;
 
 export default function BusinessAccounts() {
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm]       = useState("");
   const [statusFilter, setStatusFilter]   = useState<string>("All");
   const [cityFilter, setCityFilter]       = useState<string>("All");
   const [currentPage, setCurrentPage]     = useState(1);
 
-  const cities = ["All", ...Array.from(new Set(MOCK_BUSINESSES.map((b) => b.city)))];
+  useEffect(() => {
+  loadBusinesses();
+}, []);
 
+async function loadBusinesses() {
+  try {
+    setLoading(true);
+
+    const rows = await getBusinesses();
+
+    setBusinesses(rows);
+  } catch (error) {
+    console.error("Failed to load businesses", error);
+  } finally {
+    setLoading(false);
+  }
+}
   const filtered = useMemo(() => {
-    return MOCK_BUSINESSES.filter((b) => {
+    return businesses.filter((b) => {
       const term = searchTerm.toLowerCase();
       const matchesSearch = !term || (
         b.name.toLowerCase().includes(term) ||
         b.ownerName.toLowerCase().includes(term) ||
         b.email.toLowerCase().includes(term) ||
-        b.area.toLowerCase().includes(term)
+        b.address?.toLowerCase().includes(term)
       );
-      const matchesStatus = statusFilter === "All" || b.status === statusFilter.toLowerCase();
-      const matchesCity   = cityFilter   === "All" || b.city   === cityFilter;
-      return matchesSearch && matchesStatus && matchesCity;
+      const matchesStatus =
+  statusFilter === "All" ||
+  (statusFilter === "Active" && !b.isDeleted) ||
+  (statusFilter === "Suspended" && b.isDeleted);
+      
+      return matchesSearch && matchesStatus;
     });
-  }, [searchTerm, statusFilter, cityFilter]);
+  }, [businesses,searchTerm, statusFilter]);
 
   const totalPages  = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated   = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -180,11 +80,10 @@ export default function BusinessAccounts() {
   const rangeEnd    = Math.min(currentPage * PAGE_SIZE, filtered.length);
 
   const counts = {
-    All:       MOCK_BUSINESSES.length,
-    Active:    MOCK_BUSINESSES.filter((b) => b.status === "active").length,
-    Suspended: MOCK_BUSINESSES.filter((b) => b.status === "suspended").length,
-    Pending:   MOCK_BUSINESSES.filter((b) => b.status === "pending").length,
-  };
+  All: businesses.length,
+  Active: businesses.filter((b) => !b.isDeleted).length,
+  Suspended: businesses.filter((b) => b.isDeleted).length,
+};
 
   const renderCellContent = (heading: TableHeading, row: Business) => {
     switch (heading.id) {
@@ -206,8 +105,8 @@ export default function BusinessAccounts() {
         return (
           <div className="flex items-start gap-1.5 text-sm text-slate-600">
             <div>
-              <p className="font-medium">{row.area}</p>
-              <p className="text-xs text-slate-400">{row.city}</p>
+              <p className="font-medium">{row.address}</p>
+              {/* <p className="text-xs text-slate-400">{row.city}</p> */}
             </div>
           </div>
         );
@@ -224,13 +123,13 @@ export default function BusinessAccounts() {
         return (
           <div className="flex items-center gap-1.5">
             <Star size={14} className="text-amber-400 fill-amber-400" />
-            <span className="text-sm font-semibold text-slate-700">{row.rating.toFixed(1)}</span>
+            <span className="text-sm font-semibold text-slate-700">{row.rating ? row.rating.toFixed(1) : 0}</span>
           </div>
         );
       case "orders":
         return (
           <span className="text-sm font-semibold text-slate-700">
-            {row.totalOrders.toLocaleString()}
+            {(row.totalOrders ?? 0).toLocaleString()}
           </span>
         );
       case "pricing":
@@ -239,9 +138,9 @@ export default function BusinessAccounts() {
         const map = {
           active:    { label: "ACTIVE",    cls: "bg-green-100 text-green-700"  },
           suspended: { label: "SUSPENDED", cls: "bg-red-100 text-red-600"      },
-          pending:   { label: "PENDING",   cls: "bg-amber-100 text-amber-700"  },
+          // pending:   { label: "PENDING",   cls: "bg-amber-100 text-amber-700"  },
         } as const;
-        const s = map[row.status];
+        const s = map[row.isDeleted ? "suspended" : "active"];
         return (
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${s.cls}`}>
             {s.label}
@@ -251,23 +150,41 @@ export default function BusinessAccounts() {
       case "actions":
         return (
           <div className="flex items-center justify-end gap-3">
-            <BusinessAccountDialog mode="edit" business={row} onSuccess={() => {}}>
+            <BusinessAccountDialog mode="edit" business={row} onSuccess={() => loadBusinesses()}>
               <button className="text-slate-500 hover:text-purple-600">
               <Pencil size={16} />
             </button>
             </BusinessAccountDialog>
             <ConfirmActionDialog
-              title="Delete Business"
-              description={`Are you sure you want to delete "${row.name}"? This will deactivate their account and all associated data.`}
-              confirmLabel="Delete"
+              title={row.isDeleted ? "Restore Business" : "Suspend Business"}
+              description={
+                row.isDeleted
+                  ? `Restore "${row.name}"?`
+                  : `Suspend "${row.name}"?`
+              }
+              confirmLabel={row.isDeleted ? "Restore" : "Suspend"}
               onConfirm={async () => {
-                // await deleteBusiness(row.id)
+                if (row.isDeleted) {
+                  await restoreBusiness(row.id);
+                } else {
+                  await blockBusiness(row.id);
+                }
               }}
-              onSuccess={() => {}}
+              onSuccess={loadBusinesses}
             >
-              <button className="text-red-500 hover:text-red-600 cursor-pointer">
-              <Trash2 size={16} />
-            </button>
+              <button
+                className={`cursor-pointer ${
+                  row.isDeleted
+                    ? "text-green-600 hover:text-green-700"
+                    : "text-red-500 hover:text-red-600"
+                }`}
+              >
+                {!row.isDeleted ? (
+                  <Trash2 size={16} />
+                ):(
+                  <ArchiveRestore size={16} />
+                )}
+              </button>
             </ConfirmActionDialog>
           </div>
         );
@@ -296,10 +213,10 @@ export default function BusinessAccounts() {
                 className="bg-transparent outline-none text-xs text-slate-600 placeholder:text-slate-400 w-full"
               />
             </div>
-            <button className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm">
+            {/* <button className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm">
               <Download className="h-3.5 w-3.5" /> Export CSV
-            </button>
-            <BusinessAccountDialog mode="add" onSuccess={() => {}}>
+            </button> */}
+            <BusinessAccountDialog mode="add" onSuccess={() => loadBusinesses()}>
               <button className="flex gap-2 items-center bg-purple-600 px-5 py-2.5 text-white text-sm font-medium rounded-md cursor-pointer hover:bg-purple-700 transition-colors">
                 <Plus size={15} /> Add New Business
               </button>
@@ -340,7 +257,7 @@ export default function BusinessAccounts() {
           <div className="h-5 w-px bg-slate-200" />
 
           {/* City filter */}
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* <div className="flex items-center gap-2 flex-wrap">
             {cities.map((city) => (
               <button
                 key={city}
@@ -354,7 +271,7 @@ export default function BusinessAccounts() {
                 {city}
               </button>
             ))}
-          </div>
+          </div> */}
         </section>
 
         {/* Table */}
