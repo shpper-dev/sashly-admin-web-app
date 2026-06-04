@@ -37,7 +37,6 @@ interface Props {
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
   confirmed:      { label: "Confirmed",        color: "text-blue-600",   dot: "bg-blue-500"   },
   pickedUp:       { label: "Picked Up",        color: "text-indigo-600", dot: "bg-indigo-500" },
-  paid:           { label: "Paid",             color: "text-yellow-600", dot: "bg-yellow-500" },
   sorting:        { label: "Sorting",          color: "text-yellow-600", dot: "bg-yellow-500" },
   detailing:      { label: "detailing",        color: "text-pink-600",   dot: "bg-pink-500"   },
   cleaning:       { label: "Cleaning",         color: "text-orange-600", dot: "bg-orange-500" },

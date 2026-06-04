@@ -18,7 +18,7 @@ export type TabKey ="all" | "detail" | "cleaning" | "ready" | "pickups" | "archi
 
 const TAB_FILTERS: Record<TabKey, OrderFilters> = {
   all: {},
-  detail:   {  statuses: ["pickedUp" ,"paid", "sorting" , "detailing"], isCancelled:false, isDelivered:false},
+  detail:   {  statuses: ["pickedUp" , "sorting" , "detailing"], isCancelled:false, isDelivered:false},
   pickups:  {  status: "confirmed"   , hasDriver: true   }, 
   cleaning: {  statuses: ["cleaning"]       },
   ready:    {  status: "readyToDeliver"  },

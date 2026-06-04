@@ -1,8 +1,9 @@
-import { collection, doc, getDocs, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
+import { collection, doc, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 import { DesignatedArea, Driver } from "../models/driver.model";
 import { db } from "./config";
 import { mapDriver } from "../mappers/driver.mapper";
 import { serializeDriver } from "../serializers/driver.serializer";
+import { Order } from "../models/order.model";
 
 export async function getDrivers(activeOnly = false): Promise<Driver[]> {
   const constraints = activeOnly
@@ -60,3 +61,45 @@ export async function createDriver(data: {
   return driverId;
 }
 
+
+//Real-time subscription to all active orders assigned to a specific driver */
+export function subscribeToActiveOrdersByDriverId(
+  driverId: string,
+  callback: (orders: Order[]) => void
+): () => void {
+  const q = query(
+    collection(db, "orders"),
+    where("assignedDriverId", "==", driverId),
+    where("isDelivered", "==", false),
+    where("isCancelled", "==", false),
+    orderBy("createdAt", "desc")
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const orders = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Order[];
+    callback(orders);
+  });
+}
+
+//Real-time subscription to ALL orders for a driver (including delivered/cancelled) 
+export function subscribeToAllOrdersByDriverId(
+  driverId: string,
+  callback: (orders: Order[]) => void
+): () => void {
+  const q = query(
+    collection(db, "orders"),
+    where("assignedDriverId", "==", driverId),
+    orderBy("createdAt", "desc")
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const orders = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Order[];
+    callback(orders);
+  });
+}
