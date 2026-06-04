@@ -134,7 +134,8 @@ const readyForDelivery = activeOrders.filter(
 const NEXT_STATUS_LABEL: Partial<Record<OrderStatuses, string>> = {
   pickedUp:        "Mark Picked Up",
   sorting:         "Mark Sorting",
-  inProgress:      "Mark In Progress",
+  detailing:       "Mark Detailing",
+  cleaning:        "Mark Cleaning",
   readyToDeliver:  "Mark Ready",
   delivered:       "Mark Delivered",
   disputed:        "Mark Disputed",
