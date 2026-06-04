@@ -1,11 +1,13 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Calendar, Mail, PencilLine, Phone, Route, ShoppingBag, LucideIcon } from 'lucide-react';
 import DriversOrders from './DriversOrders';
 import DriversEditProfile from './DriversEditProfile';
 import { DesignatedArea, Driver } from '@/lib/models/driver.model';
 import DriversRoutes from './DriversRoutes';
+import { Order } from '@/lib/models/order.model';
+import { subscribeToActiveOrdersByDriverId } from '@/lib/firebase/driver';
 
 type TabName = "orders" | "stats" | "edit profile" | "routes" | "payouts" | "messages" | "photos";
 
@@ -38,6 +40,25 @@ interface DriverInfoDialogProps {
 export default function DriverInfoDialog({ children, driver, onDelete, onSuccess }: DriverInfoDialogProps) {
   const [activeTab, setActiveTab] = useState<TabName>("orders");
   const [open, setOpen] = useState(false);
+
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  useEffect(() => {
+  if (!driver || !open) return;
+
+  setLoadingOrders(true);
+
+  const unsubscribe = subscribeToActiveOrdersByDriverId(
+    driver.id,
+    (data) => {
+      setOrders(data);
+      setLoadingOrders(false);
+    }
+  );
+
+  return () => unsubscribe();
+}, [driver, open]);
 
   let name = "Unknown";
   let initials = "";
@@ -133,7 +154,7 @@ export default function DriverInfoDialog({ children, driver, onDelete, onSuccess
               </div>
 
               <div className="flex-1 overflow-y-auto">
-                {activeTab === "orders" && <DriversOrders />}
+                {activeTab === "orders" && <DriversOrders orders={orders} loading={loadingOrders} />}
                 {activeTab === "edit profile" && <DriversEditProfile driver={driver} onSuccess={onSuccess}  />}
                 {activeTab === "routes" && <DriversRoutes driverId={driver.id} currentArea={driver?.designatedArea ?? null} onSuccess={onSuccess} />}
                 {/* Add other tab components here as needed */}
