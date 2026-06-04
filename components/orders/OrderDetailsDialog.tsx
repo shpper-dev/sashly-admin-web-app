@@ -37,8 +37,10 @@ interface Props {
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
   confirmed:      { label: "Confirmed",        color: "text-blue-600",   dot: "bg-blue-500"   },
   pickedUp:       { label: "Picked Up",        color: "text-indigo-600", dot: "bg-indigo-500" },
+  paid:           { label: "Paid",             color: "text-yellow-600", dot: "bg-yellow-500" },
   sorting:        { label: "Sorting",          color: "text-yellow-600", dot: "bg-yellow-500" },
-  inProgress:     { label: "In Progress",      color: "text-orange-600", dot: "bg-orange-500" },
+  detailing:      { label: "detailing",        color: "text-pink-600",   dot: "bg-pink-500"   },
+  cleaning:       { label: "Cleaning",         color: "text-orange-600", dot: "bg-orange-500" },
   readyToDeliver: { label: "Ready to Deliver", color: "text-purple-600", dot: "bg-purple-500" },
   delivered:      { label: "Delivered",        color: "text-green-600",  dot: "bg-green-500"  },
   disputed:       { label: "Disputed",         color: "text-red-500",    dot: "bg-red-400"  },
@@ -91,7 +93,7 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
               </span>
               <div>
                 <DialogTitle className="text-base font-bold uppercase tracking-wide">
-                  Order #{order.id.slice(-13)}
+                  Order #{order?.orderNumber ?? order.id}
                 </DialogTitle>
                 <p className="text-xs text-slate-400">
                   Placed {fmt(order.createdAt)} · Updated {fmt(order.updatedAt)}

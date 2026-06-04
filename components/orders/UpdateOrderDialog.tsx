@@ -5,16 +5,18 @@ import { OrderStatuses } from "@/lib/models/order.model";
 import { advanceOrderStatus, getAllowedNextStatuses } from "@/lib/firebase/order";
 
 const STATUS_LABELS: Record<OrderStatuses, string> = {
-  unpaid:         "Unpaid",
-  confirmed:      "Confirmed",
-  pickedUp:       "Picked Up",
-  sorting:        "Sorting",
-  inProgress:     "In Progress",
+  unpaid: "Unpaid",
+  confirmed: "Confirmed",
+  pickedUp: "Picked Up",
+  sorting: "Sorting",
+  cleaning: "Cleaning",
   readyToDeliver: "Ready to Deliver",
-  delivered:      "Delivered",
-  disputed:       "Disputed",
+  delivered: "Delivered",
+  disputed: "Disputed",
   disputeResolved: "Dispute Resolved",
-  cancelled:      "Cancelled",
+  cancelled: "Cancelled",
+  paid: "Paid",
+  detailing: "Detailing"
 };
 
 interface UpdateOrderDialogProps {

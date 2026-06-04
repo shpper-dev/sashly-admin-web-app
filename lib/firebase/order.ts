@@ -75,16 +75,19 @@ export async function getOrdersNextPage(
 //Status advancement 
 // Valid transitions enforced here — UI calls this, not updateDoc directly
 const STATUS_TRANSITIONS: Record<OrderStatuses, OrderStatuses[]> = {
-  unpaid:          ["confirmed", "cancelled"],
-  confirmed:       ["pickedUp", "cancelled"],
-  pickedUp:        ["sorting", "cancelled"],
-  sorting:         ["inProgress", "cancelled"],
-  inProgress:      ["readyToDeliver", "cancelled"],
-  readyToDeliver:  ["delivered", "cancelled"],
-  delivered:       ["disputed"],
-  disputed:        ["disputeResolved"],
-  disputeResolved:        [],
-  cancelled:       [],
+  unpaid: ["confirmed", "cancelled"],
+  confirmed: ["pickedUp", "cancelled"],
+  pickedUp: ["sorting", "detailing", "cancelled"],
+  paid: ["sorting","detailing","cancelled"],
+  sorting: ["detailing", "cancelled"],
+  detailing: ["cleaning", "cancelled"],
+  cleaning: ["readyToDeliver", "cancelled"],
+  readyToDeliver: ["delivered", "cancelled"],
+  delivered: ["disputed"],
+  disputed: ["disputeResolved"],
+  disputeResolved: [],
+  cancelled: [],
+  
 };
 
 export function getAllowedNextStatuses(current: OrderStatuses): OrderStatuses[] {
@@ -110,7 +113,7 @@ export async function advanceOrderStatus(
   };
 
   // Status → flag mapping from the doc
-  if (newStatus === "confirmed")      updates.isPaid = true;
+  if (newStatus === "paid")      updates.isPaid = true;
   if (newStatus === "delivered")      { updates.isDelivered = true; updates.deliveryEndTime = Date.now(); }
   
   if (newStatus === "cancelled")      updates.isCancelled = true;
@@ -151,7 +154,8 @@ export async function confirmOrderPayment(
   paidBy: "cash" | "card" | "wallet",
   paymentInfo?: string,
 ): Promise<void> {
- 
+  // update latest status
+  await advanceOrderStatus(orderId,"paid", `paid via ${paidBy}`)
   // seperating status from payment
   await updateDoc(doc(db, "orders", orderId), {
   isPaid: true,

@@ -41,7 +41,8 @@ export function mapOrder(doc: QueryDocumentSnapshot<DocumentData>): Order {
 
   return {
     id: doc.id,
-
+    orderNumber: data.orderNumber ?? null,
+    
     userId: data.userId ?? "",
     userName: data.userName ?? "",
     userEmail: data.userEmail ?? "",

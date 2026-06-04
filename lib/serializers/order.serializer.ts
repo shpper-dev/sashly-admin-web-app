@@ -2,6 +2,7 @@ import { Order } from "../models/order.model";
 
 export function serializeOrder(order: Partial<Order>) {
   return {
+    orderNumber: order.orderNumber ?? null,
     userId: order.userId,
     userName: order.userName,
     userEmail: order.userEmail,
