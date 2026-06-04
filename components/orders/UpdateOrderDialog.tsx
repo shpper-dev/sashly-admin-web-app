@@ -5,7 +5,6 @@ import { OrderStatuses } from "@/lib/models/order.model";
 import { advanceOrderStatus, getAllowedNextStatuses } from "@/lib/firebase/order";
 
 const STATUS_LABELS: Record<OrderStatuses, string> = {
-  unpaid: "Unpaid",
   confirmed: "Confirmed",
   pickedUp: "Picked Up",
   sorting: "Sorting",
@@ -15,7 +14,6 @@ const STATUS_LABELS: Record<OrderStatuses, string> = {
   disputed: "Disputed",
   disputeResolved: "Dispute Resolved",
   cancelled: "Cancelled",
-  paid: "Paid",
   detailing: "Detailing"
 };
 

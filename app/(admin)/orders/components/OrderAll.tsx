@@ -21,6 +21,7 @@ const orderHeadings: TableHeading[] = [
   { id: "customer",     title: "CUSTOMER"     },
   { id: "order_details",title: "ORDER DETAILS"},
   { id: "status",       title: "STATUS"       },
+  { id: "paid",         title: "PAID"         },
   { id: "pcs",          title: "PCS"          },
   { id: "total",        title: "TOTAL"        }
 ];
@@ -29,7 +30,6 @@ const orderHeadings: TableHeading[] = [
 const STATUS_CONFIG: Record<string, {label:string, style:string}> = {
   confirmed:       {label:"Confirmed", style:"bg-blue-50 text-blue-600"},
   pickedUp:        {label:"picked Up", style:"bg-indigo-50 text-indigo-600"},
-  paid:            {label:"paid",      style:"bg-yellow-50 text-yellow-600"},
   sorting:         {label:"Sorting",   style:"bg-yellow-50 text-yellow-600"},
   detailing:       {label:"Detailing", style:"bg-pink-50 text-pink-600"},
   cleaning:        {label:"Cleaning", style:"bg-orange-50 text-orange-600"},
@@ -168,6 +168,18 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
           </span>
         );
       }
+
+      case "paid":
+        return row.isPaid ? (
+          <div className="flex flex-col gap-1">
+            <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">PAID</span>
+            <span className="text-xs">
+              {new Date(row?.paymentDate ?? 0).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+            </span>
+          </div>
+        ) : (
+          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-500">UNPAID</span>
+        );
 
 
       case "pcs":
