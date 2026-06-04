@@ -12,26 +12,23 @@ import OrderCleaning from "./OrderCleaning";
 import OrderPickups from "./OrderPickups";
 import OrderReady from "./OrderReady";
 import OrderArchive from "./OrderArchive";
+import OrderAll from "./OrderAll";
 
-export type TabKey = "detail" | "cleaning" | "ready" | "pickups" | "archive";
+export type TabKey ="all" | "detail" | "cleaning" | "ready" | "pickups" | "archive";
 
-// Tab → filters mapping
-// detail:   confirmed + no driver assigned yet (filtered client-side after fetch)
-// pickups:  confirmed + driver assigned (filtered client-side after fetch)
-// cleaning: pickedUp → sorting → inProgress
-// ready:    readyToDeliver
-// archive:  all cancelled or delivered orders
 const TAB_FILTERS: Record<TabKey, OrderFilters> = {
-  detail:   {  status: "confirmed"   , hasDriver: false    },
+  all: {},
+  detail:   {  statuses: ["pickedUp" ,"paid", "sorting" , "detailing"], isCancelled:false, isDelivered:false},
   pickups:  {  status: "confirmed"   , hasDriver: true   }, 
-  cleaning: {  statuses: ["pickedUp" , "sorting" , "inProgress"]       },
+  cleaning: {  statuses: ["cleaning"]       },
   ready:    {  status: "readyToDeliver"  },
   archive:  {},  // cancelled + delivered fetched separately and merged client-side
 };
 
 const tabs: { key: TabKey; label: string }[] = [
-  { key: "detail",   label: "Detail"   },
+  { key: "all",      label: "All"},
   { key: "pickups",  label: "Pickups"  },
+  { key: "detail",   label: "Detail"   },
   { key: "cleaning", label: "Cleaning" },
   { key: "ready",    label: "Ready"    },
   { key: "archive",  label: "Archive"  },
@@ -73,7 +70,8 @@ export default function OrdersPage() {
   const { showToast } = useToast();
 
   const pageHeadings: Record<TabKey, { main: string; sub: string }> = {
-    detail:   { main: "Detail",   sub: "Confirmed orders awaiting driver assignment"  },
+    all:      { main: "All",      sub: "All orders"  },
+    detail:   { main: "Detail",   sub: "Orders awaiting detailing or currently being detailed"  },
     cleaning: { main: "Cleaning", sub: "Orders currently being cleaned"               },
     ready:    { main: "Ready",    sub: "Ready laundry awaiting delivery"              },
     pickups:  { main: "Pickups",  sub: "Confirmed orders with an assigned driver"     },
@@ -316,9 +314,7 @@ export default function OrdersPage() {
           {activeTab === "cleaning" && <OrderCleaning {...tabProps} />}
           {activeTab === "ready"    && <OrderReady    {...tabProps} />}
           {activeTab === "archive"  && <OrderArchive  {...tabProps} />}
-
-          {/* for now disabling all */}
-          {/* {activeTab === "all" && <OrderDetails />} */}
+          {activeTab === "all" && <OrderAll {...tabProps} />}
         </section>
       </main>
     </div>

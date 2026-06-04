@@ -20,10 +20,18 @@ const orderHeadings: TableHeading[] = [
   { id: "placed",       title: "PLACED"       },
   { id: "customer",     title: "CUSTOMER"     },
   { id: "order_details",title: "ORDER DETAILS"},
+  { id: "status",       title: "STATUS"       },
   { id: "pcs",          title: "PCS"          },
   { id: "total",        title: "TOTAL"        },
   { id: "actions",      title: ""             },
 ];
+
+// Status badge colours 
+const STATUS_STYLE: Record<string, string> = {
+  pickedUp: "bg-indigo-50 text-indigo-600",
+  sorting: "bg-yellow-50 text-yellow-600",
+  detailing: "bg-pink-50 text-pink-600",
+};
 
 export default function OrderDetails({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize, autoOpenOrderId }: OrderTabProps) {
   const [search, setSearch] = useState("");
@@ -65,7 +73,7 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
       case "id":
-        return <span className="text-xs text-slate-500">#{row.id.slice(0,6)}</span>;
+        return <span className="text-xs text-slate-500">#{row?.orderNumber ?? row.id.slice(6,13)}</span>;
 
       case "ready_by":
         return (
@@ -140,6 +148,16 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
           </div>
         );
       }
+
+      case "status": {
+        const style = STATUS_STYLE[row.latestStatus.status] ?? "bg-slate-100 text-slate-500";
+        return (
+          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${style}`}>
+            {row.latestStatus.status }
+          </span>
+        );
+      }
+
 
       case "pcs":
         return <span className="font-semibold">{row.items.reduce((s, i) => s + i.count, 0)}</span>;

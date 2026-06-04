@@ -138,11 +138,65 @@ export default function BusinessAccountDialog({ mode, business, children, onSucc
   };
 
   //  Validation + Submit 
+const emailRegex =
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const phoneRegex =
+  /^\+?[0-9]{7,15}$/;
+
+function validateBusinessForm() {
+  const errors: string[] = [];
+
+  if (!name.trim()) {
+    errors.push("Business Name is required.");
+  }
+
+  if (!arabicName.trim()) {
+    errors.push("Arabic Name is required.");
+  }
+
+  if (!ownerName.trim()) {
+    errors.push("Owner / Manager Name is required.");
+  }
+
+  if (!email.trim()) {
+    errors.push("Email is required.");
+  } else if (!emailRegex.test(email.trim())) {
+    errors.push("Please enter a valid email address.");
+  }
+
+  if (!phone.trim()) {
+    errors.push("Phone number is required.");
+  } else if (!phoneRegex.test(phone.trim())) {
+    errors.push("Please enter a valid phone number.");
+  }
+  const enabledItems = pricing.filter((item) => item.enabled);
+
+  const enabledServices = enabledItems.flatMap((item) =>
+    item.services.filter((service) => service.enabled)
+  );
+
+  if (enabledServices.length === 0) {
+    errors.push("Enable at least one service.");
+  }
+
+  enabledItems.forEach((item) => {
+    item.services.forEach((service) => {
+      if (service.enabled && service.price <= 0) {
+        errors.push(
+          `${item.itemName} → ${service.serviceName} must have a price greater than 0.`
+        );
+      }
+    });
+  });
+
+  return errors;
+}
   const buildBusinessPayload = (): Partial<Business> => ({
   name: name.trim(),
   arabicName: arabicName.trim(),
   ownerName: ownerName.trim(),
-  email: email.trim(),
+  email: email.trim().toLowerCase(),
   phone: phone.trim(),
   address: area.trim(),
   isDeleted: status === "suspended",
@@ -158,42 +212,19 @@ export default function BusinessAccountDialog({ mode, business, children, onSucc
 const handleSubmit = async () => {
   setError("");
 
-  if (
-    !name.trim() ||
-    !ownerName.trim() ||
-    !email.trim() ||
-    !phone.trim() ||
-    !area.trim()
-  ) {
-    setError("Please fill in all required fields.");
-    setTab("Details");
-    return;
-  }
+  const validationErrors = validateBusinessForm();
 
-  const missingPrices: string[] = [];
+  if (validationErrors.length > 0) {
+    setError(validationErrors[0]);
 
-  pricing.forEach((item) => {
-    item.services.forEach((svc) => {
-      if (svc.enabled && svc.price <= 0) {
-        missingPrices.push(
-          `${item.itemName} · ${svc.serviceName}`
-        );
-      }
-    });
-  });
-
-  if (missingPrices.length > 0) {
-    setError(
-      `Set a price for: ${missingPrices
-        .slice(0, 3)
-        .join(", ")}${
-        missingPrices.length > 3
-          ? ` +${missingPrices.length - 3} more`
-          : ""
-      }`
+    const pricingError = validationErrors.some(
+      (e) =>
+        e.includes("price") ||
+        e.includes("item") ||
+        e.includes("service")
     );
 
-    setTab("Pricing");
+    setTab(pricingError ? "Pricing" : "Details");
     return;
   }
 
@@ -224,7 +255,6 @@ const handleSubmit = async () => {
     setSaving(false);
   }
 };
-
   const enabledItemCount    = pricing.filter((p) => p.enabled).length;
   const totalEnabledServices = pricing.reduce(
     (acc, item) => acc + item.services.filter((s) => s.enabled).length, 0
@@ -285,21 +315,21 @@ const handleSubmit = async () => {
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Business Name *">
-                  <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Sparkle Laundry" />
+                  <input required className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Sparkle Laundry" />
                 </Field>
                 <Field label="Arabic Name">
-                  <input className={inputCls} value={arabicName} onChange={(e) => setArabicName(e.target.value)} placeholder="غسيل سباركل" dir="rtl" />
+                  <input required className={inputCls} value={arabicName} onChange={(e) => setArabicName(e.target.value)} placeholder="غسيل سباركل" dir="rtl" />
                 </Field>
               </div>
               <Field label="Owner / Manager Name *">
-                <input className={inputCls} value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="Ahmed Al Mansoori" />
+                <input required className={inputCls} value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="Ahmed Al Mansoori" />
               </Field>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Email *">
-                  <input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="owner@business.ae" />
+                  <input required className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="owner@business.ae" />
                 </Field>
                 <Field label="Phone *">
-                  <input className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+971 50 000 0000" />
+                  <input required className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+971 50 000 0000" />
                 </Field>
               </div>
               <Field label="Area / District *">

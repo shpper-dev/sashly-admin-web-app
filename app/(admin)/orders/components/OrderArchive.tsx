@@ -43,7 +43,7 @@ export default function OrderArchive({
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
       case "id":
-        return <span className="text-xs text-slate-500">#{row.id.slice(0, 6)}</span>;
+        return <span className="text-xs text-slate-500">#{row?.orderNumber ?? row.id.slice(6,13)}</span>;
 
       case "placed":
         return (

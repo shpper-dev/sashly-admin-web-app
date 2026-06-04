@@ -3,10 +3,12 @@ import { UserAddress } from "./user.model";
 
 export type ServiceType = "ordinary" | "express";
 
-export type OrderStatuses = "unpaid"|"confirmed" | "pickedUp" | "sorting" | "inProgress" | "readyToDeliver" | "delivered" | "cancelled" | "disputed" | "disputeResolved" ;
+export type OrderStatuses = "unpaid"| "paid"| "confirmed" |"pickedUp" |"sorting" |"detailing" |"cleaning" |"readyToDeliver" | "delivered" | "cancelled" | "disputed" | "disputeResolved" ;
 
 export interface Order {
     id: string;
+    orderNumber?: string | null;
+
     userId: string;
     userName: string;
     userEmail: string;

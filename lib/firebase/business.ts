@@ -1,5 +1,3 @@
-import { Business } from "../models/business.model";
-
 import {
   addDoc,
   collection,
@@ -9,8 +7,12 @@ import {
   query,
   updateDoc,
 } from "firebase/firestore";
+
 import { db } from "./config";
 
+import { Business } from "../models/business.model";
+import { mapBusiness } from "../mappers/business.mapper";
+import { serializeBusiness } from "../serializers/business.serializer";
 
 // get all businesses
 export async function getBusinesses(): Promise<Business[]> {
@@ -21,36 +23,23 @@ export async function getBusinesses(): Promise<Business[]> {
 
   const snapshot = await getDocs(q);
 
-  return snapshot.docs.map((docSnap) => ({
-    id: docSnap.id,
-    ...(docSnap.data() as Omit<Business, "id">),
-  }));
+  return snapshot.docs.map(mapBusiness);
 }
 
 // add new business
-export async function createBusiness(data: Partial<Business>): Promise<string> {
+export async function createBusiness(
+  data: Partial<Business>
+): Promise<string> {
   const docRef = await addDoc(
     collection(db, "businesses"),
-    {
-      name: data.name ?? "",
-      arabicName: data.arabicName ?? "",
-      ownerName: data.ownerName ?? "",
-      email: data.email ?? "",
-      phone: data.phone ?? "",
-
-      pricing: data.pricing ?? [],
-
-      address: data.address ?? null,
-      logoUrl: data.logoUrl ?? null,
-
+    serializeBusiness({
+      ...data,
       rating: 0,
       totalOrders: 0,
-
       isDeleted: false,
-
       createdAt: Date.now(),
       updatedAt: Date.now(),
-    }
+    })
   );
 
   return docRef.id;
@@ -67,21 +56,19 @@ export async function updateBusiness(
     businessId
   );
 
-  const payload: Record<string, any> = {
-    updatedAt: Date.now(),
-  };
-
-  Object.entries(data).forEach(([key, value]) => {
-    if (value !== undefined) {
-      payload[key] = value;
-    }
-  });
-
-  await updateDoc(businessRef, payload);
+  await updateDoc(
+    businessRef,
+    serializeBusiness({
+      ...data,
+      updatedAt: Date.now(),
+    })
+  );
 }
 
 // soft delete business
-export async function blockBusiness(businessId: string): Promise<void> {
+export async function blockBusiness(
+  businessId: string
+): Promise<void> {
   await updateDoc(
     doc(db, "businesses", businessId),
     {
@@ -92,7 +79,9 @@ export async function blockBusiness(businessId: string): Promise<void> {
 }
 
 // restore business
-export async function restoreBusiness(businessId: string): Promise<void> {
+export async function restoreBusiness(
+  businessId: string
+): Promise<void> {
   await updateDoc(
     doc(db, "businesses", businessId),
     {

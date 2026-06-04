@@ -1,50 +1,73 @@
 "use client";
-import { PencilLine, Search } from "lucide-react";
-import React, { useState } from "react";
+import { FileText, PencilLine, Search } from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { Order } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
-import FilterDropdown from "@/components/buttons/FilterDropdown";
+import { OrderTabProps } from "./OrdersPageClient";
+import FilterButton from "@/components/buttons/FilterDropdown";
+import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog";
 // import CustomerCell from "@/components/orders/CustomerCell";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
-import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
-import { OrderStatuses } from "@/lib/models/order.model";
 import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import { OrderTable } from "@/components/orders/OrderTable";
 import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
-import { OrderTabProps } from "./OrdersPageClient";
+import { getOrderById } from "@/lib/firebase/order";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
   { id: "ready_by",     title: "READY BY"     },
   { id: "placed",       title: "PLACED"       },
   { id: "customer",     title: "CUSTOMER"     },
-  { id: "address",      title: "ADDRESS"      },
   { id: "order_details",title: "ORDER DETAILS"},
-  // { id: "bags",         title: "BAGS"         },
+  { id: "status",       title: "STATUS"       },
   { id: "pcs",          title: "PCS"          },
-  { id: "paid",         title: "PAID"         },
-  { id: "total",        title: "TOTAL"        },
-  { id: "actions",      title: ""             },
+  { id: "total",        title: "TOTAL"        }
 ];
 
-const cleaningReportOptions = [
-  { label: "To Clean",            value: "to-clean",   href: "/orders/reports/to-clean"   },
-  { label: "To Clean (No dates)", value: "no-dates",   href: "/orders/reports/no-dates"   },
-  { label: "Cleaned Today",       value: "today",      href: "/orders/reports/today"      },
-  { label: "Cleaned Yesterday",   value: "yesterday",  href: "/orders/reports/yesterday"  },
-  { label: "Detailed Today",      value: "detailed",   href: "/orders/reports/detailed"   },
-];
+// Status badge colours 
+const STATUS_CONFIG: Record<string, {label:string, style:string}> = {
+  confirmed:       {label:"Confirmed", style:"bg-blue-50 text-blue-600"},
+  pickedUp:        {label:"picked Up", style:"bg-indigo-50 text-indigo-600"},
+  paid:            {label:"paid",      style:"bg-yellow-50 text-yellow-600"},
+  sorting:         {label:"Sorting",   style:"bg-yellow-50 text-yellow-600"},
+  detailing:       {label:"Detailing", style:"bg-pink-50 text-pink-600"},
+  cleaning:        {label:"Cleaning", style:"bg-orange-50 text-orange-600"},
+  readyToDeliver:  {label:"Ready To Deliver", style:"bg-purple-50 text-purple-600"},
+  delivered:       {label:"Delivered", style:"bg-green-50 text-green-600"},  
+  disputed:        {label:"Disputed", style:"bg-red-50 text-red-500"},    
+  disputeResolved: {label:"Dispute resolved", style:"bg-green-50 text-green-500"},  
+  cancelled:       {label:"Cancelled", style:"bg-red-50 text-red-600"},    
+ 
+};
 
-export default function OrderCleaning({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
+export default function OrderAll({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize, autoOpenOrderId }: OrderTabProps) {
   const [search, setSearch] = useState("");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
-  const {showToast} = useToast();
+  const { showToast } = useToast();
 
-  const filtered = orders.filter((o) =>
+  // Auto-open dialog state
+  const [autoOrder, setAutoOrder] = useState<Order | null>(null);
+
+  // When orders load, find the target order — fallback fetch if not on current page
+  useEffect(() => {
+    if (!autoOpenOrderId) return;
+
+    const found = orders.find((o) => o.id === autoOpenOrderId);
+    if (found) {
+      setAutoOrder(found);
+    } else if (!loading) {
+      // Not in current page — fetch directly
+      getOrderById(autoOpenOrderId)
+        .then(setAutoOrder)
+        .catch(console.error);
+    }
+  }, [autoOpenOrderId, orders, loading]);
+
+  const filtered = orders.filter((order) =>
     !search ||
-    o.userName.toLowerCase().includes(search.toLowerCase()) ||
-    o.id.includes(search)
+    order.userName.toLowerCase().includes(search.toLowerCase()) ||
+    order.id.includes(search)
   );
 
   const toggleItems = (id: string) => {
@@ -58,7 +81,10 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
       case "id":
-        return <span className="text-xs font-mono text-slate-500">#{row?.orderNumber ?? row.id.slice(6,13)}</span>;
+        return (
+        <OrderDetailsDialog order={row} onStatusUpdate={onStatusUpdate}>
+            <span className="text-xs text-slate-500 hover:text-purple-600 cursor-pointer">#{row?.orderNumber ?? row.id.slice(6,13)}</span>
+        </OrderDetailsDialog>);
 
       case "ready_by":
         return (
@@ -77,26 +103,18 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
             <span className="text-xs">
               {new Date(row.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" })}
             </span>
-            <span className={`${row.serviceType === "ordinary" ? "bg-[#02d0ff]": "bg-purple-600"} p-1.5 text-[10px] text-white rounded-lg`}>{row.serviceType}</span>
+            <span className={`${row.serviceType === "ordinary" ? "bg-[#02d0ff]": "bg-purple-600"} py-1 px-1.5 text-[10px] text-white rounded-xl`}>{row.serviceType}</span>
           </div>
         );
 
       case "customer":
         return (
-           <CustomerCell
+          <CustomerCell
            userId={row.userId}
            userName={row.userName}
            userPhone={row.userPhone}
            onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
          />
-        );
-
-      case "address":
-        return (
-          <div className="flex flex-col text-xs">
-            <span className="font-semibold text-slate-400">DELIVERY</span>
-            <span className="text-slate-600">{row.deliveryAddress.formattedAddress ?? "—"}</span>
-          </div>
         );
 
       case "order_details": {
@@ -107,9 +125,7 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
           ? row.items
           : row.items.slice(0, visibleCount);      
 
-        const hiddenCount = row.items.length - visibleCount;
-      
-        
+        const hiddenCount = row.items.length - visibleCount;      
 
         return (
           <div className="flex flex-wrap gap-2 items-center">
@@ -144,20 +160,18 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
         );
       }
 
+      case "status": {
+        const style = STATUS_CONFIG[row.latestStatus.status]?.style ?? "bg-slate-100 text-slate-500";
+        return (
+          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${style}`}>
+            {STATUS_CONFIG[row.latestStatus.status]?.label ?? row.latestStatus.status}
+          </span>
+        );
+      }
+
+
       case "pcs":
         return <span className="font-semibold">{row.items.reduce((s, i) => s + i.count, 0)}</span>;
-
-      case "paid":
-        return row.isPaid ? (
-          <div className="flex flex-col gap-1">
-            <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">PAID</span>
-            <span className="text-xs">
-              {new Date(row?.paymentDate ?? 0).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" })}
-            </span>
-          </div>
-        ) : (
-          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-500">UNPAID</span>
-        );
 
       case "total":
         return (
@@ -167,50 +181,48 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
           </div>
         );
 
-      case "actions":
-        return (
-          <div className="flex items-center gap-1 justify-end">
-            <UpdateOrderDialog
-              orderId={row.id}
-              currentStatus={row.latestStatus.status as OrderStatuses}
-              onSuccess={onStatusUpdate}
-            >
-              <button className="px-3 py-1.5 flex items-center gap-2 text-xs font-medium text-white bg-[#02D0FF] rounded-lg hover:bg-blue-200 transition-colors">
-                <PencilLine className="w-4 h-4 text-white" />
-                CLEANING
-              </button>
-            </UpdateOrderDialog>
-          </div>
-        );
-
       default: return null;
     }
   };
 
   return (
     <div>
+      {autoOrder && (
+        <OrderDetailsDialog
+          order={autoOrder}
+          open={true}
+          onOpenChange={(open) => { if (!open) setAutoOrder(null); }}
+          onStatusUpdate={onStatusUpdate}
+        >
+          <span />
+        </OrderDetailsDialog>
+      )}
+      {/* Filter bar */}
       <div className="flex justify-between items-center mb-4 px-8">
         <div className="flex gap-3">
-          <FilterDropdown label="Reports" options={cleaningReportOptions} />
-          <FilterDropdown label="Sections" />
-          <FilterDropdown label="Order Type" />
-          <FilterDropdown label="Date" />
+          {/* <FilterButton label="Filter Sections" />
+          <FilterButton label="Order Type" />
+          <FilterButton label="Date" /> */}
         </div>
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>
 
-      {loading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
-        <OrderTable
-          headings={orderHeadings}
-          rows={filtered}
-          renderCell={renderCell}
-          currentPage={currentPage}
-          hasNextPage={hasNextPage}
-          onNext={onNext}
-          onPrev={onPrev}
-          pageSize={pageSize}
-          loading={loading}
-        />
+      {loading && filtered.length === 0 ? (
+        <TableSkeleton tableHeadings={orderHeadings} />
+      ) : (
+        <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+          <OrderTable
+            headings={orderHeadings}
+            rows={filtered}
+            renderCell={renderCell}
+            currentPage={currentPage}
+            hasNextPage={hasNextPage}
+            onNext={onNext}
+            onPrev={onPrev}
+            pageSize={pageSize}
+            loading={loading}
+          />
+        </div>
       )}
     </div>
   );
