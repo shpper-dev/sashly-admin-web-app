@@ -171,7 +171,7 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
 
       case "paid":
         return row.isPaid ? (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 items-center">
             <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">PAID</span>
             <span className="text-xs">
               {new Date(row?.paymentDate ?? 0).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" })}
