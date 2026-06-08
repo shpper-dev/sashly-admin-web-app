@@ -1,5 +1,5 @@
 "use client";
-import {Eye, LayoutDashboard,Search, LogOut, Megaphone, OctagonAlert, Package, Settings, Shirt, TriangleAlert, Truck, Users, Wallet, ChevronDown, TicketPercent, Tags, Loader2, Briefcase} from "lucide-react";
+import {Eye, LayoutDashboard,Search, LogOut, Megaphone, OctagonAlert, Package, Settings, Shirt, TriangleAlert, Truck, Users, Wallet, ChevronDown, TicketPercent, Tags, Loader2, Briefcase, Activity} from "lucide-react";
 import Link from "next/link";
 import UserDropDown from "./UserDropDown";
 import { usePathname } from "next/navigation";
@@ -67,6 +67,11 @@ const navItems = [
         name:"Business Accounts",
         icon: Briefcase ,
         href:"/business-accounts"
+    },
+    {
+        name:"Metrics",
+        icon: Activity ,
+        href:"/metrics/top-selling"
     }
 
     // {
