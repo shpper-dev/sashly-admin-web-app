@@ -3,369 +3,367 @@ import Header from "@/components/Header";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { broadcastHeadings } from "@/constants/headings";
+import { getAdminById } from "@/lib/firebase/admin.auth";
+import {  getBroadcasts, sendBroadcast } from "@/lib/firebase/broadcast";
+import { Broadcast, BroadcastPriority, BroadcastTarget } from "@/lib/models/broadcast.model";
 import { TableHeading } from "@/lib/types";
-import { ChevronLeft, ChevronRight, Eye, Headset, LucideIcon, MapPinX, PackageX } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, Eye,
+  Loader2, Send,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 
-const mockData = [
-{
-  id:1,
-  date_time: "#4627",
-  msg_details: "ORD-7953",
-  target: "4h",
-  reach:"Address Issue",
-  engagement: "96",
-  actions: "action",
-},
-{
-  id:2,
-  date_time: "#5251",
-  msg_details: "ORD-623G",
-  target: "1h",
-  reach:"Customer Request",
-  engagement: "63",
-  actions: "action",
-},
-{
-  id:3,
-  date_time: "#7252",
-  msg_details: "ORD-32QQ",
-  target: "2h",
-  reach:"Damaged Pkg",
-  engagement: "99",
-  actions: "action",
-}]
+const TARGET_CONFIG: Record<BroadcastTarget, { label: string; className: string }> = {
+  "ALL USERS":    { label: "All Users",    className: "bg-purple-50  text-purple-700" },
+  "ACTIVE USERS": { label: "Active Users", className: "bg-green-50   text-green-700"  },
+  "DRIVERS":      { label: "Drivers",      className: "bg-blue-50    text-blue-700"   },
+  "ADMINS":       { label: "Admins",       className: "bg-slate-100  text-slate-700"  },
+};
 
-interface BroadcastClientProps{
-    initialTarget?: string;
+const PRIORITY_CONFIG: Record<BroadcastPriority, { label: string; className: string }> = {
+  normal: { label: "Normal", className: "bg-slate-100 text-slate-600" },
+  urgent: { label: "Urgent", className: "bg-red-50    text-red-600"   },
+};
+
+//  Time formatter 
+
+function formatTimeAgo(ms: number): string {
+  const diff = Date.now() - ms;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60)  return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs  < 24)  return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d`;
 }
 
-export default function BroadcastClient({initialTarget}:BroadcastClientProps) {
-  const [priority, setPriority] = useState<"normal" | "urgent">("normal");
-  const [target, setTarget] = useState(initialTarget ?? "ALL USERS");
+const PAGE_SIZE = 8;
+
+
+
+interface BroadcastClientProps {
+  initialTarget?: string;
+}
+
+export default function BroadcastClient({ initialTarget }: BroadcastClientProps) {
+  const [priority, setPriority] = useState<BroadcastPriority>("normal");
+  const [target,   setTarget]   = useState<BroadcastTarget>(
+    (initialTarget as BroadcastTarget) ?? "ALL USERS"
+  );
   const [heading, setHeading] = useState<string>("");
-  const [body, setBody] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [data, setData] = useState<any[]>([]);
+  const [body,    setBody]    = useState<string>("");
 
-  useEffect(()=>{
-    console.log(initialTarget??"")
-    setLoading(true);
-    setTimeout(()=>{
-      setData(mockData);
-      setLoading(false);
-    },2000)
-  },[]);
+  const [sending,      setSending]      = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [history,      setHistory]      = useState<Broadcast[]>([]);
+  const [page,         setPage]         = useState(1);
 
-  const renderCellContent = (heading:TableHeading, value:any)=>{
-    if(!value || value === "-"){
-      return (
-        <span className='text-slate-400'>-</span>
-      );
+ 
+
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const records = await getBroadcasts(100);
+      setHistory(records);
+    } finally {
+      setHistoryLoading(false);
     }
+  };
 
-    switch (heading.id){
-      case "date_time":
-        return(
-          <span className="font-bold">{value}</span>
-        )
-      case "actions":
-        return(
-          <div className="flex items-center justify-end px-3">
-              {/* <span
-                className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium`}>
-                {value}
-              </span> */}
-          
-              <ChevronRight className="h-4 w-4 text-slate-400" />
-            </div>
-        );
-      case "reach":
-        type ReachKey = "address issue" | "customer request" | "damaged pkg"
+  useEffect(() => { loadHistory(); }, []);
 
-        const REACH_CONFIG: Record<ReachKey, { icon: LucideIcon; style: string }> = {
-          "address issue":    { icon: MapPinX,  style: "text-amber-700 "  },
-          "customer request": { icon: Headset,  style: "text-blue-700 "   },
-          "damaged pkg":      { icon: PackageX, style: "text-red-700"    },
-        }
-        const key = value.toLowerCase().trim() as ReachKey
-        const config = REACH_CONFIG[key]
-        const Icon = config?.icon
-      
-        return (
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold`}>
-            {Icon && <Icon className={`h-3.5 w-3.5 ${config?.style ?? "text-slate-600"}`}  />}
-            {value}
-          </span>
-        );
-      case "target":
-        return (
-          <span className="px-2 py-1 bg-slate-100 rounded-lg text-xs font-medium">{value} ago</span>
-        );
-      case "engagement":
-        return(
-          <div className="flex items-center gap-2 px-3">
-            <Eye className="h-4 w-4 text-green-700" strokeWidth={3} />
-              <span
-                className={`inline-flex items-center  py-1 text-xs font-bold`}>
-                {value} %
-              </span>
-            </div>
-        )
-      default:
-        return value;
-    }
 
-  }
+
+  const totalPages  = Math.max(1, Math.ceil(history.length / PAGE_SIZE));
+  const pageStart   = (page - 1) * PAGE_SIZE;
+  const pageEnd     = Math.min(pageStart + PAGE_SIZE, history.length);
+  const visibleRows = history.slice(pageStart, pageEnd);
 
   
 
-  // Placeholder handlers
-  const handleSaveDraft = () => {
-    console.log("Draft saved:", { target, priority, heading, body });
-    alert("Draft saved");
+  const handleSend = async () => {
+    if (!heading.trim() || !body.trim()) {
+      alert("Please fill in both the heading and body before sending.");
+      return;
+    }
+    setSending(true);
+    try {
+      await sendBroadcast({ title: heading.trim(), body: body.trim(), target, priority });
+      setHeading("");
+      setBody("");
+      setPage(1);
+      await loadHistory(); 
+    } catch (err) {
+      console.error("Broadcast failed:", err);
+      alert("Failed to send broadcast. Please try again.");
+    } finally {
+      setSending(false);
+    }
   };
 
-  const handleSend = () => {
-    console.log("Broadcast sent:", { target, priority, heading, body });
-    alert("Broadcast sent");
+
+  const renderCellContent = (heading: TableHeading, value: any, row: Broadcast) => {
+
+    switch (heading.id) {
+      case "date_time":
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded w-fit">
+              #{row.id.slice(0, 6).toUpperCase()}
+            </span>
+            <span className="text-[11px] text-slate-400">
+              {new Date(row.createdAt).toLocaleDateString("en-GB", {
+                day: "2-digit", month: "short", year: "numeric",
+              })}
+            </span>
+          </div>
+        );
+
+      // Message heading preview
+      case "msg_details":
+        return (
+          <div className="flex flex-col gap-0.5 max-w-[220px]">
+            <span className="text-xs font-semibold text-slate-800 truncate">{row.title}</span>
+            <span className="text-[11px] text-slate-400 truncate">{row.body}</span>
+          </div>
+        );
+
+      // Target audience badge
+      case "target": {
+        const cfg = TARGET_CONFIG[row.target] ?? { label: row.target, className: "bg-slate-100 text-slate-600" };
+        return (
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${cfg.className}`}>
+            {cfg.label}
+          </span>
+        );
+      }
+
+      // Priority badge
+      case "reach": {
+        const cfg = PRIORITY_CONFIG[row.priority] ?? PRIORITY_CONFIG.normal;
+        return (
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${cfg.className}`}>
+            {cfg.label}
+          </span>
+        );
+      }
+
+      case "engagement":
+        return (
+          <div className="flex items-center gap-2">
+            <Eye className="h-3.5 w-3.5 text-green-600" strokeWidth={2.5} />
+            <span className="text-xs font-bold text-slate-700">{row.sentCount.toLocaleString()}</span>
+            <span className="text-[11px] text-slate-400">sent</span>
+          </div>
+        );
+
+      case "created_by":
+         return <AdminName adminId={row.createdBy} />;
+
+      default:
+        return <span className="text-xs">{value}</span>;
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header  />
+      <Header />
 
       <main className="flex flex-col min-h-screen pt-18 pl-60">
+
+        {/* Compose form */}
         <section className="px-8 pb-6">
-          {/* CARD */}
-          <form className="bg-white border border-blue-500/30 rounded-2xl shadow-sm">
+          <div className="bg-white border border-blue-500/30 rounded-2xl shadow-sm">
 
-            {/* HEADER */}
-            <div className="px-6 py-4 text-xl font-semibold">
-              New Broadcast
-            </div>
-
+            <div className="px-6 py-4 text-xl font-semibold">New Broadcast</div>
             <div className="border-t border-slate-200" />
 
-            {/* BODY */}
             <div className="p-6 space-y-4">
 
-              {/* TOP ROW */}
+              {/* Target + Priority */}
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
 
-                {/* TARGET */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-slate-600">
-                      TARGET AUDIENCE
-                    </label>
-                  
-                    <Select value={target} onValueChange={setTarget}>
-                      <SelectTrigger className="w-full rounded-xl border border-slate-300 bg-slate-100 px-4 py-5.5 text-sm font-medium focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all">
-                        <SelectValue placeholder="Select target audience" />
-                      </SelectTrigger>
-                      
-                      <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-lg">
-                        <SelectItem 
-                          value="ALL USERS" 
-                          className="rounded-lg cursor-pointer hover:bg-blue-50 focus:bg-blue-50"
-                        >
-                          ALL USERS
+                  <label className="text-sm font-semibold text-slate-600">TARGET AUDIENCE</label>
+                  <Select value={target} onValueChange={(v) => setTarget(v as BroadcastTarget)}>
+                    <SelectTrigger className="w-full rounded-xl border border-slate-300 bg-slate-100 px-4 py-5.5 text-sm font-medium focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all">
+                      <SelectValue placeholder="Select target audience" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border border-slate-200 bg-white shadow-lg">
+                      {(["ALL USERS", "ACTIVE USERS", "DRIVERS", "ADMINS"] as BroadcastTarget[]).map((t) => (
+                        <SelectItem key={t} value={t} className="rounded-lg cursor-pointer hover:bg-blue-50 focus:bg-blue-50">
+                          {TARGET_CONFIG[t].label}
                         </SelectItem>
-                        <SelectItem 
-                          value="ACTIVE USERS" 
-                          className="rounded-lg cursor-pointer hover:bg-blue-50 focus:bg-blue-50"
-                        >
-                          ACTIVE USERS
-                        </SelectItem>
-                        <SelectItem 
-                          value="DRIVERS" 
-                          className="rounded-lg cursor-pointer hover:bg-blue-50 focus:bg-blue-50"
-                        >
-                          DRIVERS
-                        </SelectItem>
-                        <SelectItem 
-                          value="ADMINS" 
-                          className="rounded-lg cursor-pointer hover:bg-blue-50 focus:bg-blue-50"
-                        >
-                          ADMINS
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                {/* PRIORITY */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-slate-600">
-                    PRIORITY LEVEL
-                  </label>
-
+                  <label className="text-sm font-semibold text-slate-600">PRIORITY LEVEL</label>
                   <div className="flex gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setPriority("normal")}
-                      className={`flex-1 py-3 rounded-xl border text-sm font-medium transition
-                        ${
-                          priority === "normal"
+                    {(["normal", "urgent"] as BroadcastPriority[]).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPriority(p)}
+                        className={`flex-1 py-3 rounded-xl border text-sm font-medium transition capitalize ${
+                          priority === p
                             ? "border-purple-500 text-purple-600 bg-purple-50"
                             : "border-slate-300 text-slate-600 bg-slate-100"
                         }`}
-                    >
-                      Normal
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPriority("urgent")}
-                      className={`flex-1 py-3 rounded-xl border text-sm font-medium transition
-                        ${
-                          priority === "urgent"
-                            ? "border-purple-500 text-purple-600 bg-purple-50"
-                            : "border-slate-300 text-slate-600 bg-slate-100"
-                        }`}
-                    >
-                      Urgent
-                    </button>
+                      >
+                        {p}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* HEADING */}
+              {/* Heading */}
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-slate-600">
-                  MESSAGE HEADING
-                </label>
-
+                <label className="text-sm font-semibold text-slate-600">MESSAGE HEADING</label>
                 <input
                   value={heading}
                   onChange={(e) => setHeading(e.target.value)}
-                  maxLength={20}
-                  placeholder="e.g System Maintenance Notice"
-                  className="w-full text-sm rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 outline-none"
+                  maxLength={60}
+                  placeholder="e.g. System Maintenance Notice"
+                  className="w-full text-sm rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 outline-none focus:border-purple-400 focus:bg-white transition"
                 />
-
-                <div className="text-right text-xs text-slate-400">
-                  {heading.length}/20 characters
-                </div>
+                <div className="text-right text-xs text-slate-400">{heading.length}/60 characters</div>
               </div>
 
-              {/* BODY */}
+              {/* Body */}
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-semibold text-slate-600">
-                  MESSAGE BODY
-                </label>
-
+                <label className="text-sm font-semibold text-slate-600">MESSAGE BODY</label>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   maxLength={160}
                   rows={5}
                   placeholder="Enter your message here..."
-                  className="w-full rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 outline-none resize-none"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 outline-none resize-none focus:border-purple-400 focus:bg-white transition"
                 />
-
-                <div className="text-right text-xs text-slate-400">
-                  {body.length}/160 characters
-                </div>
+                <div className="text-right text-xs text-slate-400">{body.length}/160 characters</div>
               </div>
             </div>
-            <hr className="text-slate-200 mx-6" />
-            {/* FOOTER */}
-            <div className="flex justify-end gap-4 px-6 py-4 ">
-             
-              <button
-                type="button"
-                onClick={handleSaveDraft}
-                className="px-5 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium cursor-pointer"
-              >
-                Save Draft
-              </button>
 
+            <hr className="text-slate-200 mx-6" />
+
+            <div className="flex justify-end gap-4 px-6 py-4">
               <button
                 type="button"
                 onClick={handleSend}
-                className="px-6 py-3 rounded-xl bg-linear-to-r from-purple-500 to-purple-600 text-white text-sm font-medium shadow cursor-pointer"
+                disabled={sending || !heading.trim() || !body.trim()}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white text-sm font-medium shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
-                Send Broadcast
+                {sending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Sending…
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    Send Broadcast
+                  </>
+                )}
               </button>
-
             </div>
-          </form>
+          </div>
         </section>
-        <section className='px-8 pb-6'>
-                <div className='flex gap-3 mb-4 justify-between'>
-                    <div>
-                        <h2 className='text-xl font-bold text-slate-800'>Sent History</h2>
-                        <p className='text-sm text-slate-500'>Review previously broadcasted messages</p>
-                    </div>
-                    
-                </div>
-                <div>
-                    {loading ? (
-                        <TableSkeleton tableHeadings={broadcastHeadings}/>
-                    ):(
-                        <table className='w-full'>
-                            <thead className='bg-slate-200/50'>
-                                <tr>
-                                    {broadcastHeadings.map((heading)=>(
-                                        <th key={heading.id}
-                                        className='px-6 py-3 text-left text-sm font-semibold text-slate-700 first:rounded-tl-lg last:rounded-tr-lg'>
-                                            {heading.title}
-                                        </th>
 
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-slate-200">
-                                {data.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={broadcastHeadings.length}
-                                        className="px-6 py-12 text-center text-sm text-slate-500 ">
-                                            No data available
-                                        </td>
-                                    </tr>
-                                ):(
-                                    data.map((row,index)=>(
-                                        <tr key={row.id || index} className="hover:bg-slate-50 transition-colors">
-                                        {broadcastHeadings.map((heading)=>(
-                                            <td key={heading.id}
-                                            className={`px-6 py-3 text-sm text-slate-700`}>
-                                                {renderCellContent(heading, row[heading.id])}
-                                            </td>
-                                        ))}
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                            <tfoot className='bg-slate-200/50'>
-                            <tr>
-                                <td colSpan={broadcastHeadings.length} className='px-6 py-3 first:rounded-bl-lg last:rounded-br-lg'>
-                                    <div className='flex items-center justify-between'>
-                                        {/* left : showing text */}
-                                        <div className='text-left text-sm text-slate-600'>
-                                            showing <b>1</b>-<b>3</b> of <b>{data.length}</b> orders
-                                        </div>
-                                        {/* Right: pagination controls */}
-                                        <div className='flex items-center gap-2'>
-                                            <button>
-                                                <ChevronLeft className='h-3 w-3 text-slate-700' />
-                                            </button>
-                                            <button>
-                                                <ChevronRight className='h-3 w-3 text-slate-700'/>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    
-                                </td>
-                            </tr>
-                                
-                            </tfoot>
-                        </table>
-                    )}
-                </div>
-            </section>
+        {/* Sent history */}
+        <section className="px-8 pb-6">
+          <div className="flex gap-3 mb-4 justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-800">Sent History</h2>
+              <p className="text-sm text-slate-500">Review previously broadcasted messages</p>
+            </div>
+          </div>
+
+          {historyLoading ? (
+            <TableSkeleton tableHeadings={broadcastHeadings} />
+          ) : (
+            <table className="w-full">
+              <thead className="bg-slate-200/50">
+                <tr>
+                  {broadcastHeadings.map((h) => (
+                    <th key={h.id} className="px-6 py-3 text-left text-sm font-semibold text-slate-700 first:rounded-tl-lg last:rounded-tr-lg">
+                      {h.title}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {visibleRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={broadcastHeadings.length} className="px-6 py-12 text-center text-sm text-slate-500">
+                      No broadcasts sent yet
+                    </td>
+                  </tr>
+                ) : (
+                  visibleRows.map((row) => (
+                    <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                      {broadcastHeadings.map((h) => (
+                        <td key={h.id} className="px-6 py-3 text-sm text-slate-700">
+                          {renderCellContent(h, row[h.id as keyof Broadcast], row)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              <tfoot className="bg-slate-200/50">
+                <tr>
+                  <td colSpan={broadcastHeadings.length} className="px-6 py-3 first:rounded-bl-lg last:rounded-br-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">
+                        Showing <b>{pageStart + 1}</b>–<b>{pageEnd}</b> of <b>{history.length}</b> broadcasts
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+                          disabled={page === 1}
+                          className="p-1 rounded disabled:opacity-30"
+                        >
+                          <ChevronLeft className="h-3 w-3 text-slate-700" />
+                        </button>
+                        <span className="text-xs text-slate-500">{page} / {totalPages}</span>
+                        <button
+                          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={page === totalPages}
+                          className="p-1 rounded disabled:opacity-30"
+                        >
+                          <ChevronRight className="h-3 w-3 text-slate-700" />
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </section>
       </main>
     </div>
   );
 }
 
+// helpers
+function AdminName({ adminId }: { adminId: string }) {
+  const [name, setName] = useState("");
+
+  useEffect(() => {
+    getAdminById(adminId).then((admin) => {
+      setName(`${admin.firstName} ${admin.lastName}`);
+    });
+  }, [adminId]);
+
+  return (
+    <span className="px-2 py-1 text-xs font-medium text-slate-500">
+      {name}
+    </span>
+  );
+}
