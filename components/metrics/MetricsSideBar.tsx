@@ -5,11 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { name: "Dashboard",         href: "/metrics"                    },
-  { name: "Overview",          href: "/metrics/overview"           },
-  { name: "Revenue",           href: "/metrics/revenue"            },
-  { name: "Unpaid",            href: "/metrics/unpaid"             },
-  { name: "Orders",            href: "/metrics/orders"             },
+  // { name: "Dashboard",         href: "/metrics"                    },
+  // { name: "Overview",          href: "/metrics/overview"           },
+  // { name: "Revenue",           href: "/metrics/revenue"            },
+  // { name: "Unpaid",            href: "/metrics/unpaid"             },
+  // { name: "Orders",            href: "/metrics/orders"             },
   { name: "Customers",         href: "/metrics/customers"          },
   // { name: "Subscriptions",     href: "/metrics/subscriptions"      },
   { name: "Top Selling",       href: "/metrics/top-selling"      },
