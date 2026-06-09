@@ -519,3 +519,51 @@ export function subscribeToActiveOrdersByUserId(
     callback(orders);
   });
 }
+
+// daily order stats
+export async function getDailyOrderStats(): Promise<{
+  orderCount: number;
+  totalValue: number;
+  totalDiscounts: number;
+  totalCreditsUsed: number;
+}> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const startMs = startOfDay.getTime();
+  const endMs   = Date.now();
+
+  const q = query(
+    collection(db, "orders"),
+    where("createdAt", ">=", startMs),
+    where("createdAt", "<=", endMs)
+  );
+
+  const snap = await getDocs(q);
+  const orders = snap.docs.map(d => ({ ...d.data() } as Order));
+
+  return {
+    orderCount:       orders.length,
+    totalValue:       orders.reduce((sum, o) => sum + o.totalPrice, 0),
+    // discountAmount is already on Order model
+    totalDiscounts:   orders.reduce((sum, o) => sum + (o.discountAmount ?? 0), 0),
+    // credits = difference between original price and paid price when a coupon was applied
+    totalCreditsUsed: orders
+      .filter(o => o.appliedCoupon)
+      .reduce((sum, o) => sum + (o.discountAmount ?? 0), 0),
+  };
+}
+
+export async function getPendingPayoutsTotal(): Promise<number> {
+  const q = query(
+    collection(db, "orders"),
+    where("isCancelled", "==", false),
+    where("isPaid", "==", false)
+  );
+ 
+  const snap = await getDocs(q);
+ 
+  return snap.docs.reduce((sum, doc) => {
+    const data = doc.data();
+    return sum + (data.totalPrice ?? 0);
+  }, 0);
+}
