@@ -16,6 +16,7 @@ import { db } from "./config";
 import { Broadcast, BroadcastPriority, BroadcastTarget } from "../models/broadcast.model";
 import { mapBroadcast } from "../mappers/broadcast.mapper";
 import { getCurrentUser } from "./admin.auth";
+import { Notification } from "../models/notification";
 
 
 
@@ -51,12 +52,14 @@ export async function sendBroadcast({
 }): Promise<void> {
   const sendToUsers   = target === "ALL USERS" || target === "ACTIVE USERS";
   const sendToDrivers = target === "ALL USERS" || target === "DRIVERS";
+  const sendToAdmins  = target === "ALL USERS" || target === "ADMINS";
   
 
   //  Resolve recipient doc IDs 
 
   let userIds:   string[] = [];
   let driverIds: string[] = [];
+  let adminIds:  string[] = [];
 
   if (sendToUsers) {
     let usersQuery;
@@ -74,7 +77,12 @@ export async function sendBroadcast({
     driverIds = snap.docs.map((d) => d.id);
   }
 
-  const totalCount = userIds.length + driverIds.length;
+  if (sendToAdmins) {
+    const snap = await getDocs(collection(db, "admins"));
+    adminIds = snap.docs.map((d) => d.id);
+  }
+
+  const totalCount = userIds.length + driverIds.length + adminIds.length;
   const admin = await getCurrentUser()
   const adminId = admin?.uid ?? "";
   //  Save the broadcast record first 
@@ -94,6 +102,7 @@ export async function sendBroadcast({
   // Execute in chunks — each chunk is one committed batch
   const userChunks   = chunkArray(userIds,   BATCH_SIZE);
   const driverChunks = chunkArray(driverIds, BATCH_SIZE);
+  const adminChunks  = chunkArray(adminIds,  BATCH_SIZE);
 
   const batchPromises: Promise<void>[] = [];
 
@@ -139,8 +148,32 @@ export async function sendBroadcast({
     batchPromises.push(batch.commit());
   }
 
+  for (const chunk of adminChunks) {
+  const batch = writeBatch(db);
+
+  for (const adminId of chunk) {
+    const notifRef = doc(collection(db, "admins", adminId, "notifications"));
+
+    batch.set(notifRef, {
+      id: notifRef.id,
+      title,
+      body,
+      type: "broadcast",
+      deepLink: "none",
+      priority,
+      isRead: false,
+      readAt: null,
+      createdAt: serverTimestamp(), 
+    });
+  }
+
+  batchPromises.push(batch.commit());
+}
+
   await Promise.all(batchPromises);
 }
+
+
 
 //  Util 
 
