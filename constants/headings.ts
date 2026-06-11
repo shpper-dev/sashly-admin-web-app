@@ -44,8 +44,8 @@ export const broadcastHeadings : TableHeading[]= [
     title:"ENGAGEMENT"
 },
 {
-  id:"actions",
-  title:""
+  id:"created_by",
+  title:"CREATED BY"
 }
 ];
 

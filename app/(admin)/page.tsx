@@ -3,7 +3,7 @@ import Header from "@/components/Header";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import StatsCard from "@/components/StatsCard";
 import { dashboardHeadings } from "@/constants/headings";
-import { getActiveOrdersCount } from "@/lib/firebase/order";
+import { getActiveOrdersCount, getDailyOrderStats, getPendingPayoutsTotal } from "@/lib/firebase/order";
 import { getDisputes } from "@/lib/firebase/dispute";
 import { Dispute } from "@/lib/models/dispute.model";
 import { TableHeading } from "@/lib/types";
@@ -19,22 +19,27 @@ export default function Dashboard() {
   const [data, setData] = useState<any[]>([]);
   const [activeOrdersCount, setActiveOrdersCount] = useState<number>(0);
   const [disputesCount, setDisputesCount] = useState<number>(0);
-  const [payoutsCount, setPayoutsCount] = useState<number>(75212);
+  const [payoutsTotal, setPayoutsTotal] = useState<number>(0);
+  const [dailyStats, setDailyStats] = useState({
+    orderCount: 0, totalValue: 0, totalDiscounts: 0, totalCreditsUsed: 0,
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
 
-      // Fetch active orders count and all open disputes in parallel
-      const [activeCount, openDisputes] = await Promise.all([
+      const [activeCount, openDisputes, ordersToday, pendingPayouts] = await Promise.all([
         getActiveOrdersCount(),
-        getDisputes(true), // true = active/open only
+        getDisputes(true),
+        getDailyOrderStats(),
+        getPendingPayoutsTotal(),
       ]);
 
       setActiveOrdersCount(activeCount);
       setDisputesCount(openDisputes.length);
+      setDailyStats(ordersToday);
+      setPayoutsTotal(pendingPayouts);
 
-      // Filter to high priority only, take first 4 for the resolution queue
       const highPriority = openDisputes
         .filter((d: Dispute) => d.priority === "high")
         .slice(0, 4)
@@ -44,7 +49,7 @@ export default function Dashboard() {
           order_id:       d.orderId,
           issue_category: d.issueType,
           time_elapsed:   d.createdAt,
-          action:         d.id,                       
+          action:         d.id,
         }));
 
       setData(highPriority);
@@ -54,7 +59,6 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  // Each cell receives the resolved value for its column (row[heading.id])
   const renderCellContent = (heading: TableHeading, value: any) => {
     if (value === null || value === undefined || value === "") {
       return <span className="text-slate-400">—</span>;
@@ -63,9 +67,7 @@ export default function Dashboard() {
     switch (heading.id) {
       case "dispute_id":
         return (
-          <span className="text-xs text-slate-500">
-            {value}
-          </span>
+          <span className="text-xs text-slate-500">{value}</span>
         );
 
       case "issue_category": {
@@ -81,7 +83,7 @@ export default function Dashboard() {
           </span>
         );
       }
-     
+
       case "time_elapsed":
         return <WaitTimeBadge createdAt={value} />;
 
@@ -108,21 +110,42 @@ export default function Dashboard() {
         {/* Stats Cards */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
           <StatsCard title="ACTIVE ORDERS" value={activeOrdersCount} change={0} />
-          <StatsCard title="DISPUTES" value={disputesCount} change={data.length} comparisonText="new alerts requires action" icon={Flag} hasAlerts={data.length === 0 ? false : true} />
-          <StatsCard title="PENDING PAYOUTS" value={`SAR ${payoutsCount?.toLocaleString()}.00`} change={6} icon={Banknote} />
+          <StatsCard
+            title="DISPUTES"
+            value={disputesCount}
+            change={data.length}
+            comparisonText="new alerts requires action"
+            icon={Flag}
+            hasAlerts={data.length > 0}
+          />
+          <StatsCard
+            title="PENDING PAYOUTS"
+            value={`SAR ${payoutsTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            change={0}
+            icon={Banknote}
+          />
+          <StatsCard
+            title="TODAY'S ORDERS"
+            value={dailyStats.orderCount}
+            change={0}
+          />
+          <StatsCard
+            title="TODAY'S DISCOUNTS"
+            value={`SAR ${dailyStats.totalDiscounts.toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
+            change={0}
+            icon={Banknote}
+          />
         </section>
 
         {/* Priority Resolution Section with Side Card */}
         <section className="px-6 pb-6">
-          {/* Section Header */}
           <div className="mb-4">
             <h2 className="text-xl font-semibold text-slate-800">Priority Resolution</h2>
             <p className="text-sm text-slate-500">Review flagged issues requiring manual intervention.</p>
           </div>
 
-          {/* Grid Layout: */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            {/* Left: Table Section (9 columns) */}
+            {/* Table */}
             <div className="lg:col-span-9 overflow-x-auto rounded-lg">
               {loading ? (
                 <TableSkeleton tableHeadings={dashboardHeadings} />
@@ -145,7 +168,6 @@ export default function Dashboard() {
                         </td>
                       </tr>
                     ) : (
-                      // Pass row[heading.id] per cell so each case receives its own value
                       data.map((row, index) => (
                         <tr key={row.id || index} className="hover:bg-slate-50 transition-colors">
                           {dashboardHeadings.map((heading) => (
@@ -160,7 +182,6 @@ export default function Dashboard() {
                   <tfoot className="bg-slate-200/50">
                     <tr>
                       <td colSpan={dashboardHeadings.length} className="px-6 py-3 first:rounded-bl-lg last:rounded-br-lg">
-                        {/* Summary: how many high-priority cases are shown */}
                         <div className="flex items-center justify-between">
                           <p className="text-sm text-slate-600">
                             Showing <b>{data.length}</b> high priority{" "}
@@ -183,18 +204,13 @@ export default function Dashboard() {
             {/* Broadcasting card */}
             <div className="lg:col-span-3 space-y-6">
               <div className="flex flex-col items-center justify-center bg-white rounded-lg border border-blue-500/30 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                {/* Icon and Title */}
                 <div className="flex items-center justify-center gap-4 p-4">
                   <Radio className="h-6 w-6 text-purple-600" />
                   <h3 className="font-bold text-center text-sm">Quick Broadcast</h3>
                 </div>
-
-                {/* Button */}
                 <Link href={"/broadcast"} className="px-5 py-3 bg-purple-600 text-white rounded-md font-medium transition-colors text-sm">
                   + New Broadcast
                 </Link>
-
-                {/* Description */}
                 <div className="px-6 py-3 bg-white w-[90%]">
                   <p className="text-slate-600 text-center lg:text-left text-xs">
                     Send quick alerts to users and drivers
