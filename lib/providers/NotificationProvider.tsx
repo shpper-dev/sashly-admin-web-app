@@ -7,7 +7,7 @@ import {
 import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "@/lib/firebase/config";
 import { useToast } from "@/lib/providers/ToastProvider";
-import { Notification } from "../models/notification";
+import { Notification } from "../models/notification.model";
 
 interface NotificationContextType {
   alerts: Notification[];

@@ -118,14 +118,14 @@ export async function advanceOrderStatus(
   // refine this once the disputes flow is finalised 
   if (newStatus === "disputed") {
     try {
-      await createMessage({
-        orderId,
-        senderId: senderId || "system", 
-        text: "🚨 Dispute Opened: Admin has moved this order to dispute status.",
-        role: "admin", // since the admin is the one moving the status
-        readByUser: false,
-        readByAdmin: true,
-      });
+      // await createMessage({
+      //   orderId,
+      //   senderId: senderId || "system", 
+      //   text: "🚨 Dispute Opened: Admin has moved this order to dispute status.",
+      //   role: "admin", // since the admin is the one moving the status
+      //   readByUser: false,
+      //   readByAdmin: true,
+      // });
 
       // temp dispute creation
       await createDispute({
@@ -135,7 +135,8 @@ export async function advanceOrderStatus(
         description:"Shorts is missing",
         priority:"high"
       },
-      )
+      );
+
       
     } catch (msgError) {
       console.error("Failed to create dispute message:", msgError);

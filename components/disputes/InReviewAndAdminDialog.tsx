@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { updateDispute } from "@/lib/firebase/dispute";
+import { assignDisputeFn } from "@/lib/firebase/dispute";
 import { Dispute } from "@/lib/models/dispute.model";
 import { Admin } from "@/lib/models/admin.model";
 import { Loader2, UserCheck, UserCog, X } from "lucide-react";
@@ -43,6 +43,7 @@ export default function InReviewAndAdminDialog({
   const [selectedId, setSelectedId] = useState<string>("");
   const [loading, setLoading]       = useState(false);
   const [fetching, setFetching]     = useState(false);
+  const [error, setError]           = useState<string | null>(null);
 
   const isOpen     = dispute.status === "open";
   const isInReview = dispute.status === "in_review";
@@ -51,6 +52,7 @@ export default function InReviewAndAdminDialog({
 
   useEffect(() => {
     if (!open) return;
+    setError(null);
     setFetching(true);
     getAdmins()
       .then((list) => {
@@ -66,25 +68,29 @@ export default function InReviewAndAdminDialog({
 
   const selectedAdmin = admins.find((a) => a.uid === selectedId);
 
+  // assignDispute defaults to assigning the caller themselves when
+  // assignToAdminId is omitted/false. We always want to assign the
+  // *selected* admin, so pass true whenever a different admin is chosen,
+  // and rely on the default (self-assign) only when selecting yourself.
   const handleConfirm = async () => {
     if (!selectedId || !selectedAdmin) return;
     setLoading(true);
+    setError(null);
     try {
-      await updateDispute(dispute.id, {
-        status: "in_review",
-        isAssigned: true,
-        assignedTo: selectedAdmin.uid,
-        updatedAt: Date.now(),
+      await assignDisputeFn({
+        disputeId: dispute.id,
+        assignToAdminId: selectedId ,
       });
       setOpen(false);
-    } catch (e) {
-      console.error("MarkInReview failed:", e);
+    } catch (e: any) {
+      console.error("assignDispute failed:", e);
+      setError(e?.message ?? "Failed to assign dispute. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const selfAdmin  = admins.find((a) => a.uid === currentAdminId);
+  const selfAdmin   = admins.find((a) => a.uid === currentAdminId);
   const otherAdmins = admins.filter((a) => a.uid !== currentAdminId);
 
   return (
@@ -108,6 +114,16 @@ export default function InReviewAndAdminDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
+
+          {/* Inline error banner for failed cloud function calls */}
+          {error && (
+            <div className="flex items-start justify-between gap-2 bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5">
+              <span className="text-xs text-red-600 leading-snug">{error}</span>
+              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 shrink-0">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
 
           {/* Info banner for OPEN disputes */}
           {isOpen && (

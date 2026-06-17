@@ -11,6 +11,7 @@ export function serializeMessage(message: Partial<Message>){
          photoUrl: message.photoUrl ?? "",
          readByAdmin: message.readByAdmin ?? false,
          readByUser: message.readByUser ?? false,
+         isSystem: message.isSystem ?? false,
          createdAt: message.createdAt ?? serverTimestamp(),
 }
 } 

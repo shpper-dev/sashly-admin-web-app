@@ -1,3 +1,7 @@
+export type DisputeStatus ="open" | "in_review" | "resolved" | "rejected";
+export type DisputeIssueType ="missing_item" | "damaged" | "wrong_service" | "driver_behaviour" | "delivery_problem" | "other";
+export type ResolveAction ="full_refund" | "partial_refund" | "wallet_credit" | "reattempt" | "no_action";
+
 export interface Dispute {
   id: string;
 
@@ -7,20 +11,11 @@ export interface Dispute {
   driverId?: string | null;
 
   // status
-  status:
-    | "open"
-    | "in_review"
-    | "resolved"
-    | "rejected";
+  status: DisputeStatus;
 
   // dispute category
-  issueType:
-    | "missing_item"
-    | "damaged"
-    | "wrong_service"
-    | "driver_behaviour"
-    | "other";
-
+  issueType: DisputeIssueType;
+    
   // customer description
   description: string;
 
@@ -40,12 +35,7 @@ export interface Dispute {
 
   // resolution details
   resolution?: {
-    action:
-      | "full_refund"
-      | "partial_refund"
-      | "wallet_credit"
-      | "reattempt"
-      | "no_action";
+    action: ResolveAction;
 
     amount?: number | null;
 
@@ -55,10 +45,21 @@ export interface Dispute {
     resolvedAt: number;
   };
 
+  // driver actions 
+  driverActions: DriverAction[];
+
   // tracking
   isResolved?: boolean | null;
 
   createdAt: number;
   updatedAt: number;
 
+}
+
+export interface DriverAction {
+  type: "warning" | "penalty";
+  amount: number;
+  note: string;
+  by: string; // adminId
+  at: number; // timestamp
 }

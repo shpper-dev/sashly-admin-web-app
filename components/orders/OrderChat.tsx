@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, CheckCheck, Paperclip, Send, X, ImageIcon, Loader2 } from "lucide-react";
+import { Check, CheckCheck, Paperclip, Send, X, ImageIcon, Loader2, Info } from "lucide-react";
 import { Message } from "@/lib/models/message.model";
 import { createMessage, subscribeToMessages } from "@/lib/firebase/message";
 import { getCurrentUser } from "@/lib/firebase/admin.auth";
@@ -96,45 +96,62 @@ export default function OrderChat({ orderId }: { orderId: string }) {
         </div> */}
       {/* Message list */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 min-h-40">
-        {messages.map((msg) => (
-          <div 
-            key={msg.id} 
-            className={`flex gap-3 ${msg.role === "admin" ? "justify-end" : "justify-start"}`}
-          >
-            <div className="max-w-[75%]">
-              <div className={`rounded-2xl px-4 py-2.5 text-sm text-slate-800 shadow-sm leading-snug ${
-                msg.role === "admin" ? "rounded-br-sm bg-cyan-50" : "rounded-bl-sm bg-slate-100"
-              }`}>
-                {/* Image Display Logic */}
-                {msg.photoUrl && (
-                  <div className="mb-2">
-                    <img 
-                      src={msg.photoUrl} 
-                      alt="Attachment" 
-                      className="rounded-lg w-full h-auto object-cover max-h-60 border border-slate-200"
-                    />
-                  </div>
-                )}
-                {msg.text && <p>{msg.text}</p>}
+        {messages.map((msg) => {
+        
+          if (msg.role === "system" || msg.isSystem) {
+            return (
+              <div key={msg.id} className="flex flex-col items-center justify-center">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-[11px] font-medium max-w-[85%] text-center">
+                  <span>{msg.text}</span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                    {formatTime(new Date(msg.createdAt))}
+                </p>
+                
               </div>
-              
-              <div className="flex items-center justify-end gap-1 mt-1">
-                <p className="text-[10px] text-slate-400">
-                  {formatTime(new Date(msg.createdAt))}
-                </p> 
-                {msg.role === "admin" && (
-                  <span className="ml-1">
-                    {msg.readByUser ? (
-                      <CheckCheck className="w-3 h-3 text-cyan-500" />
-                    ) : (
-                      <Check className="w-3 h-3 text-slate-300" />
-                    )}
-                  </span>
-                )}
+            );
+          }
+
+          return (
+            <div
+              key={msg.id}
+              className={`flex gap-3 ${msg.role === "admin" ? "justify-end" : "justify-start"}`}
+            >
+              <div className="max-w-[75%]">
+                <div className={`rounded-2xl px-4 py-2.5 text-sm text-slate-800 shadow-sm leading-snug ${
+                  msg.role === "admin" ? "rounded-br-sm bg-cyan-50" : "rounded-bl-sm bg-slate-100"
+                }`}>
+                  {/* Image Display Logic */}
+                  {msg.photoUrl && (
+                    <div className="mb-2">
+                      <img 
+                        src={msg.photoUrl} 
+                        alt="Attachment" 
+                        className="rounded-lg w-full h-auto object-cover max-h-60 border border-slate-200"
+                      />
+                    </div>
+                  )}
+                  {msg.text && <p>{msg.text}</p>}
+                </div>
+                
+                <div className="flex items-center justify-end gap-1 mt-1">
+                  <p className="text-[10px] text-slate-400">
+                    {formatTime(new Date(msg.createdAt))}
+                  </p> 
+                  {msg.role === "admin" && (
+                    <span className="ml-1">
+                      {msg.readByUser ? (
+                        <CheckCheck className="w-3 h-3 text-cyan-500" />
+                      ) : (
+                        <Check className="w-3 h-3 text-slate-300" />
+                      )}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         <div ref={bottomRef} />
       </div>
 

@@ -1,4 +1,5 @@
 import { Coupon } from "./coupon.model";
+import { DisputeIssueType, DisputeStatus } from "./dispute.model";
 import { UserAddress } from "./user.model";
 
 export type ServiceType = "ordinary" | "express";
@@ -59,6 +60,12 @@ export interface Order {
     customerSignatureUrl?: string | null;
     driverActivePhase?: "headingToPickup" | "headingToDelivery" |  null;
 
+    // dispute details
+    hasOpenDispute?: boolean | null;
+    disputeId?: string | null;
+    disputeStatus?: DisputeStatus | null;
+    disputeIssueType?: DisputeIssueType | null;
+    lastDisputeAt?: number | null;
 
     ratingByUser ?: OrderRating | null;
     createdAt : number;

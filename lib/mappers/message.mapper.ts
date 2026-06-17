@@ -17,6 +17,7 @@ export function mapMessage(doc: QueryDocumentSnapshot): Message{
          photoUrl: data.photoUrl ?? "",
          readByAdmin: data.readByAdmin ?? false,
          readByUser: data.readByUser ?? false,
+         isSystem : data.isSystem ?? false,
          createdAt: data.createdAt?.toMillis?.() ?? data.createdAt ?? 0,
 }
 } 
