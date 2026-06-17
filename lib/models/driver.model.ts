@@ -9,7 +9,10 @@ export interface Driver{
 
     fcmToken?: string | null;
     isActive: boolean;              
-    isOnline: boolean;              
+    isOnline: boolean;    
+    
+    // offer toggle
+    enableDriverOfferResponse: boolean;
  
     createdAt: FirebaseFirestore.Timestamp;
     updatedAt?: FirebaseFirestore.Timestamp | null;

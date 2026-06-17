@@ -14,7 +14,9 @@ export function serializeDriver(driver: Partial<Driver>){
        fcmToken: driver.fcmToken ?? "",
        isActive: driver.isActive ?? true,              
        isOnline: driver.isOnline ?? true,             
-   
+       
+       enableDriverOfferResponse: driver.enableDriverOfferResponse ?? false,
+
        createdAt: driver.createdAt ?? serverTimestamp(),
        updatedAt: driver.updatedAt ??  null,
     }

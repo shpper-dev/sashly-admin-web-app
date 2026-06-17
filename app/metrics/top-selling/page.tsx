@@ -29,8 +29,6 @@ function presetToRange(preset: Preset): { startMs: number; endMs: number } {
 }
 
 
-
-
 export default function MetricsTopSellingPage() {
   const [showAvgPrice, setShowAvgPrice]   = useState(false);
   const [activeMode,   setActiveMode]     = useState<"items" | "services">("items");
@@ -175,8 +173,6 @@ export default function MetricsTopSellingPage() {
                 {preset === "custom" && (
                   <>
                     <DropdownMenuSeparator className="my-1" />
-            
-                    
                     <div
                       className="px-3 pb-2 pt-1 flex flex-col gap-2"
                       onPointerDown={e => e.stopPropagation()} 
