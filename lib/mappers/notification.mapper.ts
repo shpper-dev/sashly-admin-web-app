@@ -1,5 +1,5 @@
 import { DocumentData, QueryDocumentSnapshot, Timestamp } from "firebase/firestore";
-import { Notification } from "../models/notification";
+import { Notification } from "../models/notification.model";
 
 export function mapNotification(doc: QueryDocumentSnapshot<DocumentData>) : Notification {
     const data = doc.data();

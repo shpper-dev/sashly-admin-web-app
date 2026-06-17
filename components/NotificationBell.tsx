@@ -4,7 +4,7 @@ import {
   Truck, Building2, CheckCheck, Check,
 } from "lucide-react";
 import Link from "next/link";
-import { DeepLinkType, Notification, NotificationType } from "@/lib/models/notification";
+import { DeepLinkType, Notification, NotificationType } from "@/lib/models/notification.model";
 import { useAdminNotifications } from "@/hooks/useAdminNotification";
 import {
   DropdownMenu,

@@ -15,12 +15,13 @@ import AddDriverDialog from '@/components/drivers/AddDriverDialog';
 const PAGE_SIZE = 10;
 
 const driverHeadings: TableHeading[] = [
-  { id: "name",    title: "NAME"         },
-  { id: "contact", title: "CONTACT"      },
-  { id: "route",   title: "AREA"         },
-  { id: "active",  title: "ACTIVE"       },
-  { id: "online",  title: "ONLINE"       },
-  { id: "updated", title: "LAST UPDATED" },
+  { id: "name",    title: "NAME"          },
+  { id: "contact", title: "CONTACT"       },
+  { id: "route",   title: "AREA"          },
+  { id: "active",  title: "ACTIVE"        },
+  { id: "online",  title: "ONLINE"        },
+  { id: "offer" ,  title: "OFFER RESPONSE"},
+  { id: "updated", title: "LAST UPDATED"  },
 ];
 
 //  Filter definitions
@@ -54,20 +55,20 @@ export default function Drivers() {
 
   const { showToast } = useToast();
 
-  const fetchDrivers = async () => {
-    setLoading(true);
-    try {
-      const drivers = await getDrivers();
-      setData(drivers);
-    } catch (e) {
-      console.error("Failed to fetch drivers:", e);
-      showToast("Failed to load drivers.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchDrivers = async (showSkeleton = true) => {
+  if (showSkeleton) setLoading(true);
+  try {
+    const drivers = await getDrivers();
+    setData(drivers);
+  } catch (e) {
+    console.error("Failed to fetch drivers:", e);
+    showToast("Failed to load drivers.", "error");
+  } finally {
+    if (showSkeleton) setLoading(false);
+  }
+};
 
-  useEffect(() => { fetchDrivers(); }, []);
+useEffect(() => { fetchDrivers(); }, []);
 
   //toggle isActive
   const handleToggleActive = async (driver: Driver) => {
@@ -78,6 +79,22 @@ export default function Drivers() {
         prev.map((d) => d.id === driver.id ? { ...d, isActive: !d.isActive } : d)
       );
       showToast(`Driver ${driver.id} ${!driver.isActive ? "UNBLOCKED" : "BLOCKED"}`,`${!driver.isActive ? "success": "error"}`);
+    } catch (e) {
+      console.error("Failed to update driver:", e);
+      showToast("Failed to update driver status.", "error");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleToggleOffer = async (driver: Driver) => {
+    setTogglingId(driver.id);
+    try {
+      await updateDriver(driver.id, { enableDriverOfferResponse: !driver.enableDriverOfferResponse });
+      setData((prev) =>
+        prev.map((d) => d.id === driver.id ? { ...d, enableDriverOfferResponse: !d.enableDriverOfferResponse } : d)
+      );
+      showToast(`Driver ${driver.id} OFFER RESPONSE  ${!driver.enableDriverOfferResponse ? "ENABLED" : "DISABLED"}`,`${!driver.enableDriverOfferResponse ? "success": "error"}`);
     } catch (e) {
       console.error("Failed to update driver:", e);
       showToast("Failed to update driver status.", "error");
@@ -137,7 +154,7 @@ export default function Drivers() {
         const name     = row.name?.trim() || "Unknown";
         const initials = name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
         return (
-         <DriverInfoDialog driver={row} onSuccess={fetchDrivers}>
+         <DriverInfoDialog driver={row} onSuccess={()=> fetchDrivers(false)}>
            <div className="flex items-center gap-3 cursor-pointer">
             <div className="w-9 h-9 rounded-full overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center font-semibold text-sm shrink-0">
               {row.profileImageUrl
@@ -199,6 +216,16 @@ export default function Drivers() {
           }`}>
             {row.isOnline ? "ONLINE" : "OFFLINE"}
           </span>
+        );
+      
+      case "offer":
+        return (
+          <Switch
+            checked={row.enableDriverOfferResponse ?? false}
+            disabled={togglingId === row.id}
+            onCheckedChange={() => handleToggleOffer(row)}
+            className="cursor-pointer data-[state=checked]:bg-purple-600!"
+          />
         );
 
       case "updated":

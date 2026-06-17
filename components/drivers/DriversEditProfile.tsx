@@ -1,12 +1,10 @@
 "use client";
 import React, { useRef, useState } from 'react';
 import { 
-  Mail, Phone, UserIcon, Globe, Trash2, RotateCcw, Save, 
-  MapPin, Hash, ClipboardList, Info, Camera, Check, X, Ban,
-  CreditCard, Percent, Route
+  Mail, Phone, UserIcon, RotateCcw, Save, 
+  MapPin, Camera,  X, Ban, Route
 } from 'lucide-react';
 import { Driver } from '@/lib/models/driver.model';
-// import { updateDriver, blockDriver, unblockDriver } from '@/lib/firebase/driver'; // Assuming these exist
 import { deleteImage, uploadImage } from '@/lib/utils';
 import { updateDriver } from '@/lib/firebase/driver';
 import { Switch } from '../ui/switch';
@@ -20,19 +18,16 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
   const [saving, setSaving] = useState(false);
   const [blocking, setBlocking] = useState(false);
   const [togglingOnline, setTogglingOnline] = useState(false);
-  const [isOnline, setIsOnline]             = useState(driver.isOnline ?? false);
+  const [togglingOffer, setTogglingOffer]   = useState(false); // ← separate loading flag
+
+  const [isOnline, setIsOnline] = useState(driver.isOnline ?? false);
+  const [offerEnabled, setOfferEnabled] = useState(driver.enableDriverOfferResponse ?? false); // ← local state, mirrors isOnline pattern
 
   // States
   const [name, setName] = useState(driver.name ?? "");
   const [email, setEmail] = useState(driver.email ?? "");
   const [phoneNumber, setPhoneNumber] = useState(driver.phoneNumber ?? "");
   const [profileImageUrl, setProfileImageUrl] = useState(driver.profileImageUrl ?? "");
-  
-  // Custom driver fields (Add these to your model/firebase if not already present)
-  const [secondaryPhone, setSecondaryPhone] = useState(""); 
-  const [city, setCity] = useState("Riyadh");
-  const [iban, setIban] = useState("");
-  const [commission, setCommission] = useState("15");
 
   // Image handling
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
@@ -48,17 +43,30 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
   };
 
   const handleToggleOnline = async () => {
-  setTogglingOnline(true);
-  try {
-    await updateDriver(driver.id, { isOnline: !isOnline });
-    setIsOnline((prev) => !prev);
-    onSuccess?.();
-  } catch (e) {
-    console.error("Online toggle failed:", e);
-  } finally {
-    setTogglingOnline(false);
-  }
-};
+    setTogglingOnline(true);
+    try {
+      await updateDriver(driver.id, { isOnline: !isOnline });
+      setIsOnline((prev) => !prev);
+      onSuccess?.();
+    } catch (e) {
+      console.error("Online toggle failed:", e);
+    } finally {
+      setTogglingOnline(false);
+    }
+  };
+
+  const handleToggleOffer = async () => {
+    setTogglingOffer(true);
+    try {
+      await updateDriver(driver.id, { enableDriverOfferResponse: !offerEnabled });
+      setOfferEnabled((prev) => !prev);
+      onSuccess?.();
+    } catch (e) {
+      console.error("Offer response toggle failed:", e);
+    } finally {
+      setTogglingOffer(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -66,29 +74,23 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
       let finalImageUrl = profileImageUrl;
 
       if (pendingImageFile) {
-
-      // delete old image first
-      if (profileImageUrl) {
-        try {
-          await deleteImage(profileImageUrl);
-        } catch (err) {
-          console.error("Old image delete failed:", err);
+        if (profileImageUrl) {
+          try {
+            await deleteImage(profileImageUrl);
+          } catch (err) {
+            console.error("Old image delete failed:", err);
+          }
         }
+        finalImageUrl = await uploadImage(pendingImageFile, "driverProfile");
+        setPendingImageFile(null);
+        setProfileImageUrl(finalImageUrl);
       }
-
-    // upload new image
-    finalImageUrl = await uploadImage(pendingImageFile, "driverProfile");
-  
-    setPendingImageFile(null);
-    setProfileImageUrl(finalImageUrl);
-}
 
       await updateDriver(driver.id, {
         name,
         email,
         phoneNumber,
         profileImageUrl: finalImageUrl || null,
-        
       });
       onSuccess?.();
     } catch (e) {
@@ -101,11 +103,7 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
   const handleToggleBlock = async () => {
     setBlocking(true);
     try {
-      if (driver.isActive) {
-        await updateDriver(driver.id,{isActive:false});
-      } else {
-        await updateDriver(driver.id, {isActive: true});
-      }
+      await updateDriver(driver.id, { isActive: !driver.isActive });
       onSuccess?.();
     } catch (e) {
       console.error("Action failed:", e);
@@ -118,7 +116,7 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
 
   return (
     <div className="flex-1 overflow-y-auto bg-white px-8 py-8">
-      
+
       {/* Avatar Section */}
       <div className="flex justify-center mb-8">
         <div className="relative group">
@@ -170,7 +168,6 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
           <InputWithIcon icon={Mail} value={email} onChange={setEmail} />
         </FormField>
 
-
         {/* Read Only Designated Area */}
         <FormField label="Designated Area (Read Only)">
           <div className="flex flex-col rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 gap-1 opacity-70">
@@ -191,35 +188,55 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
           </div>
         </FormField>
 
+        {/* Online Status */}
+        <FormField label="Online Status">
+          
+          <div
+            className="flex items-center h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 gap-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Switch
+              checked={isOnline}
+              disabled={togglingOnline}
+              onCheckedChange={handleToggleOnline}
+              className="cursor-pointer data-[state=checked]:bg-purple-600!"
+            />
+            <span className={`text-sm font-semibold transition-colors ${isOnline ? "text-green-600" : "text-slate-400"}`}>
+              {togglingOnline ? "Updating…" : isOnline ? "Online" : "Offline"}
+            </span>
+          </div>
+        </FormField>
 
-       {/* Online Status */}
-       <FormField label="Online Status">
-         <div className="flex items-center h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 gap-3">
-           <Switch
-             checked={isOnline}
-             disabled={togglingOnline}
-             onCheckedChange={handleToggleOnline}
-             className="cursor-pointer data-[state=checked]:bg-purple-600!"
-           />
-           <span className={`text-sm font-semibold transition-colors ${isOnline ? "text-green-600" : "text-slate-400"}`}>
-             {togglingOnline ? "Updating…" : isOnline ? "Online" : "Offline"}
-           </span>
-         </div>
-       </FormField>
+        {/* Offer Response */}
+        <FormField label="Offer Response">
+          <div
+            className="flex items-center h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 gap-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Switch
+              checked={offerEnabled}
+              disabled={togglingOffer}
+              onCheckedChange={handleToggleOffer}
+              className="cursor-pointer data-[state=checked]:bg-purple-600!"
+            />
+            <span className={`text-sm font-semibold transition-colors ${offerEnabled ? "text-green-600" : "text-slate-400"}`}>
+              {togglingOffer ? "Updating…" : offerEnabled ? "Enabled" : "Disabled"}
+            </span>
+          </div>
+        </FormField>
       </div>
 
       {/* Operational Section */}
       <div className="mt-10 pt-6 border-t border-slate-100">
         <SectionLabel>Payouts & Operational</SectionLabel>
         <div className="grid grid-cols-3 gap-x-6 gap-y-5">
-          {/* <FormField label="IBAN for Payouts">
+            {/* <FormField label="IBAN for Payouts">
             <InputWithIcon icon={CreditCard} value={iban} onChange={setIban} placeholder="SA..." />
           </FormField>
 
           <FormField label="Commission Tier (%)">
             <InputWithIcon icon={Percent} value={commission} onChange={setCommission} />
           </FormField> */}
-
           <FormField label="System ID">
             <div className="flex items-center h-11 rounded-xl border border-slate-100 bg-slate-50 px-4 text-xs font-mono text-slate-400">
               {driver.id}
@@ -256,7 +273,7 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
   );
 }
 
-//helpers
+// helpers
 
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (

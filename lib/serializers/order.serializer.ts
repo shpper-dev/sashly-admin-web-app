@@ -89,6 +89,13 @@ export function serializeOrder(order: Partial<Order>) {
     customerSignatureUrl: order.customerSignatureUrl ?? null,
     driverActivePhase: order.driverActivePhase ?? null,
 
+     // dispute details
+    hasOpenDispute: order.hasOpenDispute ?? false,
+    disputeId: order.disputeId ?? "",
+    disputeStatus: order.disputeStatus ?? null,
+    disputeIssueType: order.disputeIssueType ?? null,
+    lastDisputeAt: order.lastDisputeAt ?? 0,
+
 
     ratingByUser: order.ratingByUser
       ? {

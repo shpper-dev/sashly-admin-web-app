@@ -19,7 +19,9 @@ export function mapDriver(doc: QueryDocumentSnapshot<DocumentData>): Driver {
    
        fcmToken: data.fcmToken ?? "",
        isActive: data.isActive ?? true,              
-       isOnline: data.isOnline ?? true,             
+       isOnline: data.isOnline ?? true, 
+       
+       enableDriverOfferResponse: data.enableDriverOfferResponse ?? false,
    
        createdAt: data.createdAt ?? 0,
        updatedAt: data.updatedAt ??  null,

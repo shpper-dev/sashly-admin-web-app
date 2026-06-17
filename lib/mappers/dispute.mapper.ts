@@ -1,5 +1,5 @@
 import { DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
-import { Dispute } from "../models/dispute.model";
+import { Dispute, DriverAction } from "../models/dispute.model";
 
 export function mapDispute(
   doc: QueryDocumentSnapshot<DocumentData>
@@ -16,6 +16,17 @@ export function mapDispute(
     note: r?.note ?? "",
     resolvedBy: r?.resolvedBy ?? "",
     resolvedAt: r?.resolvedAt ?? 0,
+  });
+
+  const mapDriverAction = (a: any): DriverAction => ({
+    type: a?.type ?? "warning",
+    amount: a?.amount ?? 0,
+    note: a?.note ?? "",
+    by: a?.by ?? "",
+    at:
+      a?.at?.toMillis?.() ??
+      a?.at ??
+      0,
   });
 
   return {
@@ -51,6 +62,11 @@ export function mapDispute(
     resolution: data.resolution
       ? mapResolution(data.resolution)
       : undefined,
+
+    //  driver actions
+    driverActions: Array.isArray(data.driverActions)
+      ? data.driverActions.map(mapDriverAction)
+      : [],
 
     // tracking
     isResolved: data.isResolved ?? false,

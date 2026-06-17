@@ -1,7 +1,8 @@
 import { addDoc, collection, doc, getDocs, onSnapshot, orderBy, query, updateDoc, where } from "firebase/firestore";
 import { Dispute } from "../models/dispute.model";
-import { db } from "./config";
+import {  db, functions } from "./config";
 import { mapDispute } from "../mappers/dispute.mapper";
+import { httpsCallable } from "firebase/functions";
 
 export async function createDispute(dispute: Partial<Dispute>) {
     await addDoc(collection(db,"disputes"),{
@@ -59,3 +60,46 @@ export function subscribeToDispute(
   });
 }
 
+
+
+// ─── Cloud functions (default region) ──────────────────────────────────────
+// Every one of these enforces users/{uid}.isAdmin == true server-side.
+
+
+
+type ResolveAction = "full_refund" | "partial_refund" | "wallet_credit" | "reattempt" | "no_action";
+
+interface ResolveDisputeInput {
+  disputeId: string;
+  action: ResolveAction;
+  amount?: number;
+  note?: string;
+}
+
+interface RejectDisputeInput {
+  disputeId: string;
+  note?: string;
+}
+
+interface ApplyDriverPenaltyInput {
+  driverId: string;
+  type: "warning" | "penalty";
+  amount?: number;
+  note?: string;
+  disputeId?: string;
+}
+
+interface AssignDisputeInput {
+  disputeId: string;
+  assignToAdminId?: string;
+}
+
+interface CallableResult {
+  success: true;
+  [key: string]: any;
+}
+
+export const resolveDisputeFn      = httpsCallable<ResolveDisputeInput, CallableResult>(functions, "resolveDispute");
+export const rejectDisputeFn       = httpsCallable<RejectDisputeInput, CallableResult>(functions, "rejectDispute");
+export const applyDriverPenaltyFn  = httpsCallable<ApplyDriverPenaltyInput, CallableResult>(functions, "applyDriverPenalty");
+export const assignDisputeFn       = httpsCallable<AssignDisputeInput, CallableResult>(functions, "assignDispute");

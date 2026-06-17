@@ -16,7 +16,7 @@ import { db } from "./config";
 import { Broadcast, BroadcastPriority, BroadcastTarget } from "../models/broadcast.model";
 import { mapBroadcast } from "../mappers/broadcast.mapper";
 import { getCurrentUser } from "./admin.auth";
-import { Notification } from "../models/notification";
+import { Notification } from "../models/notification.model";
 
 
 
@@ -172,8 +172,6 @@ export async function sendBroadcast({
 
   await Promise.all(batchPromises);
 }
-
-
 
 //  Util 
 
