@@ -84,7 +84,7 @@ export function subscribeToActiveOrdersByDriverId(
   });
 }
 
-//Real-time subscription to ALL orders for a driver (including delivered/cancelled) 
+//Real-time subscription to ALL orders for a driver 
 export function subscribeToAllOrdersByDriverId(
   driverId: string,
   callback: (orders: Order[]) => void

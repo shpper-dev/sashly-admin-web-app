@@ -86,7 +86,7 @@ export default function DriversOrders({ orders, loading }: DriversOrdersProps) {
       <div className="flex items-center gap-2 mb-4">
         <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
         <span className="text-xs font-bold tracking-widest text-slate-400 uppercase">
-          In Progress
+          {activeFilter === "All" ? "All Orders" : "In Progress"}
         </span>
       </div>
 

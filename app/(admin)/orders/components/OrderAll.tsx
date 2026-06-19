@@ -1,12 +1,11 @@
 "use client";
 import { FileText, PencilLine, Search } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { Order } from "@/lib/models/order.model";
+import { Order, OrderStatuses } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
 import { OrderTabProps } from "./OrdersPageClient";
 import FilterButton from "@/components/buttons/FilterDropdown";
 import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog";
-// import CustomerCell from "@/components/orders/CustomerCell";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import { OrderTable } from "@/components/orders/OrderTable";
@@ -29,7 +28,7 @@ const orderHeadings: TableHeading[] = [
 // Status badge colours 
 const STATUS_CONFIG: Record<string, {label:string, style:string}> = {
   confirmed:       {label:"Confirmed", style:"bg-blue-50 text-blue-600"},
-  pickedUp:        {label:"picked Up", style:"bg-indigo-50 text-indigo-600"},
+  pickedUp:        {label:"Picked Up", style:"bg-indigo-50 text-indigo-600"},
   sorting:         {label:"Sorting",   style:"bg-yellow-50 text-yellow-600"},
   detailing:       {label:"Detailing", style:"bg-pink-50 text-pink-600"},
   cleaning:        {label:"Cleaning", style:"bg-orange-50 text-orange-600"},
@@ -38,18 +37,31 @@ const STATUS_CONFIG: Record<string, {label:string, style:string}> = {
   disputed:        {label:"Disputed", style:"bg-red-50 text-red-500"},    
   disputeResolved: {label:"Dispute resolved", style:"bg-green-50 text-green-500"},  
   cancelled:       {label:"Cancelled", style:"bg-red-50 text-red-600"},    
- 
 };
+
+// Removed `href` — these now drive in-place filtering only, not navigation
+const OrderStatusOptions = [
+  { label: "Confirmed",         value: "confirmed"        },
+  { label: "Picked Up",         value: "pickedUp"         },
+  { label: "Sorting",           value: "sorting"          },
+  { label: "Detailing",         value: "detailing"        },
+  { label: "Cleaning",          value: "cleaning"         },
+  { label: "Ready To Deliver",  value: "readyToDeliver"   },
+  { label: "Delivered",         value: "delivered"        },
+  { label: "Disputed",          value: "disputed"         },
+  { label: "Dispute Resolved",  value: "disputeResolved"  },
+  { label: "Cancelled",         value: "cancelled"        },
+];
 
 export default function OrderAll({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize, autoOpenOrderId }: OrderTabProps) {
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>(""); // "" = no filter applied
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
 
   // Auto-open dialog state
   const [autoOrder, setAutoOrder] = useState<Order | null>(null);
 
-  // When orders load, find the target order — fallback fetch if not on current page
   useEffect(() => {
     if (!autoOpenOrderId) return;
 
@@ -57,18 +69,24 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
     if (found) {
       setAutoOrder(found);
     } else if (!loading) {
-      // Not in current page — fetch directly
       getOrderById(autoOpenOrderId)
         .then(setAutoOrder)
         .catch(console.error);
     }
   }, [autoOpenOrderId, orders, loading]);
 
-  const filtered = orders.filter((order) =>
-    !search ||
-    order.userName.toLowerCase().includes(search.toLowerCase()) ||
-    order.id.includes(search)
-  );
+  // Filtering — status AND search both apply, combined with AND logic
+  const filtered = orders.filter((order) => {
+    const matchesSearch =
+      !search ||
+      order.userName.toLowerCase().includes(search.toLowerCase()) ||
+      order.id.includes(search);
+
+    const matchesStatus =
+      !statusFilter || order.latestStatus.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   const toggleItems = (id: string) => {
     setExpandedItems((prev) => ({
@@ -76,7 +94,6 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
       [id]: !prev[id],
     }));
   };
-
 
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
@@ -181,7 +198,6 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
           <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-500">UNPAID</span>
         );
 
-
       case "pcs":
         return <span className="font-semibold">{row.items.reduce((s, i) => s + i.count, 0)}</span>;
 
@@ -211,10 +227,21 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
       )}
       {/* Filter bar */}
       <div className="flex justify-between items-center mb-4 px-8">
-        <div className="flex gap-3">
-          {/* <FilterButton label="Filter Sections" />
-          <FilterButton label="Order Type" />
-          <FilterButton label="Date" /> */}
+        <div className="flex gap-3 items-center">
+          <FilterButton
+            label="Order Status"
+            options={OrderStatusOptions}
+            defaultValue={statusFilter || undefined}
+            onChange={setStatusFilter}
+          />
+          {/* {statusFilter && (
+            <button
+              onClick={() => setStatusFilter("")}
+              className="text-xs text-slate-400 hover:text-slate-600 underline transition"
+            >
+              Clear filter
+            </button>
+          )} */}
         </div>
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>

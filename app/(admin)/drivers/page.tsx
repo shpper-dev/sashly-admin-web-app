@@ -250,10 +250,10 @@ useEffect(() => { fetchDrivers(); }, []);
             <p className="text-sm text-slate-500">Manage your delivery drivers</p>
           </div>
           <div className="flex gap-3 items-center">
-            
+{/*             
             <button className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm">
               <Download className="h-3.5 w-3.5" /> Export CSV
-            </button>
+            </button> */}
             <AddDriverDialog onSuccess={fetchDrivers} />
           </div>
         </section>

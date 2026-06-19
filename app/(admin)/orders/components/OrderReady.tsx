@@ -207,8 +207,8 @@ export default function OrderReady({ orders, loading, onStatusUpdate, currentPag
     <div>
       <div className="flex justify-between items-center mb-4 px-8">
         <div className="flex gap-3">
-          <FilterButton label="Reports" />
-          <FilterButton label="Order Type" />
+          {/* <FilterButton label="Reports" />
+          <FilterButton label="Order Type" /> */}
         </div>
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>

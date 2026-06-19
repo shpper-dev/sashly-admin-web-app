@@ -7,7 +7,7 @@ import DriversEditProfile from './DriversEditProfile';
 import { DesignatedArea, Driver } from '@/lib/models/driver.model';
 import DriversRoutes from './DriversRoutes';
 import { Order } from '@/lib/models/order.model';
-import { subscribeToActiveOrdersByDriverId } from '@/lib/firebase/driver';
+import {  subscribeToAllOrdersByDriverId } from '@/lib/firebase/driver';
 
 type TabName = "orders" | "stats" | "edit profile" | "routes" | "payouts" | "messages" | "photos";
 
@@ -49,7 +49,7 @@ export default function DriverInfoDialog({ children, driver, onDelete, onSuccess
 
   setLoadingOrders(true);
 
-  const unsubscribe = subscribeToActiveOrdersByDriverId(
+  const unsubscribe = subscribeToAllOrdersByDriverId(
     driver.id,
     (data) => {
       setOrders(data);

@@ -56,7 +56,7 @@ const readyForDelivery = activeOrders.filter(
       {/* Section label */}
       <div className="flex items-center gap-2 mb-3">
         <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-        <span className="text-xs font-bold tracking-widest text-slate-400 uppercase">In Progress</span>
+        <span className="text-xs font-bold tracking-widest text-slate-400 uppercase">{activeFilter === "All" ? "All Orders" : "In Progress"}</span>
       </div>
 
       {/* Order Cards */}

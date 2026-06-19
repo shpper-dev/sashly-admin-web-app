@@ -32,9 +32,15 @@ export default function FilterDropdown({
   const router = useRouter();
 
   const handleSelect = (option: FilterOption) => {
-    setSelected(option.value);
-    onChange?.(option.value);
-    if (option.href) {
+    // Toggle off if the same option is clicked again — lets users clear the filter
+    const isDeselecting = selected === option.value;
+    const nextValue = isDeselecting ? undefined : option.value;
+
+    setSelected(nextValue);
+    onChange?.(nextValue ?? "");
+
+    
+    if (option.href && !onChange) {
       router.push(option.href);
     }
   }
@@ -44,6 +50,11 @@ export default function FilterDropdown({
       <DropdownMenuTrigger asChild>
         <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">
           {label}
+          {selected && (
+            <span className="px-1.5 py-0.5 rounded-full bg-[#1EB4D4] text-white text-[10px] font-bold">
+              1
+            </span>
+          )}
           <ChevronDown className="w-4 h-4" />
         </button>
       </DropdownMenuTrigger>

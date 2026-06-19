@@ -5,14 +5,13 @@ import {
   QueryConstraint,
   getCountFromServer,
   getDoc,
-  serverTimestamp,
-  onSnapshot
+  onSnapshot,
+  QueryDocumentSnapshot
 } from "firebase/firestore";
 import { Order, OrderStatuses, OrderStatus, OrderItem } from "@/lib/models/order.model";
 import { mapOrder } from "../mappers/order.mapper";
 import { createMessage } from "./message";
 import { SearchFilters } from "@/app/(admin)/search/page";
-import { QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { createDispute } from "./dispute";
 
 //Filters type
@@ -118,15 +117,7 @@ export async function advanceOrderStatus(
   // refine this once the disputes flow is finalised 
   if (newStatus === "disputed") {
     try {
-      // await createMessage({
-      //   orderId,
-      //   senderId: senderId || "system", 
-      //   text: "🚨 Dispute Opened: Admin has moved this order to dispute status.",
-      //   role: "admin", // since the admin is the one moving the status
-      //   readByUser: false,
-      //   readByAdmin: true,
-      // });
-
+     
       // temp dispute creation
       await createDispute({
         orderId,
@@ -382,63 +373,100 @@ export async function searchOrders({
   filters,
   pageSize = 10,
   lastDoc,
-}:{
+}: {
   filters: Partial<SearchFilters>;
   pageSize?: number;
   lastDoc?: QueryDocumentSnapshot | null;
 }) {
-  const constraints : any[] = [];
+  const constraints: any[] = [];
 
-  // exact match filters
-  if(filters.orderId){
-    constraints.push(where("id", "==", filters.orderId))
+  // Server-side filters
+  if (filters.orderId) {
+    constraints.push(where("id", "==", filters.orderId));
   }
-  if(filters.payment === "paid"){
+
+  if (filters.payment === "paid") {
     constraints.push(where("isPaid", "==", true));
   }
-  if(filters.payment === "unpaid"){
+
+  if (filters.payment === "unpaid") {
     constraints.push(where("isPaid", "==", false));
   }
-  if(filters.email){
-    constraints.push(where("userEmail", "==", filters.email.trim().toLowerCase()))
+
+  if (filters.email) {
+    constraints.push(
+      where("userEmail", "==", filters.email.trim().toLowerCase())
+    );
   }
 
-  // date filters
-  if(filters.placedAfter){
-    constraints.push(where("createdAt", ">=", new Date(filters.placedAfter).getTime()));
-  }
-  if(filters.placedBefore){
-    constraints.push(where("createdAt", "<=", new Date(filters.placedBefore).getTime()));
-  }
-  if(filters.paidAfter){
-    constraints.push(where("paymentDate", ">=", new Date(filters.paidAfter).getTime()));
-  }
-  if(filters.paidBefore){
-    constraints.push(where("paymentDate", "<=", new Date(filters.paidBefore).getTime()));
+  if (filters.placedAfter) {
+    constraints.push(
+      where("createdAt", ">=", new Date(filters.placedAfter).getTime())
+    );
   }
 
-  constraints.push(orderBy("createdAt","desc"));
-  
-  if (lastDoc) {
-    constraints.push(startAfter(lastDoc));
+  if (filters.placedBefore) {
+    constraints.push(
+      where("createdAt", "<=", new Date(filters.placedBefore).getTime())
+    );
   }
 
-  constraints.push(limit(pageSize));
+  if (filters.paidAfter) {
+    constraints.push(
+      where("paymentDate", ">=", new Date(filters.paidAfter).getTime())
+    );
+  }
 
-  const q = query(collection(db,"orders"),...constraints);
-  const snapshot = await getDocs(q);
-  
-  const docs = snapshot.docs;
-  let orders = docs.map(mapOrder);
+  if (filters.paidBefore) {
+    constraints.push(
+      where("paymentDate", "<=", new Date(filters.paidBefore).getTime())
+    );
+  }
 
-  // client side filtering
-  orders = applyClientFilters(orders, filters);
+  const FETCH_SIZE = 50;
+
+  let cursor = lastDoc;
+  let hasMore = true;
+
+  const results: Order[] = [];
+
+  while (results.length < pageSize && hasMore) {
+    const batchConstraints = [
+      ...constraints,
+      orderBy("createdAt", "desc"),
+      ...(cursor ? [startAfter(cursor)] : []),
+      limit(FETCH_SIZE),
+    ];
+
+    const q = query(collection(db, "orders"), ...batchConstraints);
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      hasMore = false;
+      break;
+    }
+
+    const fetchedOrders = snapshot.docs.map(mapOrder);
+
+    const filteredOrders = applyClientFilters(
+      fetchedOrders,
+      filters
+    );
+
+    results.push(...filteredOrders);
+
+    cursor = snapshot.docs[snapshot.docs.length - 1];
+
+    if (snapshot.docs.length < FETCH_SIZE) {
+      hasMore = false;
+    }
+  }
+
   return {
-    orders,
-    lastDoc: docs.length > 0 ? docs[docs.length - 1] : null,
-    hasMore: docs.length === pageSize,
+    orders: results.slice(0, pageSize),
+    lastDoc: cursor,
+    hasMore,
   };
-  
 }
 
 function applyClientFilters(orders: Order[], filters: Partial<SearchFilters>) {
@@ -501,7 +529,7 @@ export function subscribeToOrders(
 }
 
 // subscribe to orders by user ud
-export function subscribeToActiveOrdersByUserId(
+export function subscribeToAllOrdersByUserId(
   userId: string,
   callback: (orders: Order[]) => void
 ) {

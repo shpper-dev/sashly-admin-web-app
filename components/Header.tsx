@@ -15,17 +15,17 @@ export default function Header() {
 
   return (
     <div className="fixed bg-white top-0 h-12 left-60 right-0 border-b border-b-blue-500/30 z-10">
-      <div className="flex items-center justify-between h-full px-6">
+      <div className="flex items-center justify-end h-full px-6">
 
         {/* Search */}
-        <div className="flex items-center px-4 py-1.5 bg-slate-200/50 rounded-lg text-sm gap-2">
+        {/* <div className="flex items-center px-4 py-1.5 bg-slate-200/50 rounded-lg text-sm gap-2">
           <Search className="h-4 w-4 text-gray-500 shrink-0" />
           <input
             type="text"
             placeholder="Search order, drivers, etc"
             className="bg-transparent border-none outline-none text-sm placeholder:text-gray-400"
           />
-        </div>
+        </div> */}
 
         {/* Right section */}
         <div className="flex items-center gap-1">
