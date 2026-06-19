@@ -1,6 +1,11 @@
 "use client";
 import React, { useState, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, DrawingManager } from '@react-google-maps/api';
+import {
+  GoogleMap,
+  useJsApiLoader,
+  Polygon,
+  Marker,
+} from "@react-google-maps/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { UserIcon, Phone, Mail, MapPin, Save, Plus, Camera, Loader2 } from 'lucide-react';
 import { createDriver } from '@/lib/firebase/driver';
@@ -37,9 +42,8 @@ export default function AddDriverDialog({onSuccess}:AddDriverDialogProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-    libraries: ['drawing']
+  id: "google-map-script",
+  googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
   });
 
   const onImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,17 +54,27 @@ export default function AddDriverDialog({onSuccess}:AddDriverDialogProps) {
     }
   };
 
-  const onPolygonComplete = (poly: google.maps.Polygon) => {
-    const path = poly.getPath();
-    const coords = [];
-    for (let i = 0; i < path.getLength(); i++) {
-      const point = path.getAt(i);
-      coords.push({ lat: point.lat(), lng: point.lng() });
-    }
-    setPolygon(coords);
-    poly.setMap(null); 
-  };
+ const handleMapClick = (e: google.maps.MapMouseEvent) => {
+   const latLng = e.latLng;
+   if (!latLng) return; 
 
+   setPolygon((prev) => [
+     ...prev,
+     {
+       lat: latLng.lat(),
+       lng: latLng.lng(),
+     },
+   ]);
+ };
+
+  const clearPolygon = () => {
+    setPolygon([]);
+  };
+  
+  const removePoint = (index: number) => {
+    setPolygon((prev) => prev.filter((_, i) => i !== index));
+  };
+  
   const handleSave = async () => {
   if (!name || !phoneNumber) {
     alert("Please provide name & phone");
@@ -174,11 +188,17 @@ export default function AddDriverDialog({onSuccess}:AddDriverDialogProps) {
             <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
               <p className="text-[10px] uppercase font-bold text-slate-400 mb-2">Polygon Status</p>
               {polygon.length >= 3 ? (
-                <div className="flex items-center gap-2 text-emerald-600 text-xs font-bold">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  {polygon.length} Points Captured
-                </div>
-              ) : (
+                 <div className="space-y-1">
+                   <div className="flex items-center gap-2 text-emerald-600 text-xs font-bold">
+                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                     Area Ready
+                   </div>               
+
+                   <p className="text-[11px] text-slate-500">
+                     {polygon.length} boundary points
+                   </p>
+                 </div>
+               ) : (
                 <p className="text-xs text-slate-400 italic">Draw area on the map (min 3 points)</p>
               )}
             </div>
@@ -186,33 +206,77 @@ export default function AddDriverDialog({onSuccess}:AddDriverDialogProps) {
 
           {/* Right Side: Map */}
           <div className="flex-1 bg-slate-100 relative">
+            
             {isLoaded ? (
+            <>
+              <div className="absolute top-4 left-4 z-10 bg-white rounded-xl shadow-lg px-4 py-3">
+                <p className="text-xs font-semibold text-slate-700">
+                  Click the map to create a delivery area
+                </p>            
+  
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Click markers to remove points
+                </p>
+              </div>
               <GoogleMap
-                mapContainerStyle={{ width: '100%', height: '100%' }}
-                center={{ lat: 24.7136, lng: 46.6753 }}
+                mapContainerStyle={{
+                  width: "100%",
+                  height: "100%",
+                }}
+                center={{
+                  lat: 24.7136,
+                  lng: 46.6753,
+                }}
                 zoom={12}
-                options={{ disableDefaultUI: true, zoomControl: true }}
+                onClick={handleMapClick}
+                options={{
+                  disableDefaultUI: true,
+                  zoomControl: true,
+                }}
               >
-                <DrawingManager
-                  onPolygonComplete={onPolygonComplete}
-                  options={{
-                    drawingControl: true,
-                    drawingControlOptions: {
-                      position: google.maps.ControlPosition.TOP_CENTER,
-                      drawingModes: [google.maps.drawing.OverlayType.POLYGON],
-                    },
-                    polygonOptions: {
-                      fillColor: '#7F50F4',
+                {polygon.length >= 2 && (
+                  <Polygon
+                    paths={polygon}
+                    options={{
+                      fillColor: "#7F50F4",
                       fillOpacity: 0.3,
                       strokeWeight: 2,
-                      strokeColor: '#7F50F4',
-                      clickable: false,
+                      strokeColor: "#7F50F4",
                       editable: false,
-                      zIndex: 1,
-                    },
-                  }}
-                />
+                    }}
+                  />
+                )}              
+
+                {polygon.map((point, index) => (
+                  <Marker
+                    key={index}
+                    position={point}
+                    onClick={() => removePoint(index)}
+                    icon={{
+                      path: google.maps.SymbolPath.CIRCLE,
+                      scale: 10,
+                      fillColor: "#7F50F4",
+                      fillOpacity: 1,
+                      strokeColor: "#FFFFFF",
+                      strokeWeight: 2,
+                    }}
+                    label={{
+                      text: `${index + 1}`,
+                      color: "#FFFFFF",
+                      fontSize: "11px",
+                      fontWeight: "bold",
+                    }}
+                  />
+                ))}
               </GoogleMap>
+              <button
+                type="button"
+                onClick={clearPolygon}
+                className="absolute top-4 right-4 z-10 bg-white shadow-lg px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Clear Area
+              </button>
+            </>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400 text-sm">
                 <Loader2 className="animate-spin mr-2" /> Loading Maps...

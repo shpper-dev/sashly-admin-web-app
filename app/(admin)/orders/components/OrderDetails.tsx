@@ -201,9 +201,9 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
       {/* Filter bar */}
       <div className="flex justify-between items-center mb-4 px-8">
         <div className="flex gap-3">
-          <FilterButton label="Filter Sections" />
+          {/* <FilterButton label="Filter Sections" />
           <FilterButton label="Order Type" />
-          <FilterButton label="Date" />
+          <FilterButton label="Date" /> */}
         </div>
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>

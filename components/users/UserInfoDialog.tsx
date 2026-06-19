@@ -9,7 +9,7 @@ import UsersMessages from './UsersMessages';
 import UsersPickups from './UsersPickups';
 import UsersPhotos from './UsersPhotos';
 import { User } from '@/lib/models/user.model';
-import { getActiveOrdersByUserId, subscribeToActiveOrdersByUserId } from "@/lib/firebase/order";
+import {  subscribeToAllOrdersByUserId } from "@/lib/firebase/order";
 import { Order } from '@/lib/models/order.model';
 import UsersWallet from './UsersWallet';
 
@@ -68,7 +68,7 @@ useEffect(() => {
 
   setLoadingOrders(true);
 
-  const unsubscribe = subscribeToActiveOrdersByUserId(
+  const unsubscribe = subscribeToAllOrdersByUserId(
     user.userId,
     (data) => {
       setOrders(data);
@@ -197,14 +197,14 @@ useEffect(() => {
             </div>
 
             {/* Bottom: action buttons */}
-            <div className="flex flex-col gap-2 border-t border-slate-300 pt-4 mt-6">
+            {/* <div className="flex flex-col gap-2 border-t border-slate-300 pt-4 mt-6">
               <button className="w-full py-2.5 px-4 bg-[#7F50F4] hover:bg-[#6B3FD4] text-white text-xs font-bold rounded-xl transition-colors">
                 + Create Order
               </button>
               <button className="w-full py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition-colors">
                 Send Message
               </button>
-            </div>
+            </div> */}
           </div>
 
           {/* Main content area */}

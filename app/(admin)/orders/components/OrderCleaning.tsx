@@ -191,10 +191,10 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
     <div>
       <div className="flex justify-between items-center mb-4 px-8">
         <div className="flex gap-3">
-          <FilterDropdown label="Reports" options={cleaningReportOptions} />
+          {/* <FilterDropdown label="Reports" options={cleaningReportOptions} />
           <FilterDropdown label="Sections" />
           <FilterDropdown label="Order Type" />
-          <FilterDropdown label="Date" />
+          <FilterDropdown label="Date" /> */}
         </div>
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>

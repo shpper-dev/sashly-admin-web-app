@@ -225,9 +225,9 @@ const handlePrev = async () => {
                 className="bg-transparent outline-none text-xs text-slate-600 placeholder:text-slate-400 w-full"
               />
             </div>
-            <button className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm">
+            {/* <button className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm">
               <Download className="h-3.5 w-3.5" /> Export CSV
-            </button>
+            </button> */}
           </div>
         </section>
 

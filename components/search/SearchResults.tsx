@@ -25,15 +25,18 @@ const filterLabels: Record<keyof SearchFilters, string> = {
   cleanedAfter: "Cleaned After",
   cleanedBefore: "Cleaned Before",
 } 
-const STATUS_CONFIG: Record<string, { label: string; color: string;  }> = {
-  confirmed:      { label: "Confirmed",        color: "text-blue-600 bg-blue-50",     },
-  pickedUp:       { label: "Picked Up",        color: "text-indigo-600 bg-indigo-50",  },
-  sorting:        { label: "Sorting",          color: "text-yellow-600 bg-yellow-50",  },
-  inProgress:     { label: "In Progress",      color: "text-orange-600 bg-orange-50", },
-  readyToDeliver: { label: "Ready to Deliver", color: "text-purple-600 bg-purple-50",},
-  delivered:      { label: "Delivered",        color: "text-green-600 bg-green-50", },
-  disputed:       { label: "Disputed",         color: "text-red-500 bg-red-50",    },
-  cancelled:      { label: "Cancelled",        color: "text-red-600 bg-red-50",    },
+
+const STATUS_CONFIG: Record<string, { label: string; color: string;}> = {
+  confirmed:      { label: "Confirmed",        color: "text-blue-600 bg-blue-50"   },
+  pickedUp:       { label: "Picked Up",        color: "text-indigo-600 bg-indigo-50" },
+  sorting:        { label: "Sorting",          color: "text-yellow-600 bg-yellow-50" },
+  detailing:      { label: "detailing",        color: "text-pink-600 bg-pink-50"   },
+  cleaning:       { label: "Cleaning",         color: "text-orange-600 bg-orange-50" },
+  readyToDeliver: { label: "Ready to Deliver", color: "text-purple-600 bg-purple-50" },
+  delivered:      { label: "Delivered",        color: "text-green-600 bg-green-50"  },
+  disputed:       { label: "Disputed",         color: "text-red-500 bg-red-50"  },
+  disputeResolved:{ label: "Dispute Resolved", color: "text-green-500 bg-green-50"  },
+  cancelled:      { label: "Cancelled",        color: "text-red-600 bg-red-50"    },
 };
 
 function fmt(ts?: number | null) {
@@ -117,8 +120,8 @@ function renderCellContent(col: string, order: Order) {
 
     case "status":
       return (
-        <span className={`px-2 py-1 text-[10px] font-semibold rounded-full ${STATUS_CONFIG[order.latestStatus.status].color}`}>
-          {order.latestStatus.status}
+        <span className={`px-2 py-1 text-[10px] font-semibold rounded-full ${STATUS_CONFIG[order.latestStatus?.status]?.color ?? "text-slate-500 bg-slate-50"}`}>
+          {STATUS_CONFIG[order.latestStatus?.status]?.label ?? order.latestStatus.status}
         </span>
       )
 
