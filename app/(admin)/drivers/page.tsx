@@ -21,7 +21,7 @@ const driverHeadings: TableHeading[] = [
   { id: "active",  title: "ACTIVE"        },
   { id: "online",  title: "ONLINE"        },
   { id: "offer" ,  title: "OFFER RESPONSE"},
-  { id: "updated", title: "LAST UPDATED"  },
+  { id: "max_orders", title: "MAX ORDERS"  },
 ];
 
 //  Filter definitions
@@ -33,16 +33,6 @@ const CLIENT_FILTERS: { label: string; fn: (d: Driver) => boolean }[] = [
   { label: "Has Area",         fn: (d) => !!d.designatedArea            },
   { label: "Missing Area",     fn: (d) => !d.designatedArea             },
 ];
-
-
-
-function fmt(ts?: { seconds: number } | null) {
-  if (!ts) return "—";
-  return new Date(ts.seconds * 1000).toLocaleDateString("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
-  });
-}
-
 
 export default function Drivers() {
   const [loading,      setLoading]      = useState(false);
@@ -228,9 +218,12 @@ useEffect(() => { fetchDrivers(); }, []);
           />
         );
 
-      case "updated":
+      case "max_orders":
         return (
-          <span className="text-xs text-slate-500">{fmt(row.updatedAt)}</span>
+          <div className='flex items-center justify-center'>
+            <span className="text-sm text-slate-900 font-semibold">{row.maxActiveOrders}</span>
+          </div>
+          
         );
 
       default:

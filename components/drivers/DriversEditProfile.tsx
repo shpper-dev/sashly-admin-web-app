@@ -2,7 +2,8 @@
 import React, { useRef, useState } from 'react';
 import { 
   Mail, Phone, UserIcon, RotateCcw, Save, 
-  MapPin, Camera,  X, Ban, Route
+  MapPin, Camera,  X, Ban, Route,
+  PackagePlus
 } from 'lucide-react';
 import { Driver } from '@/lib/models/driver.model';
 import { deleteImage, uploadImage } from '@/lib/utils';
@@ -12,6 +13,13 @@ import { Switch } from '../ui/switch';
 interface DriversEditProfileProps {
   driver: Driver;
   onSuccess?: () => void;
+}
+
+function fmt(ts?: { seconds: number } | null) {
+  if (!ts) return "—";
+  return new Date(ts.seconds * 1000).toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  });
 }
 
 export default function DriversEditProfile({ driver, onSuccess }: DriversEditProfileProps) {
@@ -28,6 +36,7 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
   const [email, setEmail] = useState(driver.email ?? "");
   const [phoneNumber, setPhoneNumber] = useState(driver.phoneNumber ?? "");
   const [profileImageUrl, setProfileImageUrl] = useState(driver.profileImageUrl ?? "");
+  const [maxOrders, setMaxOrders] = useState(driver.maxActiveOrders ?? 5);
 
   // Image handling
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
@@ -91,6 +100,7 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
         email,
         phoneNumber,
         profileImageUrl: finalImageUrl || null,
+        maxActiveOrders: maxOrders || 5,
       });
       onSuccess?.();
     } catch (e) {
@@ -168,25 +178,10 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
           <InputWithIcon icon={Mail} value={email} onChange={setEmail} />
         </FormField>
 
-        {/* Read Only Designated Area */}
-        <FormField label="Designated Area (Read Only)">
-          <div className="flex flex-col rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 gap-1 opacity-70">
-            <div className="flex items-center gap-3">
-              <Route className="h-4 w-4 text-slate-400 shrink-0" />
-              <span className="text-sm text-slate-600 truncate">
-                {driver.designatedArea?.areaName ?? "No area assigned"}
-              </span>
-            </div>
-            {driver.designatedArea?.center && (
-              <div className="flex items-center gap-1.5 pl-7">
-                <MapPin className="h-3 w-3 text-slate-300 shrink-0" />
-                <span className="text-[10px] font-mono text-slate-400">
-                  {driver.designatedArea.center.lat.toFixed(6)}, {driver.designatedArea.center.lng.toFixed(6)}
-                </span>
-              </div>
-            )}
-          </div>
+        <FormField label="Max Active Orders">
+          <InputWithIcon icon={PackagePlus} value={maxOrders} onChange={setMaxOrders} type='number' />
         </FormField>
+        
 
         {/* Online Status */}
         <FormField label="Online Status">
@@ -242,6 +237,29 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
               {driver.id}
             </div>
           </FormField>
+          <FormField label="Updated At">
+            <div className="flex items-center h-11 rounded-xl border border-slate-100 bg-slate-50 px-4 text-xs font-mono text-slate-400">
+              {fmt(driver.updatedAt)}
+            </div>
+          </FormField>
+          <FormField label="Designated Area (Read Only)">
+          <div className="flex flex-col rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 gap-1 opacity-70">
+            <div className="flex items-center gap-3">
+              <Route className="h-4 w-4 text-slate-400 shrink-0" />
+              <span className="text-sm text-slate-600 truncate">
+                {driver.designatedArea?.areaName ?? "No area assigned"}
+              </span>
+            </div>
+            {driver.designatedArea?.center && (
+              <div className="flex items-center gap-1.5 pl-7">
+                <MapPin className="h-3 w-3 text-slate-300 shrink-0" />
+                <span className="text-[10px] font-mono text-slate-400">
+                  {driver.designatedArea.center.lat.toFixed(6)}, {driver.designatedArea.center.lng.toFixed(6)}
+                </span>
+              </div>
+            )}
+          </div>
+        </FormField>
         </div>
       </div>
 
@@ -299,21 +317,26 @@ function InputWithIcon({
   icon: Icon,
   value,
   onChange,
-  placeholder
+  placeholder,
+  type = "text"
 }: {
   icon: any;
-  value: string;
-  onChange: (val: string) => void;
+  value: string | number;
+  onChange: (val: any) => void;
   placeholder?: string;
+  type?: "text" | "number";
 }) {
   return (
-    <div className="flex items-center h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 gap-3 focus-within:ring-2 focus-within:ring-[#7F50F4] focus-within:border-transparent transition">
+    <div className="flex items-center h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 gap-3">
       <Icon className="h-4 w-4 text-slate-400 shrink-0" />
       <input
+        type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) =>
+          onChange(type === "number" ? Number(e.target.value) : e.target.value)
+        }
         placeholder={placeholder}
-        className="flex-1 bg-transparent text-sm text-slate-700 focus:outline-none min-w-0"
+        className="flex-1 bg-transparent text-sm text-slate-700 focus:outline-none"
       />
     </div>
   );

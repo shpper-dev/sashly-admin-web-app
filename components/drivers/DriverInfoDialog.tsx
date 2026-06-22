@@ -127,15 +127,38 @@ export default function DriverInfoDialog({ children, driver, onDelete, onSuccess
                   <ContactItem icon={Phone} label="Phone" value={driver.phoneNumber} />
                   <ContactItem icon={Calendar} label="Joined" value={fmt(driver.createdAt)} />
                 </div>
+                <div className="h-px bg-slate-200" />
+                
+                <div className='flex flex-col gap-1'>
+                  <span className='text-xs font-bold uppercase text-slate-400'>Orders</span>
+                  <div className="flex items-center gap-3 w-full">
+                  
+                    <div className="flex flex-col  pl-3 pr-6 py-2 bg-white rounded-xl border border-slate-100">
+                      <span className="text-[10px] font-bold uppercase  text-slate-400">
+                        Active
+                      </span>
+                      <span className="text-md font-bold text-slate-700">{driver.activeOrderCount}</span>
+                    </div>
+                    <div className="flex flex-col pl-3 pr-6 py-2 bg-white rounded-xl border border-slate-100">
+                      <span className="text-[10px] font-bold uppercase text-slate-400 text-nowrap">
+                       Today
+                      </span>
+                      <span className="text-md font-bold text-[#4F39F6] text-nowrap">
+                       {driver.ordersCompletedToday} of {driver.ordersAssignedToday}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
+
               <div className="flex flex-col gap-2 border-t border-slate-300 pt-4 mt-6">
-                <button className="w-full py-2.5 px-4 bg-[#7F50F4] hover:bg-[#6B3FD4] text-white text-xs font-bold rounded-xl transition-colors">
+                {/* <button className="w-full py-2.5 px-4 bg-[#7F50F4] hover:bg-[#6B3FD4] text-white text-xs font-bold rounded-xl transition-colors">
                   + Assign Route
                 </button>
                 <button className="w-full py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition-colors">
                   Send Message
-                </button>
+                </button> */}
               </div>
             </div>
 
