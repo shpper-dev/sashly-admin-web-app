@@ -21,8 +21,16 @@ export function mapDriver(doc: QueryDocumentSnapshot<DocumentData>): Driver {
        isActive: data.isActive ?? true,              
        isOnline: data.isOnline ?? true, 
        
-       enableDriverOfferResponse: data.enableDriverOfferResponse ?? false,
+       enableDriverOfferResponse: data.enableDriverOfferResponse ?? true,
+
+       // counts
+       activeOrderCount: data.activeOrderCount ?? 0,
+       ordersAssignedToday: data.ordersAssignedToday ?? 0,
+       ordersCompletedToday: data.ordersCompletedToday ?? 0,
+       maxActiveOrders: data.maxActiveOrders ?? 5,
    
+       // dates
+       lastAssignedAt: data.lastAssignedAt ??  null,
        createdAt: data.createdAt ?? 0,
        updatedAt: data.updatedAt ??  null,
     }

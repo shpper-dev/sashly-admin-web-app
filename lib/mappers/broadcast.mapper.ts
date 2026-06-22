@@ -1,7 +1,7 @@
-import { QueryDocumentSnapshot, Timestamp } from "firebase/firestore";
+import { DocumentData, QueryDocumentSnapshot, Timestamp } from "firebase/firestore";
 import {Broadcast } from "../models/broadcast.model";
 
-export function mapBroadcast(doc: QueryDocumentSnapshot):Broadcast{
+export function mapBroadcast(doc: QueryDocumentSnapshot<DocumentData>):Broadcast{
     const data = doc.data();
 
     if(!data){

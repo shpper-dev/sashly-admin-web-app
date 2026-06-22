@@ -15,7 +15,16 @@ export function serializeDriver(driver: Partial<Driver>){
        isActive: driver.isActive ?? true,              
        isOnline: driver.isOnline ?? true,             
        
-       enableDriverOfferResponse: driver.enableDriverOfferResponse ?? false,
+       enableDriverOfferResponse: driver.enableDriverOfferResponse ?? true,
+
+       // counts
+       activeOrderCount: driver.activeOrderCount ?? 0,
+       ordersAssignedToday: driver.ordersAssignedToday ?? 0,
+       ordersCompletedToday: driver.ordersCompletedToday ?? 0,
+       maxActiveOrders: driver.maxActiveOrders ?? 5,
+   
+       // dates
+       lastAssignedAt: driver.lastAssignedAt ??  null,
 
        createdAt: driver.createdAt ?? serverTimestamp(),
        updatedAt: driver.updatedAt ??  null,

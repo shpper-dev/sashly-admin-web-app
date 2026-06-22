@@ -13,7 +13,15 @@ export interface Driver{
     
     // offer toggle
     enableDriverOfferResponse: boolean;
- 
+
+    // counts
+    activeOrderCount?: number;
+    ordersAssignedToday?: number;
+    ordersCompletedToday?: number;
+    maxActiveOrders?: number;
+
+    // dates
+    lastAssignedAt?: FirebaseFirestore.Timestamp | null;
     createdAt: FirebaseFirestore.Timestamp;
     updatedAt?: FirebaseFirestore.Timestamp | null;
 };
