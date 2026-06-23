@@ -27,6 +27,8 @@ export function mapUser(doc: QueryDocumentSnapshot<DocumentData>): User {
 
     createdAt: data.createdAt?.toMillis?.() ?? data.createdAt ?? 0,
 
+    businessAccountId: data.businessAccountId ?? null,
+
     isDeleted: data.isDeleted ?? false,
     deletedAt: data.deletedAt ?? null,
   };

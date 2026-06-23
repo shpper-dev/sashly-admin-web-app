@@ -67,6 +67,8 @@ export interface Order {
     disputeIssueType?: DisputeIssueType | null;
     lastDisputeAt?: number | null;
 
+    businessAccountId?: string | null;
+
     ratingByUser ?: OrderRating | null;
     createdAt : number;
     updatedAt: number;

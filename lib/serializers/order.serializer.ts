@@ -96,6 +96,8 @@ export function serializeOrder(order: Partial<Order>) {
     disputeIssueType: order.disputeIssueType ?? null,
     lastDisputeAt: order.lastDisputeAt ?? 0,
 
+    businessAccountId: order.businessAccountId ?? null,
+
 
     ratingByUser: order.ratingByUser
       ? {

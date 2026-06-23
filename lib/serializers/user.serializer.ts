@@ -18,6 +18,8 @@ export function serializeUser(user: Partial<User>) {
 
     createdAt: user.createdAt ?? Date.now(),
 
+    businessAccountId: user.businessAccountId ?? null,
+
     isDeleted: user.isDeleted ?? false,
     deletedAt: user.deletedAt ?? null,
   };

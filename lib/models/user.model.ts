@@ -10,6 +10,9 @@ export interface User {
     profileImageUrl?: string | null;
     appLanguageCode?: string | null;
     notificationPref: NotificationPref ;
+    
+    businessAccountId?: string | null;
+
     createdAt: number;
     isDeleted?: boolean | null;
     deletedAt?: number | null;

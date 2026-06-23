@@ -34,11 +34,7 @@ export async function createBusiness(
     collection(db, "businesses"),
     serializeBusiness({
       ...data,
-      rating: 0,
-      totalOrders: 0,
-      isDeleted: false,
       createdAt: Date.now(),
-      updatedAt: Date.now(),
     })
   );
 
@@ -60,33 +56,32 @@ export async function updateBusiness(
     businessRef,
     serializeBusiness({
       ...data,
-      updatedAt: Date.now(),
     })
   );
 }
 
 // soft delete business
-export async function blockBusiness(
-  businessId: string
-): Promise<void> {
-  await updateDoc(
-    doc(db, "businesses", businessId),
-    {
-      isDeleted: true,
-      updatedAt: Date.now(),
-    }
-  );
-}
+// export async function blockBusiness(
+//   businessId: string
+// ): Promise<void> {
+//   await updateDoc(
+//     doc(db, "businesses", businessId),
+//     {
+//       isDeleted: true,
+//       updatedAt: Date.now(),
+//     }
+//   );
+// }
 
-// restore business
-export async function restoreBusiness(
-  businessId: string
-): Promise<void> {
-  await updateDoc(
-    doc(db, "businesses", businessId),
-    {
-      isDeleted: false,
-      updatedAt: Date.now(),
-    }
-  );
-}
+// // restore business
+// export async function restoreBusiness(
+//   businessId: string
+// ): Promise<void> {
+//   await updateDoc(
+//     doc(db, "businesses", businessId),
+//     {
+//       isDeleted: false,
+//       updatedAt: Date.now(),
+//     }
+//   );
+// }
