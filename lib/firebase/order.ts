@@ -6,13 +6,16 @@ import {
   getCountFromServer,
   getDoc,
   onSnapshot,
-  QueryDocumentSnapshot
+  QueryDocumentSnapshot,
+  addDoc
 } from "firebase/firestore";
-import { Order, OrderStatuses, OrderStatus, OrderItem } from "@/lib/models/order.model";
+import { Order, OrderStatuses, OrderStatus, OrderItem, ServiceType } from "@/lib/models/order.model";
 import { mapOrder } from "../mappers/order.mapper";
 import { createMessage } from "./message";
 import { SearchFilters } from "@/app/(admin)/search/page";
 import { createDispute } from "./dispute";
+import { UserAddress } from "../models/user.model";
+import { getCatalog } from "./business";
 
 //Filters type
 export interface OrderFilters {
@@ -595,4 +598,110 @@ export async function getPendingPayoutsTotal(): Promise<number> {
     const data = doc.data();
     return sum + (data.totalPrice ?? 0);
   }, 0);
+}
+
+// business orders
+
+export interface CreateBusinessOrderInput {
+  businessId:       string;
+  businessName:     string;
+  businessPhone:    string;
+  catalogItemIds:   { itemId: string; count: number }[];
+  serviceType:      ServiceType;
+  pickUpAddress:    UserAddress;
+  deliveryAddress:  UserAddress;
+  pickUpStartTime:  number;
+  pickUpEndTime:    number;
+  expectedDeliveryTime?: number | null;
+  notes?: string | null;
+}
+
+export async function createBusinessOrder(
+  input: CreateBusinessOrderInput
+): Promise<string> {
+  // Fetch the business catalog to resolve item names + prices
+  const catalog = await getCatalog(input.businessId);
+  const catalogMap = new Map(catalog.map(c => [c.id, c]));
+
+  const items: OrderItem[] = input.catalogItemIds
+    .map(({ itemId, count }) => {
+      const catalogItem = catalogMap.get(itemId);
+      if (!catalogItem) return null;
+      return {
+        id:               catalogItem.id,
+        name:             catalogItem.name,
+        arabicName:       "",                          // catalog items are flat
+        categoryId:       catalogItem.category ?? "",
+        serviceName:      catalogItem.serviceType ?? "",
+        serviceArabicName: "",
+        servicePrice:     catalogItem.price,
+        count,
+        photoUrl:         catalogItem.imageUrl ?? null,
+      } satisfies OrderItem;
+    })
+    .filter(Boolean) as OrderItem[];
+
+  if (items.length === 0) throw new Error("No valid items resolved from catalog");
+
+  const totalPrice = items.reduce((sum, item) => sum + item.servicePrice * item.count, 0);
+
+  const orderData: Omit<Order, "id"> = {
+    // Business orders don't have an individual user — use the business as the
+    // "customer" identity so existing reports and table cells still work
+    userId:            input.businessId,
+    userName:          input.businessName,
+    userEmail:         "",
+    userPhone:         input.businessPhone,
+
+    orderNumber:       null,
+    items,
+    totalPrice,
+    latestStatus:      { status: "confirmed", createdAt: Date.now() },
+    statusHistory:     [{ status: "confirmed", createdAt: Date.now() }],
+    isPaid:            false,
+    isDelivered:       false,
+    isCancelled:       false,
+    serviceType:       input.serviceType,
+    pickUpStartTime:   input.pickUpStartTime,
+    pickUpEndTime:     input.pickUpEndTime,
+    pickUpAddress:     input.pickUpAddress,
+    deliveryAddress:   input.deliveryAddress,
+    expectedDeliveryTime: input.expectedDeliveryTime ?? null,
+    deliveryStartTime: null,
+    deliveryEndTime:   null,
+    paidBy:            null,
+    paymentInfo:       null,
+    paymentDate:       null,
+    discountAmount:    null,
+    appliedCoupon:     null,
+    assignedDriverId:  null,
+    driverName:        null,
+    driverPhone:       null,
+    driverProfileImageUrl: null,
+    driverAssignedAt:  null,
+    driverAcceptedAt:  null,
+    driverEarnings:    null,
+    platformFee:       null,
+    driverFee:         null,
+    driverLocation:    null,
+    estimatedPickupTime:   null,
+    estimatedDeliveryTime: null,
+    deliveryNotes:     input.notes ?? null,
+    pickupPhotoUrl:    null,
+    deliveryPhotoUrl:  null,
+    customerSignatureUrl: null,
+    driverActivePhase: null,
+    hasOpenDispute:    null,
+    disputeId:         null,
+    disputeStatus:     null,
+    disputeIssueType:  null,
+    lastDisputeAt:     null,
+    businessAccountId: input.businessId,  // ← tags the order to the business
+    ratingByUser:      null,
+    createdAt:         Date.now(),
+    updatedAt:         Date.now(),
+  };
+
+  const ref = await addDoc(collection(db, "orders"), orderData);
+  return ref.id;
 }

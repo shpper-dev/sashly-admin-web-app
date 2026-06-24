@@ -2,192 +2,239 @@
 import Header from "@/components/Header";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ChevronLeft, ChevronRight, Download, Search, SlidersHorizontal,Phone, Star, Pencil, Trash2, Plus,
-  Loader2,
-  Archive,
-  ArchiveRestore,
+  ChevronLeft, ChevronRight, Search, SlidersHorizontal,
+  Phone, Pencil, Trash2, Plus, Copy, RefreshCw, Check,
+  Users, Loader2,
+  CopyPlusIcon,
 } from "lucide-react";
 import { TableHeading } from "@/lib/types";
 import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import BusinessAccountDialog from "@/components/business/BusinessAccountDialog";
-import { PricingDialog } from "@/components/business/PricingDialog";
 import { Business } from "@/lib/models/business.model";
-import { blockBusiness, getBusinesses, restoreBusiness } from "@/lib/firebase/business";
+import { deleteBusiness, duplicateBusiness, getBusinesses, regenerateBusinessJoinCode } from "@/lib/firebase/business";
+import { useToast } from "@/lib/providers/ToastProvider";
+import TableSkeleton from "@/components/skeleton/TableSkeleton";
 
-//  Constants 
-
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 const businessHeadings: TableHeading[] = [
-  { id: "name",        title: "BUSINESS"       },
-  { id: "location",    title: "LOCATION"       },
-  { id: "contact",     title: "CONTACT"        },
-  { id: "rating",      title: "RATING"         },
-  { id: "orders",      title: "TOTAL ORDERS"   },
-  { id: "pricing",     title: "PRICING"        },
-  { id: "status",      title: "STATUS"         },
-  { id: "actions",     title: "ACTIONS"        },
+  { id: "name",      title: "BUSINESS"  },
+  { id: "join_code", title: "JOIN CODE" },
+  { id: "contact",   title: "CONTACT"   },
+  { id: "members",   title: "MEMBERS"   },
+  { id: "status",    title: "STATUS"    },
+  { id: "actions",   title: "ACTIONS"   },
 ];
 
-const STATUS_FILTERS = ["All", "Active", "Suspended"] as const;
+const STATUS_FILTERS = ["All", "Active", "Inactive"] as const;
 
 export default function BusinessAccounts() {
-  const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm]       = useState("");
-  const [statusFilter, setStatusFilter]   = useState<string>("All");
-  const [cityFilter, setCityFilter]       = useState<string>("All");
-  const [currentPage, setCurrentPage]     = useState(1);
+  const [businesses,    setBusinesses]    = useState<Business[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [searchTerm,    setSearchTerm]    = useState("");
+  const [statusFilter,  setStatusFilter]  = useState<string>("All");
+  const [currentPage,   setCurrentPage]   = useState(1);
+  const [copiedId,      setCopiedId]      = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const { showToast } = useToast();
 
-  useEffect(() => {
-  loadBusinesses();
-}, []);
+  const loadBusinesses = async () => {
+    try {
+      setLoading(true);
+      setBusinesses(await getBusinesses());
+    } catch (e) {
+      console.error("Failed to load businesses", e);
+      showToast("Failed to load businesses", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-async function loadBusinesses() {
-  try {
-    setLoading(true);
+  useEffect(() => { loadBusinesses(); }, []);
 
-    const rows = await getBusinesses();
+  const handleCopyCode = (b: Business) => {
+    navigator.clipboard.writeText(b.joinCode);
+    setCopiedId(b.id);
+    setTimeout(() => setCopiedId(null), 1500);
+  };
 
-    setBusinesses(rows);
-  } catch (error) {
-    console.error("Failed to load businesses", error);
-  } finally {
-    setLoading(false);
-  }
-}
-  const filtered = useMemo(() => {
-    return businesses.filter((b) => {
-      const term = searchTerm.toLowerCase();
-      const matchesSearch = !term || (
-        b.name.toLowerCase().includes(term) ||
-        b.ownerName.toLowerCase().includes(term) ||
-        b.email.toLowerCase().includes(term) ||
-        b.address?.toLowerCase().includes(term)
+  // Regenerate join code and update local state without a full reload
+  const handleRegenerate = async (b: Business) => {
+    setRegeneratingId(b.id);
+    try {
+      const newCode = await regenerateBusinessJoinCode(b.id);
+      setBusinesses((prev) =>
+        prev.map((biz) => (biz.id === b.id ? { ...biz, joinCode: newCode } : biz))
       );
-      const matchesStatus =
-  statusFilter === "All" ||
-  (statusFilter === "Active" && !b.isDeleted) ||
-  (statusFilter === "Suspended" && b.isDeleted);
-      
-      return matchesSearch && matchesStatus;
-    });
-  }, [businesses,searchTerm, statusFilter]);
+      showToast("Join code regenerated", "success");
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to regenerate join code", "error");
+    } finally {
+      setRegeneratingId(null);
+    }
+  };
 
-  const totalPages  = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated   = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const rangeStart  = filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
-  const rangeEnd    = Math.min(currentPage * PAGE_SIZE, filtered.length);
+  const handleDelete = async (b: Business) => {
+    try {
+      await deleteBusiness(b.id);
+      showToast(`${b.name} deleted`, "error");
+      await loadBusinesses();
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to delete business", "error");
+    }
+  };
 
+  const handleDuplicate = async (b: Business) => {
+    const newName = window.prompt(`New business name:`, `Copy of ${b.name}`);
+    if (!newName?.trim()) return;
+    setDuplicatingId(b.id);
+    try {
+      await duplicateBusiness(b.id, newName.trim());
+      showToast(`Duplicated as "${newName}"`, "success");
+      await loadBusinesses();
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to duplicate business", "error");
+    } finally {
+      setDuplicatingId(null);
+    }
+  };
+
+  const filtered = useMemo(() => businesses.filter((b) => {
+    const term = searchTerm.toLowerCase();
+    const matchesSearch = !term || b.name.toLowerCase().includes(term) || b.contactName.toLowerCase().includes(term);
+    const matchesStatus =
+      statusFilter === "All" ||
+      (statusFilter === "Active"   && b.isActive) ||
+      (statusFilter === "Inactive" && !b.isActive);
+    return matchesSearch && matchesStatus;
+  }), [businesses, searchTerm, statusFilter]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated  = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const rangeStart = filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const rangeEnd   = Math.min(currentPage * PAGE_SIZE, filtered.length);
   const counts = {
-  All: businesses.length,
-  Active: businesses.filter((b) => !b.isDeleted).length,
-  Suspended: businesses.filter((b) => b.isDeleted).length,
-};
+    All:      businesses.length,
+    Active:   businesses.filter((b) => b.isActive).length,
+    Inactive: businesses.filter((b) => !b.isActive).length,
+  };
 
   const renderCellContent = (heading: TableHeading, row: Business) => {
     switch (heading.id) {
+
       case "name": {
         const initials = row.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
         return (
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl overflow-hidden bg-linear-to-br from-indigo-100 to-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm shrink-0">
-              {row.logoUrl ? <img src={row.logoUrl} alt={row.name} className="w-full h-full object-cover" /> : initials}
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm shrink-0">
+              {initials}
             </div>
             <div>
               <p className="font-semibold text-slate-900 text-sm">{row.name}</p>
-              <p className="text-xs text-slate-400">{row.arabicName}</p>
+              <p className="text-[10px] text-slate-400">ID: {row.id.slice(-6)}</p>
             </div>
           </div>
         );
       }
-      case "location":
+
+      case "join_code":
         return (
-          <div className="flex items-start gap-1.5 text-sm text-slate-600">
-            <div>
-              <p className="font-medium">{row.address}</p>
-              {/* <p className="text-xs text-slate-400">{row.city}</p> */}
-            </div>
+          <div className="flex items-center gap-1">
+            <span className="font-mono text-xs font-bold text-slate-700 tracking-widest bg-slate-100 px-2 py-1 rounded-lg">
+              {row.joinCode}
+            </span>
+            {/* Copy */}
+            <button
+              title="Copy join code"
+              onClick={() => handleCopyCode(row)}
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
+            >
+              {copiedId === row.id
+                ? <Check size={13} className="text-green-500" />
+                : <Copy size={13} />
+              }
+            </button>
+            {/* Regenerate */}
+            <button
+              title="Regenerate join code — invalidates the current one"
+              onClick={() => handleRegenerate(row)}
+              disabled={regeneratingId === row.id}
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-amber-500 transition disabled:opacity-40"
+            >
+              {regeneratingId === row.id
+                ? <Loader2 size={13} className="animate-spin" />
+                : <RefreshCw size={13} />
+              }
+            </button>
           </div>
         );
+
       case "contact":
         return (
           <div className="flex flex-col gap-0.5">
-            <p className="text-sm text-slate-700">{row.email}</p>
+            <p className="text-sm text-slate-700 font-medium">{row.contactName}</p>
             <div className="flex items-center gap-1 text-xs text-slate-400">
-              <Phone size={11} /> {row.phone}
+              <Phone size={11} /> {row.contactPhone}
             </div>
           </div>
         );
-      case "rating":
+
+      case "members":
         return (
-          <div className="flex items-center gap-1.5">
-            <Star size={14} className="text-amber-400 fill-amber-400" />
-            <span className="text-sm font-semibold text-slate-700">{row.rating ? row.rating.toFixed(1) : 0}</span>
-          </div>
+          <BusinessAccountDialog mode="edit" business={row} onSuccess={loadBusinesses}>
+            <button className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#7F50F4] transition">
+              <Users size={13} /> View members
+            </button>
+          </BusinessAccountDialog>
         );
-      case "orders":
+
+      case "status":
         return (
-          <span className="text-sm font-semibold text-slate-700">
-            {(row.totalOrders ?? 0).toLocaleString()}
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+            row.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
+          }`}>
+            {row.isActive ? "ACTIVE" : "INACTIVE"}
           </span>
         );
-      case "pricing":
-        return <PricingDialog business={row} />;
-      case "status": {
-        const map = {
-          active:    { label: "ACTIVE",    cls: "bg-green-100 text-green-700"  },
-          suspended: { label: "SUSPENDED", cls: "bg-red-100 text-red-600"      },
-          // pending:   { label: "PENDING",   cls: "bg-amber-100 text-amber-700"  },
-        } as const;
-        const s = map[row.isDeleted ? "suspended" : "active"];
-        return (
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${s.cls}`}>
-            {s.label}
-          </span>
-        );
-      }
+
       case "actions":
         return (
-          <div className="flex items-center justify-end gap-3">
-            <BusinessAccountDialog mode="edit" business={row} onSuccess={() => loadBusinesses()}>
-              <button className="text-slate-500 hover:text-purple-600">
-              <Pencil size={16} />
-            </button>
+          <div className="flex items-center gap-2">
+            <BusinessAccountDialog mode="edit" business={row} onSuccess={loadBusinesses}>
+              <button className="text-slate-400 hover:text-[#7F50F4] transition" title="Edit">
+                <Pencil size={15} />
+              </button>
             </BusinessAccountDialog>
-            <ConfirmActionDialog
-              title={row.isDeleted ? "Restore Business" : "Suspend Business"}
-              description={
-                row.isDeleted
-                  ? `Restore "${row.name}"?`
-                  : `Suspend "${row.name}"?`
-              }
-              confirmLabel={row.isDeleted ? "Restore" : "Suspend"}
-              onConfirm={async () => {
-                if (row.isDeleted) {
-                  await restoreBusiness(row.id);
-                } else {
-                  await blockBusiness(row.id);
-                }
-              }}
-              onSuccess={loadBusinesses}
+
+            <button
+              onClick={() => handleDuplicate(row)}
+              disabled={duplicatingId === row.id}
+              title="Duplicate business"
+              className="text-slate-400 hover:text-blue-500 transition disabled:opacity-40"
             >
-              <button
-                className={`cursor-pointer ${
-                  row.isDeleted
-                    ? "text-green-600 hover:text-green-700"
-                    : "text-red-500 hover:text-red-600"
-                }`}
-              >
-                {!row.isDeleted ? (
-                  <Trash2 size={16} />
-                ):(
-                  <ArchiveRestore size={16} />
-                )}
+              {duplicatingId === row.id
+                ? <Loader2 size={15} className="animate-spin" />
+                : <CopyPlusIcon size={15} />
+              }
+            </button>
+
+            <ConfirmActionDialog
+              title="Delete Business"
+              description={`Delete "${row.name}"? All members will be unlinked and this cannot be undone.`}
+              confirmLabel="Delete"
+              onConfirm={() => handleDelete(row)}
+            >
+              <button className="text-slate-400 hover:text-red-500 transition" title="Delete">
+                <Trash2 size={15} />
               </button>
             </ConfirmActionDialog>
           </div>
         );
+
       default: return "—";
     }
   };
@@ -198,41 +245,35 @@ async function loadBusinesses() {
       <main className="flex flex-col pt-16 pl-60 min-h-screen">
 
         {/* Top bar */}
-        <section className="flex items-center justify-between px-8 py-3 border-b border-slate-100">
+        <section className="flex items-center justify-between px-8 py-4 border-b border-slate-100">
           <div className="flex flex-col gap-1">
             <h2 className="text-xl font-semibold">Business Accounts</h2>
-            <p className="text-sm text-slate-500">Manage laundromat partners and their service pricing</p>
+            <p className="text-sm text-slate-500">Manage business partners and their custom price catalogs</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg shadow-sm w-72">
+            <div className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg shadow-sm w-64">
               <Search size={14} className="text-slate-400 shrink-0" />
               <input
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                placeholder="Search by name, owner or area..."
+                placeholder="Search by name..."
                 className="bg-transparent outline-none text-xs text-slate-600 placeholder:text-slate-400 w-full"
               />
             </div>
-            {/* <button className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm">
-              <Download className="h-3.5 w-3.5" /> Export CSV
-            </button> */}
-            <BusinessAccountDialog mode="add" onSuccess={() => loadBusinesses()}>
-              <button className="flex gap-2 items-center bg-purple-600 px-5 py-2.5 text-white text-sm font-medium rounded-md cursor-pointer hover:bg-purple-700 transition-colors">
-                <Plus size={15} /> Add New Business
+            <BusinessAccountDialog mode="add" onSuccess={loadBusinesses}>
+              <button className="flex gap-2 items-center bg-[#7F50F4] px-5 py-2.5 text-white text-sm font-bold rounded-xl hover:bg-[#6B3FD4] transition shadow-md">
+                <Plus size={15} /> Add Business
               </button>
             </BusinessAccountDialog>
           </div>
         </section>
 
         {/* Filter bar */}
-        <section className="flex items-center gap-3 px-8 py-3 border-b border-slate-100 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider mr-1">
+        <section className="flex items-center gap-3 px-8 py-3 border-b border-slate-100">
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider">
             <SlidersHorizontal className="h-3.5 w-3.5" /> Filters
           </div>
-
           <div className="h-5 w-px bg-slate-200" />
-
-          {/* Status filter */}
           <div className="flex bg-slate-50 border border-slate-100 shadow-inner items-center gap-1 rounded-lg p-1">
             {STATUS_FILTERS.map((label) => (
               <button
@@ -253,87 +294,74 @@ async function loadBusinesses() {
               </button>
             ))}
           </div>
-
-          <div className="h-5 w-px bg-slate-200" />
-
-          {/* City filter */}
-          {/* <div className="flex items-center gap-2 flex-wrap">
-            {cities.map((city) => (
-              <button
-                key={city}
-                onClick={() => { setCityFilter(city); setCurrentPage(1); }}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                  cityFilter === city
-                    ? "bg-[#7F50F4] border-[#7F50F4] text-white shadow-sm"
-                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
-                }`}
-              >
-                {city}
-              </button>
-            ))}
-          </div> */}
         </section>
 
         {/* Table */}
         <section className="px-8 py-6">
-          <table className="w-full">
-            <thead className="bg-slate-100">
-              <tr>
-                {businessHeadings.map((h) => (
-                  <th key={h.id} className="px-5 py-3 text-left text-sm font-bold text-slate-500 first:rounded-tl-lg last:rounded-tr-lg">
-                    {h.title}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
-              {paginated.length === 0 ? (
+          {loading ? (
+            <TableSkeleton tableHeadings={businessHeadings} />
+          ) : (
+            <table className="w-full">
+              <thead className="bg-slate-100">
                 <tr>
-                  <td colSpan={businessHeadings.length} className="px-5 py-12 text-center text-sm text-slate-500">
-                    No businesses found
+                  {businessHeadings.map((h) => (
+                    <th key={h.id} className="px-5 py-3 text-left text-sm font-bold text-slate-500 first:rounded-tl-lg last:rounded-tr-lg">
+                      {h.title}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {paginated.length === 0 ? (
+                  <tr>
+                    <td colSpan={businessHeadings.length} className="px-5 py-12 text-center text-sm text-slate-500">
+                      No businesses found
+                    </td>
+                  </tr>
+                ) : (
+                  paginated.map((row, i) => (
+                    <tr key={row.id ?? i} className="hover:bg-slate-50 transition-colors">
+                      {businessHeadings.map((h) => (
+                        <td key={h.id} className="px-5 py-3 text-sm text-slate-700">
+                          {renderCellContent(h, row)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              <tfoot className="bg-slate-200/50">
+                <tr>
+                  <td colSpan={businessHeadings.length} className="px-6 py-3 rounded-b-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">
+                        Showing <b>{rangeStart}</b>–<b>{rangeEnd}</b> of <b>{filtered.length}</b> businesses
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage <= 1}
+                          className="p-1 rounded hover:bg-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >
+                          <ChevronLeft className="h-4 w-4 text-slate-700" />
+                        </button>
+                        <span className="text-sm text-slate-600 px-1">
+                          Page {currentPage} of {Math.max(1, totalPages)}
+                        </span>
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={currentPage >= totalPages}
+                          className="p-1 rounded hover:bg-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >
+                          <ChevronRight className="h-4 w-4 text-slate-700" />
+                        </button>
+                      </div>
+                    </div>
                   </td>
                 </tr>
-              ) : (
-                paginated.map((row, index) => (
-                  <tr key={row.id ?? index} className="hover:bg-slate-50 transition-colors">
-                    {businessHeadings.map((h) => (
-                      <td key={h.id} className="px-5 py-3 text-sm text-slate-700">
-                        {renderCellContent(h, row)}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              )}
-            </tbody>
-            <tfoot className="bg-slate-200/50">
-              <tr>
-                <td colSpan={businessHeadings.length} className="px-6 py-3 rounded-b-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">
-                      Showing <b>{rangeStart}</b>–<b>{rangeEnd}</b> of <b>{filtered.length}</b> businesses
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                        disabled={currentPage <= 1}
-                        className="p-1 rounded hover:bg-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronLeft className="h-4 w-4 text-slate-700" />
-                      </button>
-                      <span className="text-sm text-slate-600 px-1">Page {currentPage} of {Math.max(1, totalPages)}</span>
-                      <button
-                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={currentPage >= totalPages}
-                        className="p-1 rounded hover:bg-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronRight className="h-4 w-4 text-slate-700" />
-                      </button>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+              </tfoot>
+            </table>
+          )}
         </section>
       </main>
     </div>

@@ -1,16 +1,22 @@
+import { UserAddress } from "./user.model";
 
 export interface Business {
   id:                 string;
   name:               string;
+
   joinCode:           string; //unique
   isActive:           boolean; //default true
+
   contactName:        string;
   contactPhone:       string;
+  address?:           UserAddress | null;
+
   createdAt:          number;
     
 }
 
 export interface CatalogItem {
+  id: string;
   name: string;
   price: number;
 

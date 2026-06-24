@@ -18,8 +18,9 @@ export function mapBusiness(doc: QueryDocumentSnapshot<DocumentData>): Business 
 
   contactPhone: data.contactPhone ?? "",
   contactName: data.contactName ?? "",
+  address : data.address ?? null,
 
-  isActive: false,
+  isActive: data.isActive ?? true,
   createdAt: data.createdAt?.toMillis?.() ??
     data.createdAt ??
     0,

@@ -39,7 +39,7 @@ const STATUS_CONFIG: Record<string, {label:string, style:string}> = {
   cancelled:       {label:"Cancelled", style:"bg-red-50 text-red-600"},    
 };
 
-// Removed `href` — these now drive in-place filtering only, not navigation
+
 const OrderStatusOptions = [
   { label: "Confirmed",         value: "confirmed"        },
   { label: "Picked Up",         value: "pickedUp"         },
@@ -124,14 +124,21 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
           </div>
         );
 
+      // case "customer":
+      //   return (
+      //     <CustomerCell
+      //      userId={row.userId}
+      //      userName={row.userName}
+      //      userPhone={row.userPhone}
+      //      onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
+      //    />
+      //   );
       case "customer":
         return (
-          <CustomerCell
-           userId={row.userId}
-           userName={row.userName}
-           userPhone={row.userPhone}
-           onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
-         />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
+            <span className="text-[10px] text-slate-400">{row.userPhone}</span>
+          </div>
         );
 
       case "order_details": {

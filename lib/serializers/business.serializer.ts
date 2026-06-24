@@ -6,11 +6,12 @@ export function serializeBusiness(business: Partial<Business>) {
     
     joinCode: business.joinCode ?? "" ,
     isActive: business.isActive ?? true,
-    
+
     contactName: business.contactName ?? "",
     contactPhone: business.contactPhone ?? "",
+    address : business.address ?? null,
 
-    createdAt: business.createdAt,
+    createdAt: business.createdAt ?? Date.now(),
     
   };
 }

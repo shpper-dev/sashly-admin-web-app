@@ -3,7 +3,7 @@ import { OrderFilters, subscribeToOrders } from "@/lib/firebase/order";
 import { Order } from "@/lib/models/order.model";
 import { useEffect, useRef, useState } from "react";
 import Header from "@/components/Header";
-import { Download } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { exportToCsv } from "@/lib/utils";
 import { useToast } from "@/lib/providers/ToastProvider";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -13,6 +13,7 @@ import OrderPickups from "./OrderPickups";
 import OrderReady from "./OrderReady";
 import OrderArchive from "./OrderArchive";
 import OrderAll from "./OrderAll";
+import AddBusinessOrderDialog from "@/components/orders/AddBusinessOrderDialog";
 
 export type TabKey ="all" | "detail" | "cleaning" | "ready" | "pickups" | "archive";
 
@@ -266,21 +267,29 @@ export default function OrdersPage() {
 
               <div className="w-px h-7 bg-slate-300" />
 
+              
+              <div className="flex items-center gap-2">
+                <AddBusinessOrderDialog onSuccess={() => {}}>
+                  <button className="flex items-center gap-2 bg-[#02D0FF] hover:bg-[#00b8e0] text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm cursor-pointer transition-colors">
+                    <Plus className="h-4 w-4" /> Add Business Order
+                  </button>
+                </AddBusinessOrderDialog>
               {/* currently only per page orders */}
-              <button
-                className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm cursor-pointer hover:bg-slate-50"
-                onClick={() => {
-                  try {
-                    const formattedOrders = formatOrdersForCSV(orders);
-                    exportToCsv(formattedOrders, `${activeTab}-page${currentPage ?? 1}-orders.csv`);
-                    showToast(`orders exported to csv successfully`, "success");
-                  } catch (error) {
-                    showToast(`Failed to export orders to csv`, "error");
-                  }
-                }}
-              >
-                <Download className="h-3.5 w-3.5" /> Export CSV
-              </button>
+                <button
+                  className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm cursor-pointer hover:bg-slate-50"
+                  onClick={() => {
+                    try {
+                      const formattedOrders = formatOrdersForCSV(orders);
+                      exportToCsv(formattedOrders, `${activeTab}-page${currentPage ?? 1}-orders.csv`);
+                      showToast(`orders exported to csv successfully`, "success");
+                    } catch (error) {
+                      showToast(`Failed to export orders to csv`, "error");
+                    }
+                  }}
+                >
+                  <Download className="h-3.5 w-3.5" /> Export CSV
+                </button>
+              </div>
             </div>
           </div>
         </section>
