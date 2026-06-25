@@ -214,12 +214,12 @@ export default function MetricsTopSellingPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
+            {/* <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
               <FileText size={16} className="text-blue-500" /> Export PDF
             </button>
             <button className="flex items-center gap-2 bg-cyan-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-cyan-600 transition">
               <Download size={16} /> Export CSV
-            </button>
+            </button> */}
           </div>
         </div>
 
