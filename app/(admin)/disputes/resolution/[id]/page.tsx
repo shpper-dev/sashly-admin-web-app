@@ -166,19 +166,7 @@ export default function DisputesResolutionDetails({
               <StatusBadge status={dispute.status} />
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center px-4 py-1.5 bg-slate-100/70 rounded-lg text-sm gap-2">
-              <Search className="h-4 w-4 text-gray-500 shrink-0" />
-              <input
-                type="text"
-                placeholder="Search order, drivers, etc"
-                className="bg-transparent border-none outline-none text-sm placeholder:text-gray-400 w-44"
-              />
-            </div>
-            <button className="relative p-2 hover:bg-slate-100 rounded-lg transition-colors">
-              <Bell className="h-5 w-5 text-gray-500" />
-            </button>
-          </div>
+          
         </div>
       </div>
 

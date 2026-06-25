@@ -1,34 +1,33 @@
+import { UserAddress } from "./user.model";
 
 export interface Business {
   id:                 string;
   name:               string;
-  arabicName:         string;
-  ownerName:          string;
-  email:              string;
-  phone:              string;
-  pricing:            ItemPricing[]; 
-  address?:           string | null;
-  logoUrl?:           string | null;
-  rating?:            number | null;
-  totalOrders?:       number | null;
-  isDeleted:          boolean;
+
+  joinCode:           string; //unique
+  isActive:           boolean; //default true
+
+  contactName:        string;
+  contactPhone:       string;
+  address?:           UserAddress | null;
+
   createdAt:          number;
-  updatedAt:          number;
     
 }
 
-export interface ItemServicePrice {
-  serviceId:   string;
-  serviceName: string;
-  price:       number;
-  enabled:     boolean;
-}
+export interface CatalogItem {
+  id: string;
+  name: string;
+  price: number;
 
-export interface ItemPricing {
-  itemId:      string;
-  itemName:    string;
-  arabicName:  string;
-  enabled:     boolean;
-  services:    ItemServicePrice[];
+  category?: string | null;
+  serviceType?: string | null;
+
+  unit?: string | null;
+  imageUrl?: string | null;
+
+  isActive: boolean; //default true
+  sortOrder?: number | null;
+
 }
 

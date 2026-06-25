@@ -113,6 +113,8 @@ export function mapOrder(doc: QueryDocumentSnapshot<DocumentData>): Order {
     disputeIssueType: data.disputeIssueType ?? null,
     lastDisputeAt: data.lastDisputeAt?.toMillis?.() ?? data.lastDisputeAt ?? 0,
 
+    businessAccountId: data.businessAccountId ?? null,
+
     ratingByUser: data.ratingByUser ? mapRating(data.ratingByUser) : null,
 
     createdAt: data.createdAt?.toMillis?.() ?? data.createdAt ?? 0,

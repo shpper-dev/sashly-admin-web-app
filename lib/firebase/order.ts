@@ -6,13 +6,17 @@ import {
   getCountFromServer,
   getDoc,
   onSnapshot,
-  QueryDocumentSnapshot
+  QueryDocumentSnapshot,
+  addDoc,
+  setDoc
 } from "firebase/firestore";
-import { Order, OrderStatuses, OrderStatus, OrderItem } from "@/lib/models/order.model";
+import { Order, OrderStatuses, OrderStatus, OrderItem, ServiceType } from "@/lib/models/order.model";
 import { mapOrder } from "../mappers/order.mapper";
 import { createMessage } from "./message";
 import { SearchFilters } from "@/app/(admin)/search/page";
 import { createDispute } from "./dispute";
+import { UserAddress } from "../models/user.model";
+import { getCatalog } from "./business";
 
 //Filters type
 export interface OrderFilters {
@@ -595,4 +599,178 @@ export async function getPendingPayoutsTotal(): Promise<number> {
     const data = doc.data();
     return sum + (data.totalPrice ?? 0);
   }, 0);
+}
+
+// business orders
+
+export interface CreateBusinessOrderInput {
+  businessId:       string;
+  businessName:     string;
+  businessPhone:    string;
+  catalogItemIds:   { itemId: string; count: number }[];
+  serviceType:      ServiceType;
+  pickUpAddress:    UserAddress;
+  deliveryAddress:  UserAddress;
+  pickUpStartTime:  number;
+  pickUpEndTime:    number;
+  expectedDeliveryTime?: number | null;
+  notes?: string | null;
+}
+
+export async function createBusinessOrder(
+  input: CreateBusinessOrderInput
+): Promise<string> {
+  // Fetch the business catalog to resolve item names + prices
+  const catalog = await getCatalog(input.businessId);
+  const catalogMap = new Map(catalog.map(c => [c.id, c]));
+
+  const items: OrderItem[] = input.catalogItemIds
+    .map(({ itemId, count }) => {
+      const catalogItem = catalogMap.get(itemId);
+      if (!catalogItem) return null;
+      return {
+        id:               catalogItem.id,
+        name:             catalogItem.name,
+        arabicName:       "",                          // catalog items are flat
+        categoryId:       catalogItem.category ?? "",
+        serviceName:      catalogItem.serviceType ?? "",
+        serviceArabicName: "",
+        servicePrice:     catalogItem.price,
+        count,
+        photoUrl:         catalogItem.imageUrl ?? null,
+      } satisfies OrderItem;
+    })
+    .filter(Boolean) as OrderItem[];
+
+  if (items.length === 0) throw new Error("No valid items resolved from catalog");
+
+  const totalPrice = items.reduce((sum, item) => sum + item.servicePrice * item.count, 0);
+
+  const createdAtTimestamp = Date.now();
+  const orderNumber = await generateUniqueOrderNumber();
+  const orderData: Omit<Order, "id"> = {
+    // Business orders don't have an individual user — use the business as the
+    // "customer" identity so existing reports and table cells still work
+    userId:            input.businessId,
+    userName:          input.businessName,
+    userEmail:         "",
+    userPhone:         input.businessPhone,
+
+    orderNumber:       orderNumber,
+    items,
+    totalPrice,
+    latestStatus:      { status: "confirmed", createdAt: Date.now() },
+    statusHistory:     [{ status: "confirmed", createdAt: Date.now() }],
+    isPaid:            false,
+    isDelivered:       false,
+    isCancelled:       false,
+    serviceType:       input.serviceType,
+    pickUpStartTime:   input.pickUpStartTime,
+    pickUpEndTime:     input.pickUpEndTime,
+    pickUpAddress:     input.pickUpAddress,
+    deliveryAddress:   input.deliveryAddress,
+    expectedDeliveryTime: input.expectedDeliveryTime ?? null,
+    deliveryStartTime: null,
+    deliveryEndTime:   null,
+    paidBy:            null,
+    paymentInfo:       null,
+    paymentDate:       null,
+    discountAmount:    null,
+    appliedCoupon:     null,
+    assignedDriverId:  null,
+    driverName:        null,
+    driverPhone:       null,
+    driverProfileImageUrl: null,
+    driverAssignedAt:  null,
+    driverAcceptedAt:  null,
+    driverEarnings:    null,
+    platformFee:       null,
+    driverFee:         null,
+    driverLocation:    null,
+    estimatedPickupTime:   null,
+    estimatedDeliveryTime: null,
+    deliveryNotes:     input.notes ?? null,
+    pickupPhotoUrl:    null,
+    deliveryPhotoUrl:  null,
+    customerSignatureUrl: null,
+    driverActivePhase: null,
+    hasOpenDispute:    null,
+    disputeId:         null,
+    disputeStatus:     null,
+    disputeIssueType:  null,
+    lastDisputeAt:     null,
+    businessAccountId: input.businessId,  // ← tags the order to the business
+    ratingByUser:      null,
+    createdAt:         createdAtTimestamp,
+    updatedAt:         createdAtTimestamp,
+  };
+
+  const orderId = generateOrderId(input.businessId, new Date(createdAtTimestamp));
+
+  // 2. Reference the document specifically using the generated ID and save it with setDoc
+  const ref = doc(db, "orders", orderId);
+  await setDoc(ref, orderData);
+
+  return orderId;
+}
+
+
+// helpers for creating order
+export function generateOrderId(userId: string, timestamp: Date = new Date()): string {
+  const userPart = userId
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase()
+    .padEnd(4, "0")
+    .substring(0, 4);
+
+  const timePart = timestamp
+    .getTime()          // millisecondsSinceEpoch
+    .toString(36)       // toRadixString(36) — identical 0-9a-z output
+    .toUpperCase()
+    .padStart(8, "0");
+
+  return `${userPart}${timePart}`;
+}
+
+const ORDER_NUMBER_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWX0123456789";
+
+
+function randomInt(max: number): number {
+  const array = new Uint32Array(1);
+  // Uses browser/Node native CSPRNG
+  if (typeof window !== "undefined" && window.crypto) {
+    window.crypto.getRandomValues(array);
+  } else {
+    // Fallback for Node.js environments if running server-side
+    const crypto = require("crypto");
+    crypto.getRandomValues(array);
+  }
+  return array[0] % max;
+}
+
+function generateOrderNumberCandidate(): string {
+  let out = "";
+  for (let i = 0; i < 6; i++) {
+    // Draws securely from the alphabet length
+    out += ORDER_NUMBER_ALPHABET[randomInt(ORDER_NUMBER_ALPHABET.length)];
+  }
+  return out;
+}
+
+export async function generateUniqueOrderNumber(): Promise<string> {
+
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const candidate = generateOrderNumberCandidate();
+    
+    // Adapted to standard web Firebase JS v9+ Modular syntax
+    const ordersRef = collection(db, "orders");
+    const q = query(ordersRef, where("orderNumber", "==", candidate), limit(1));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return candidate;
+    }
+  }
+
+  throw new Error("Unable to generate a unique order number.");
 }
