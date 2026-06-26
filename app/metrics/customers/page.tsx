@@ -12,25 +12,9 @@ import {
   ChevronDown, CalendarDays, Loader2, ArrowUpRight,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
+import { presetToRange } from "@/lib/date-presets";
 
-// Date range presets
-
-type Preset = "7d" | "30d" | "90d" | "365d" | "custom";
-
-const PRESETS: { key: Preset; label: string }[] = [
-  { key: "7d",   label: "Last 7 days"  },
-  { key: "30d",  label: "Last 30 days" },
-  { key: "90d",  label: "Last 90 days" },
-  { key: "365d", label: "Last year"    },
-  { key: "custom", label: "Custom range" },
-];
-
-function presetToRange(preset: Preset): { startMs: number; endMs: number } {
-  const now = Date.now();
-  if (preset === "custom") return { startMs: now - 30 * 86400000, endMs: now }; 
-  const days = parseInt(preset);
-  return { startMs: now - days * 86400000, endMs: now };
-}
 
 // Tab types 
 
@@ -40,30 +24,18 @@ const TABS: TabType[] = [ "New", "Returning", "No Recent Orders", "Deactivated"]
 
 
 export default function MetricsCustomersPage() {
-  const [preset,      setPreset]      = useState<Preset>("30d");
-  const [pickerOpen,  setPickerOpen]  = useState(false);
-  const [customStart, setCustomStart] = useState("");  // ISO date string for <input type="date">
-  const [customEnd,   setCustomEnd]   = useState("");
   const [stats,       setStats]       = useState<CustomerPageStats | null>(null);
   const [loading,     setLoading]     = useState(true);
   const [activeTab,   setActiveTab]   = useState<TabType>("New");
   const [search,      setSearch]      = useState("");
   const [sortKey,     setSortKey]     = useState<keyof CustomerMetric>("spendInRange");
   const [sortDir,     setSortDir]     = useState<"asc" | "desc">("desc");
+  const [rangeLabel, setRangeLabel] = useState("Last 30 days");
 
   // Fetch 
 
-  const fetchStats = useCallback(async (p: Preset, cStart?: string, cEnd?: string) => {
-    setLoading(true);
-    let startMs: number, endMs: number;
-
-    if (p === "custom" && cStart && cEnd) {
-      startMs = new Date(cStart).getTime();
-      endMs   = new Date(cEnd).getTime() + 86400000 - 1; 
-    } else {
-      ({ startMs, endMs } = presetToRange(p));
-    }
-
+  const fetchStats = useCallback(async (startMs: number, endMs: number) => {
+    
     try {
       const data = await getCustomerMetrics(startMs, endMs);
       setStats(data);
@@ -72,20 +44,14 @@ export default function MetricsCustomersPage() {
     }
   }, []);
 
-  useEffect(() => { fetchStats(preset); }, []);
+  useEffect(() => {
+  const { startMs, endMs } = presetToRange("30d"); // match defaultPreset
+  fetchStats(startMs, endMs);
+}, []);
 
-  const handlePreset = (p: Preset) => {
-    setPreset(p);
-    if (p !== "custom") {
-      setPickerOpen(false);
-      fetchStats(p);
-    }
-    
-  };
-
-  const handleCustomApply = () => {
-    setPickerOpen(false);
-    fetchStats("custom", customStart, customEnd);
+   const handleRangeChange = ({ startMs, endMs, label }: DateRangeChangePayload) => {
+    setRangeLabel(label);
+    fetchStats(startMs, endMs);
   };
 
   //  Tab filtering
@@ -135,10 +101,6 @@ export default function MetricsCustomersPage() {
 
   // Label helpers
 
-  const currentLabel = preset === "custom" && customStart && customEnd
-    ? `${customStart} → ${customEnd}`
-    : PRESETS.find(p => p.key === preset)?.label ?? "Last 30 days";
-
   const fmtDate = (ms: number | null) =>
     ms ? new Date(ms).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
@@ -172,88 +134,14 @@ export default function MetricsCustomersPage() {
 
             {/* Date picker */}
             
-            <DropdownMenu open={pickerOpen} onOpenChange={setPickerOpen}>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-slate-50 transition outline-none">
-                  <CalendarDays size={15} className="text-slate-400" />
-                  {currentLabel}
-                  <ChevronDown size={14} className="text-slate-400" />
-                </button>
-              </DropdownMenuTrigger>
-            
-              <DropdownMenuContent align="end" className="min-w-[220px] rounded-xl p-1">
-            
-                {/* Preset options */}
-               {PRESETS.map(p => (
-                  <DropdownMenuItem
-                    key={p.key}
-                    onSelect={e => {
-                      if (p.key === "custom") e.preventDefault(); 
-                      handlePreset(p.key);
-                    }}
-                    className={`rounded-lg px-3 py-2 text-sm font-medium cursor-pointer ${
-                      preset === p.key
-                        ? "text-indigo-600 bg-indigo-50 focus:bg-indigo-50 focus:text-indigo-600"
-                        : "text-slate-600"
-                    }`}
-                  >
-                    {p.label}
-                  </DropdownMenuItem>
-                ))}
-            
-                
-                {preset === "custom" && (
-                  <>
-                    <DropdownMenuSeparator className="my-1" />
-            
-                    
-                    <div
-                      className="px-3 pb-2 pt-1 flex flex-col gap-2"
-                      onPointerDown={e => e.stopPropagation()} 
-                    >
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          From
-                        </label>
-                        <input
-                          type="date"
-                          value={customStart}
-                          onChange={e => setCustomStart(e.target.value)}
-                          className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                        />    
-                      </div>
-            
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          To
-                        </label>
-                        <input
-                          type="date"
-                          value={customEnd}
-                          onChange={e => setCustomEnd(e.target.value)}
-                          className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                        />
-                      </div>
-            
-                      <button
-                          onClick={handleCustomApply}
-                        disabled={!customStart || !customEnd}
-                        className="mt-0.5 w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 rounded-lg transition disabled:opacity-40"
-                      >
-                        Apply Range
-                      </button>
-                    </div>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <DateRangePicker defaultPreset="30d" onRangeChange={handleRangeChange} />
 
-            <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-slate-50">
+            {/* <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-slate-50">
               <FileText size={16} className="text-blue-500" /> Export PDF
             </button>
             <button className="flex items-center gap-2 bg-cyan-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-cyan-600 transition">
               <Download size={16} /> Export CSV
-            </button>
+            </button> */}
           </div>
         </section>
 
@@ -311,14 +199,12 @@ export default function MetricsCustomersPage() {
                 trendColor="text-amber-500"
               />
             </section>
-
             {/* Distribution Chart */}
-            
             <section className="px-8 mb-6">
               <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    Top Spenders — {currentLabel}
+                    Top Spenders — {rangeLabel}
                   </h3>
                   <span className="text-[10px] text-slate-300 font-medium">by spend in period</span>
                 </div>

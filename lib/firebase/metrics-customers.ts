@@ -122,3 +122,52 @@ export async function getCustomerMetrics(
     customers,
   };
 }
+
+// for customer reports
+
+export interface CustomerReportRow {
+  name:              string;
+  email:             string;
+  phone:             string;
+  signupDate:        string;
+  completedOrders:   number;
+  firstOrderDate:    string;
+  lastOrderDate:     string;
+  spendInRange:      number;
+  ltv:               number;
+  avgOrderValue:     number;
+  type:              string;
+}
+
+export function buildCustomerReportRows(
+  customers: CustomerMetric[]
+): CustomerReportRow[] {
+  return customers
+    .filter(c => !c.isDeleted)
+    .map(c => ({
+      name:            c.name,
+      email:           c.email,
+      phone:           c.phone ?? "",
+      signupDate:      c.signupDate
+        ? new Date(c.signupDate).toLocaleDateString("en-GB")
+        : "—",
+      completedOrders: c.totalOrdersAllTime,
+      firstOrderDate:  c.lastOrderAt
+        ? new Date(c.lastOrderAt).toLocaleDateString("en-GB")
+        : "—",
+      lastOrderDate:   c.lastOrderAt
+        ? new Date(c.lastOrderAt).toLocaleDateString("en-GB")
+        : "—",
+      spendInRange:    c.spendInRange,
+      ltv:             c.ltv,
+      avgOrderValue:   c.totalOrdersAllTime > 0
+        ? c.ltv / c.totalOrdersAllTime
+        : 0,
+      type: c.isDeleted        ? "Deleted"
+          : c.isNew            ? "New"
+          : c.isReturning      ? "Returning"
+          : c.ordersInRange > 0 ? "Active"
+          : "Inactive",
+    }))
+    .sort((a, b) => b.completedOrders - a.completedOrders);
+}
