@@ -16,44 +16,19 @@ import {
 import Link from "next/link";
 import { exportToCsv } from "@/lib/utils";
 import { fmtSAR } from "../page";
-
-type Preset = "7d" | "30d" | "90d" | "365d" | "custom";
-const PRESETS: { key: Preset; label: string }[] = [
-  { key: "7d",     label: "Last 7 days"  },
-  { key: "30d",    label: "Last 30 days" },
-  { key: "90d",    label: "Last 90 days" },
-  { key: "365d",   label: "Last year"    },
-  { key: "custom", label: "Custom range" },
-];
-
-function presetToRange(p: Preset) {
-  const now = Date.now();
-  if (p === "custom") return { startMs: now - 30 * 86400000, endMs: now };
-  return { startMs: now - parseInt(p) * 86400000, endMs: now };
-}
+import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
+import { presetToRange } from "@/lib/date-presets";
 
 export default function CustomerReportPage() {
-  const [preset,      setPreset]      = useState<Preset>("30d");
-  const [pickerOpen,  setPickerOpen]  = useState(false);
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd,   setCustomEnd]   = useState("");
   const [rows,        setRows]        = useState<CustomerReportRow[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [search,      setSearch]      = useState("");
+  const [rangeLabel, setRangeLabel] = useState("Last 30 days");
 
-  const currentLabel = preset === "custom" && customStart && customEnd
-    ? `${customStart} to ${customEnd}`
-    : PRESETS.find(p => p.key === preset)?.label ?? "Last 30 days";
-
-  const fetchData = useCallback(async (p: Preset, cStart?: string, cEnd?: string) => {
+  
+  const fetchData = useCallback(async (startMs: number, endMs: number) => {
     setLoading(true);
-    let startMs: number, endMs: number;
-    if (p === "custom" && cStart && cEnd) {
-      startMs = new Date(cStart).getTime();
-      endMs   = new Date(cEnd).getTime() + 86400000 - 1;
-    } else {
-      ({ startMs, endMs } = presetToRange(p));
-    }
+    
     try {
       const stats = await getCustomerMetrics(startMs, endMs);
       setRows(buildCustomerReportRows(stats.customers));
@@ -62,11 +37,14 @@ export default function CustomerReportPage() {
     }
   }, []);
 
-  useEffect(() => { fetchData(preset); }, []);
+  useEffect(() => {
+  const { startMs, endMs } = presetToRange("30d");
+  fetchData(startMs, endMs);
+}, []);
 
-  const handlePreset = (p: Preset) => {
-    setPreset(p);
-    if (p !== "custom") { setPickerOpen(false); fetchData(p); }
+   const handleRangeChange = ({ startMs, endMs, label }: DateRangeChangePayload) => {
+    setRangeLabel(label);
+    fetchData(startMs, endMs);
   };
 
   const filtered = useMemo(() => {
@@ -92,7 +70,7 @@ export default function CustomerReportPage() {
         "Avg Order Value":  r.avgOrderValue.toFixed(2),
         Type:               r.type,
       })),
-      `customer-report-${preset}.csv`
+      `customer-report-${rangeLabel}.csv`
     );
   };
 
@@ -123,57 +101,14 @@ export default function CustomerReportPage() {
             <div>
               <h1 className="text-2xl font-bold text-slate-800">Customer Report</h1>
               <p className="text-sm text-slate-500">
-                {filtered.length} customers · {currentLabel}
+                {filtered.length} customers · {rangeLabel}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             {/* Date picker — same component as MetricsCustomersPage */}
-            <DropdownMenu open={pickerOpen} onOpenChange={setPickerOpen}>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-slate-50 transition outline-none">
-                  <CalendarDays size={15} className="text-slate-400" />
-                  {currentLabel}
-                  <ChevronDown size={14} className="text-slate-400" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[220px] rounded-xl p-1">
-                {PRESETS.map(p => (
-                  <DropdownMenuItem
-                    key={p.key}
-                    onSelect={e => { if (p.key === "custom") e.preventDefault(); handlePreset(p.key); }}
-                    className={`rounded-lg px-3 py-2 text-sm font-medium cursor-pointer ${
-                      preset === p.key ? "text-indigo-600 bg-indigo-50" : "text-slate-600"
-                    }`}
-                  >
-                    {p.label}
-                  </DropdownMenuItem>
-                ))}
-                {preset === "custom" && (
-                  <>
-                    <DropdownMenuSeparator className="my-1" />
-                    <div className="px-3 pb-2 pt-1 flex flex-col gap-2" onPointerDown={e => e.stopPropagation()}>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">From</label>
-                        <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
-                          className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">To</label>
-                        <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
-                          className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-                      </div>
-                      <button onClick={() => { setPickerOpen(false); fetchData("custom", customStart, customEnd); }}
-                        disabled={!customStart || !customEnd}
-                        className="mt-0.5 w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 rounded-lg transition disabled:opacity-40">
-                        Apply Range
-                      </button>
-                    </div>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+           <DateRangePicker defaultPreset="30d" onRangeChange={handleRangeChange} />
 {/* 
             <button onClick={handlePdf}
               className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-slate-50 transition">

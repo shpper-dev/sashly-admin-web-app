@@ -1,102 +1,54 @@
 "use client";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
-  ArrowUpRight, FileText, Download, Search,
-  ChevronDown, Shirt, Zap, Loader2, TrendingUp, CalendarDays,
+  ArrowUpRight, Search, Shirt, Zap, Loader2, TrendingUp,
 } from "lucide-react";
 import Header from "@/components/Header";
 import {
   getTopSellingStats,
   MatrixData, ProductStats, ServiceStats,
 } from "@/lib/firebase/metrics-top-selling";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-
-type Preset = "7d" | "30d" | "90d" | "365d" | "custom";
-
-const PRESETS: { key: Preset; label: string }[] = [
-  { key: "7d",   label: "Last 7 days"  },
-  { key: "30d",  label: "Last 30 days" },
-  { key: "90d",  label: "Last 90 days" },
-  { key: "365d", label: "Last year"    },
-  { key: "custom", label: "Custom range" },
-];
-
-function presetToRange(preset: Preset): { startMs: number; endMs: number } {
-  const now = Date.now();
-  if (preset === "custom") return { startMs: now - 30 * 86400000, endMs: now }; 
-  const days = parseInt(preset);
-  return { startMs: now - days * 86400000, endMs: now };
-}
-
+import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
+import { presetToRange } from "@/lib/date-presets";
 
 export default function MetricsTopSellingPage() {
-  const [showAvgPrice, setShowAvgPrice]   = useState(false);
-  const [activeMode,   setActiveMode]     = useState<"items" | "services">("items");
-  const [products,     setProducts]       = useState<ProductStats[]>([]);
-  const [services,     setServices]       = useState<ServiceStats[]>([]);
-  const [matrix,       setMatrix]         = useState<MatrixData>(new Map());
-  const [loading,      setLoading]        = useState(true);
-  const [searchQuery,  setSearchQuery]    = useState("");
-  const [preset,       setPreset]         = useState<Preset>("30d");
-  const [pickerOpen,   setPickerOpen]     = useState(false);
-  const [customStart, setCustomStart] = useState(""); 
-  const [customEnd,   setCustomEnd]   = useState("");
+  const [showAvgPrice, setShowAvgPrice] = useState(false);
+  const [activeMode,   setActiveMode]   = useState<"items" | "services">("items");
+  const [products,     setProducts]     = useState<ProductStats[]>([]);
+  const [services,     setServices]     = useState<ServiceStats[]>([]);
+  const [matrix,       setMatrix]       = useState<MatrixData>(new Map());
+  const [loading,      setLoading]      = useState(true);
+  const [searchQuery,  setSearchQuery]  = useState("");
+  const [rangeLabel,   setRangeLabel]   = useState("Last 30 days");
 
-  // fetchData is memoized so it can be called both on mount and on preset change
-  const fetchData = useCallback(async (p: Preset, cStart?: string, cEnd?: string) => {
+  const fetchData = useCallback(async (startMs: number, endMs: number) => {
     setLoading(true);
-    let startMs: number, endMs: number;
-
-    if (p === "custom" && cStart && cEnd) {
-      startMs = new Date(cStart).getTime();
-      endMs   = new Date(cEnd).getTime() + 86400000 - 1; 
-    } else {
-      ({ startMs, endMs } = presetToRange(p));
-    }
     try {
-      const { products, services, matrix } = await getTopSellingStats(startMs, endMs);
-      setProducts(products);
-      setServices(services);
-      setMatrix(matrix);
+      const result = await getTopSellingStats(startMs, endMs);
+      setProducts(result.products);
+      setServices(result.services);
+      setMatrix(result.matrix);
     } finally {
       setLoading(false);
     }
   }, []);
+  useEffect(() => {
+  const { startMs, endMs } = presetToRange("30d"); // match defaultPreset
+  fetchData(startMs, endMs);
+}, []);
 
-  // Fetch on mount with default preset
-  useEffect(() => { fetchData(preset); }, []);
-
-  // When user picks a new preset, re-fetch
-    const handlePreset = (p: Preset) => {
-    setPreset(p);
-    if (p !== "custom") {
-      setPickerOpen(false);
-      fetchData(p);
-    }
-    
+  const handleRangeChange = ({ startMs, endMs, label }: DateRangeChangePayload) => {
+    setRangeLabel(label);
+    fetchData(startMs, endMs);
   };
 
-  const handleCustomApply = () => {
-    setPickerOpen(false);
-    fetchData("custom", customStart, customEnd);
-  };
- 
-  // Matrix helpers 
-  // Top 4 items × top 3 services for the stacked-bar chart.
-  // These are already sorted by popularity from the data layer.
   const matrixItems    = products.slice(0, 4);
   const matrixServices = services.slice(0, 3);
-
-  const matrixCell = (itemName: string, svcName: string) =>
+  const matrixCell     = (itemName: string, svcName: string) =>
     matrix.get(itemName)?.get(svcName) ?? 0;
-
-  // Row total = sum of pieces for that item across the 3 displayed services.
-  // Used to convert raw counts into percentages for bar widths.
   const matrixRowTotal = (itemName: string) =>
     matrixServices.reduce((sum, s) => sum + matrixCell(itemName, s.serviceName), 0);
 
-  //Search filter 
-  // useMemo avoids re-filtering on every render; only re-runs when dependencies change
   const filteredProducts = useMemo(
     () => products.filter((p) =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -104,7 +56,6 @@ export default function MetricsTopSellingPage() {
     ),
     [products, searchQuery]
   );
-
   const filteredServices = useMemo(
     () => services.filter((s) =>
       s.serviceName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -112,7 +63,6 @@ export default function MetricsTopSellingPage() {
     [services, searchQuery]
   );
 
-  // ─Stat card derivations 
   const topItem    = products[0];
   const topService = services[0];
   const topRevItem = [...products].sort((a, b) => b.totalRevenue - a.totalRevenue)[0];
@@ -123,114 +73,27 @@ export default function MetricsTopSellingPage() {
     { bar: "bg-cyan-400"   },
   ];
 
-  const currentPresetLabel = PRESETS.find((p) => p.key === preset)?.label ?? "All Time";
-
   return (
     <div className="min-h-screen bg-white">
       <Header />
       <main className="pt-16 pb-8 pl-60 flex flex-col gap-6">
 
-        {/*  Page Header  */}
+        {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-800">Top Selling Items</h1>
             <p className="text-sm text-slate-500">Detailed breakdown of top selling items &amp; services</p>
           </div>
-          <div className="flex items-center gap-3">
-
-            {/* Date picker dropdown */}
-            
-            <DropdownMenu open={pickerOpen} onOpenChange={setPickerOpen}>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-slate-50 transition outline-none">
-                  <CalendarDays size={15} className="text-slate-400" />
-                  {currentPresetLabel}
-                  <ChevronDown size={14} className="text-slate-400" />
-                </button>
-              </DropdownMenuTrigger>
-            
-              <DropdownMenuContent align="end" className="min-w-[220px] rounded-xl p-1">
-            
-                {/* Preset options */}
-               {PRESETS.map(p => (
-                  <DropdownMenuItem
-                    key={p.key}
-                    onSelect={e => {
-                      if (p.key === "custom") e.preventDefault(); 
-                      handlePreset(p.key);
-                    }}
-                    className={`rounded-lg px-3 py-2 text-sm font-medium cursor-pointer ${
-                      preset === p.key
-                        ? "text-indigo-600 bg-indigo-50 focus:bg-indigo-50 focus:text-indigo-600"
-                        : "text-slate-600"
-                    }`}
-                  >
-                    {p.label}
-                  </DropdownMenuItem>
-                ))}
-            
-                
-                {preset === "custom" && (
-                  <>
-                    <DropdownMenuSeparator className="my-1" />
-                    <div
-                      className="px-3 pb-2 pt-1 flex flex-col gap-2"
-                      onPointerDown={e => e.stopPropagation()} 
-                    >
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          From
-                        </label>
-                        <input
-                          type="date"
-                          value={customStart}
-                          onChange={e => setCustomStart(e.target.value)}
-                          className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                        />    
-                      </div>
-            
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          To
-                        </label>
-                        <input
-                          type="date"
-                          value={customEnd}
-                          onChange={e => setCustomEnd(e.target.value)}
-                          className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                        />
-                      </div>
-            
-                      <button
-                          onClick={handleCustomApply}
-                        disabled={!customStart || !customEnd}
-                        className="mt-0.5 w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 rounded-lg transition disabled:opacity-40"
-                      >
-                        Apply Range
-                      </button>
-                    </div>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
-              <FileText size={16} className="text-blue-500" /> Export PDF
-            </button>
-            <button className="flex items-center gap-2 bg-cyan-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-cyan-600 transition">
-              <Download size={16} /> Export CSV
-            </button> */}
-          </div>
+          <DateRangePicker defaultPreset="30d" onRangeChange={handleRangeChange} />
         </div>
 
-        {/*  Loading state  */}
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
           </div>
         ) : (
           <>
-            {/*  Stat Cards  */}
+            {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-6">
               <StatCard
                 title="TOP ITEM"
@@ -258,10 +121,8 @@ export default function MetricsTopSellingPage() {
               />
             </div>
 
-            {/*  Matrix + Ranking Lists  */}
+            {/* Matrix + Ranking Lists */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-6">
-
-              {/* Matrix chart */}
               <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="font-bold text-slate-800">Service × Item Matrix</h3>
@@ -269,7 +130,6 @@ export default function MetricsTopSellingPage() {
                     Top {matrixItems.length} items · Top {matrixServices.length} services · pieces
                   </span>
                 </div>
-
                 {matrixItems.length === 0 ? (
                   <div className="text-center py-10 text-slate-400 text-sm">No data available</div>
                 ) : (
@@ -316,7 +176,6 @@ export default function MetricsTopSellingPage() {
                     })}
                   </div>
                 )}
-
                 <div className="flex flex-wrap justify-center gap-4 mt-8 pt-4 border-t border-slate-100">
                   {matrixServices.map((svc, si) => (
                     <div key={svc.serviceName} className="flex items-center gap-2">
@@ -327,18 +186,17 @@ export default function MetricsTopSellingPage() {
                 </div>
               </div>
 
-              {/* Ranking lists — top 3 only */}
               <div className="space-y-6">
                 <RankingList
                   title="Top Items by Volume"
-                  items={products.slice(0, 3).map((p) => ({  
+                  items={products.slice(0, 3).map((p) => ({
                     label: p.name,
                     value: p.totalQuantity.toLocaleString(),
                   }))}
                 />
                 <RankingList
                   title="Top Services by Revenue"
-                  items={services.slice(0, 3).map((s) => ({ 
+                  items={services.slice(0, 3).map((s) => ({
                     label: s.serviceName,
                     value: `SAR ${s.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
                   }))}
@@ -347,10 +205,9 @@ export default function MetricsTopSellingPage() {
               </div>
             </div>
 
-            {/*  Detailed Table  */}
+            {/* Detailed Table */}
             <div className="px-6">
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-
                 <div className="px-4 py-3 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <h3 className="font-bold text-slate-800">Detailed Breakdown</h3>
                   <div className="flex bg-slate-100 p-1 rounded-lg">
@@ -419,7 +276,7 @@ export default function MetricsTopSellingPage() {
                           <th className="px-6 py-4">Service Name</th>
                           <th className="px-6 py-4">Line Items</th>
                           <th className="px-6 py-4">Pieces</th>
-                          <th className="px-6 py-4">Orders</th> 
+                          <th className="px-6 py-4">Orders</th>
                           <th className="px-6 py-4">Revenue</th>
                           {showAvgPrice && <th className="px-6 py-4">Avg / Piece</th>}
                         </>
@@ -440,9 +297,7 @@ export default function MetricsTopSellingPage() {
                             </td>
                             {showAvgPrice && (
                               <td className="px-6 py-4 text-slate-400 font-medium">
-                                SAR {item.totalQuantity > 0
-                                  ? (item.totalRevenue / item.totalQuantity).toFixed(2)
-                                  : "0.00"}
+                                SAR {item.totalQuantity > 0 ? (item.totalRevenue / item.totalQuantity).toFixed(2) : "0.00"}
                               </td>
                             )}
                           </tr>
@@ -453,15 +308,13 @@ export default function MetricsTopSellingPage() {
                             <td className="px-6 py-4 font-semibold text-slate-700">{svc.serviceName}</td>
                             <td className="px-6 py-4 text-slate-500">{svc.totalQuantity.toLocaleString()}</td>
                             <td className="px-6 py-4 text-slate-500">{svc.totalPieces.toLocaleString()}</td>
-                            <td className="px-6 py-4 text-slate-500">{svc.totalOrders.toLocaleString()}</td> 
+                            <td className="px-6 py-4 text-slate-500">{svc.totalOrders.toLocaleString()}</td>
                             <td className="px-6 py-4 font-bold text-purple-600">
                               SAR {svc.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                             </td>
                             {showAvgPrice && (
                               <td className="px-6 py-4 text-slate-400 font-medium">
-                                SAR {svc.totalPieces > 0
-                                  ? (svc.totalRevenue / svc.totalPieces).toFixed(2)
-                                  : "0.00"}
+                                SAR {svc.totalPieces > 0 ? (svc.totalRevenue / svc.totalPieces).toFixed(2) : "0.00"}
                               </td>
                             )}
                           </tr>
@@ -481,7 +334,7 @@ export default function MetricsTopSellingPage() {
   );
 }
 
-// Helpers 
+// ─── Sub-components ────────────────────────────────────────────────────────────
 
 function StatCard({ title, value, subValue, trend, icon, iconBg }: {
   title: string; value: string; subValue: string; trend: string;

@@ -1,7 +1,11 @@
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, setDoc, where } from "firebase/firestore";
 import { db } from "./config";
 import { Order } from "../models/order.model";
 import { mapOrder } from "../mappers/order.mapper";
+
+import { latLngToCell } from "h3-js";
+
+const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!;
 
 export interface AreaStats {
   area:                string;
@@ -16,6 +20,67 @@ export interface AreaStats {
   aov:                 number;
 }
 
+async function getAreaForLocation(
+    lat: number,
+    lng: number
+): Promise<{ key: string; label: string }> {
+
+    const h3 = latLngToCell(lat, lng, 7);
+    const bucketRef = doc(db, "geo_buckets", h3);
+    const bucketSnap = await getDoc(bucketRef);
+    if (bucketSnap.exists()) {
+        return {
+            key: h3,
+            label: bucketSnap.data().area,
+        };
+    }
+    // Not cached -> reverse geocode once
+    const url =
+        `https://maps.googleapis.com/maps/api/geocode/json` +
+        `?latlng=${lat},${lng}` +
+        `&key=${GOOGLE_API_KEY}`;
+
+    const response = await fetch(url);
+
+    const json = await response.json();
+
+    let area = "Unknown";
+
+    if (json.results?.length) {
+        const components = json.results[0].address_components;
+        const find = (...types: string[]) =>
+            components.find((c: any) =>
+                types.some(t => c.types.includes(t))
+            );
+
+        area =
+            find("neighborhood")?.long_name ??
+            find("sublocality_level_1")?.long_name ??
+            find("sublocality")?.long_name ??
+            find("administrative_area_level_2")?.long_name ??
+            find("locality")?.long_name ??
+            "Unknown";
+    }
+
+    await setDoc(bucketRef, {
+        area,
+        lat,
+        lng,
+        createdAt: Date.now(),
+    });
+
+    return { key: h3,label: area,};
+}
+
+
+async function resolveArea(order: Order) {
+    const a = order.pickUpAddress;
+    if (!a?.lat || !a?.lng) {
+        return { key: "unknown", label: "Unknown",};
+    }
+    return getAreaForLocation(a.lat, a.lng);
+}
+
 export async function getGeographyReport(
   startMs?: number,
   endMs?:   number
@@ -24,23 +89,16 @@ export async function getGeographyReport(
   const snap = await getDocs(
     query(collection(db, "orders"), where("isDelivered", "==", true))
   );
-  const orders = snap.docs.map(mapOrder);
 
+  const orders  = snap.docs.map(mapOrder);
   const filtered = orders.filter(o => {
     if (startMs && o.createdAt < startMs) return false;
     if (endMs   && o.createdAt > endMs)   return false;
     return true;
   });
 
-  // Resolve each order to an area using pickUpAddress
-  const resolveArea = (o: Order): string =>
-    o.pickUpAddress?.city      ||
-    o.pickUpAddress?.state     ||
-    o.pickUpAddress?.formattedAddress  ||
-    "Unknown";
-
-  // Build per-area stats in one pass
   const areaMap = new Map<string, {
+    label:         string;
     customers:     Set<string>;
     totalOrders:   number;
     expressOrders: number;
@@ -50,31 +108,34 @@ export async function getGeographyReport(
   }>();
 
   for (const order of filtered) {
-    const area = resolveArea(order);
-    if (!areaMap.has(area)) {
-      areaMap.set(area, {
-        customers:     new Set(),
-        totalOrders:   0,
-        expressOrders: 0,
-        totalRevenue:  0,
-        firstOrder:    null,
-        lastOrder:     null,
-      });
+    const { key, label } = await resolveArea(order);
+
+    if (!areaMap.has(key)) {
+        areaMap.set(key, {
+            label,
+            customers: new Set(),
+            totalOrders: 0,
+            expressOrders: 0,
+            totalRevenue: 0,
+            firstOrder: null,
+            lastOrder: null,
+        });
     }
-
-    const s = areaMap.get(area)!;
+    const s = areaMap.get(key)!;
     s.customers.add(order.userId);
-    s.totalOrders   += 1;
-    s.totalRevenue  += order.totalPrice;
-    s.expressOrders += order.serviceType === "express" ? 1 : 0;
+    s.totalOrders++;
+    s.totalRevenue += order.totalPrice;
+    if (order.serviceType === "express")
+        s.expressOrders++;
+    if (!s.firstOrder || order.createdAt < s.firstOrder)
+        s.firstOrder = order.createdAt;
+    if (!s.lastOrder || order.createdAt > s.lastOrder)
+        s.lastOrder = order.createdAt;
+}
 
-    if (!s.firstOrder || order.createdAt < s.firstOrder) s.firstOrder = order.createdAt;
-    if (!s.lastOrder  || order.createdAt > s.lastOrder)  s.lastOrder  = order.createdAt;
-  }
-
-  return [...areaMap.entries()]
-    .map(([area, s]) => ({
-      area,
+  return [...areaMap.values()]
+    .map(s => ({
+      area:                s.label,
       registeredCustomers: s.customers.size,
       activeCustomers:     s.customers.size,
       totalOrders:         s.totalOrders,
@@ -87,50 +148,3 @@ export async function getGeographyReport(
     }))
     .sort((a, b) => b.totalOrders - a.totalOrders);
 }
-
-// Resolve each order to an area intelligently
-const resolveArea = (o: Order): string => {
-  // 1. If city or state were explicitly provided, use them immediately
-  const explicitArea = o.pickUpAddress?.city?.trim() || o.pickUpAddress?.state?.trim();
-  if (explicitArea) return explicitArea;
-
-  const formatted = o.pickUpAddress?.formattedAddress;
-  if (!formatted) return "Unknown";
-
-  // 2. Clean up and split the address by both English (,) and Arabic (،) commas
-  const parts = formatted
-    .split(/[,،]+/)
-    .map(p => p.trim())
-    .filter(Boolean);
-
-  if (parts.length === 0) return "Unknown";
-
-  // 3. TARGET A: Look for a District / Neighborhood token (e.g., "حي العارض" or "Al Arid District")
-  const districtToken = parts.find(p => 
-    p.includes("حي") || 
-    p.toLowerCase().includes("district") || 
-    p.toLowerCase().includes("neighborhood")
-  );
-  if (districtToken) return districtToken;
-
-  // 4. TARGET B: Grab the City token fallback
-  // In typical address patterns, Country is last (e.g., "Saudi Arabia"), City is second or third to last
-  let cityToken = "Unknown";
-  if (parts.length >= 2) {
-    // If the last token is the country, look at the second to last token
-    const lastTokenLower = parts[parts.length - 1].toLowerCase();
-    if (lastTokenLower.includes("arabia") || lastTokenLower === "sa" || lastTokenLower === "ksa") {
-      cityToken = parts[parts.length - 2];
-    } else {
-      cityToken = parts[parts.length - 1];
-    }
-  } else {
-    cityToken = parts[0];
-  }
-
-  // 5. Clean up the city token by removing postal codes/digits (e.g., "Riyadh 13342" -> "Riyadh")
-  // This ensures "Riyadh 13342" and "Riyadh 11564" merge into the exact same report group
-  const cleanedCity = cityToken.replace(/[0-9]/g, "").trim();
-
-  return cleanedCity || "Unknown";
-};
