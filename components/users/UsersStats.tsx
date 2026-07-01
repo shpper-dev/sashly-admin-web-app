@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   ShieldAlert,
   MapPin,
-  Eye,
   MessageCircle,
 } from "lucide-react"
 import { Order } from "@/lib/models/order.model"
@@ -66,7 +65,7 @@ export default function UsersStats({ orders }: UsersStatsProps) {
   return (
     <div className="h-full overflow-y-auto px-6 py-3 space-y-4">
 
-      {/* ================= TOP STATS ================= */}
+      {/*  TOP STATS  */}
       <div className="rounded-2xl border border-slate-200 overflow-hidden grid grid-cols-4 divide-x divide-slate-200">
 
         {/* ORDERS */}
@@ -117,7 +116,7 @@ export default function UsersStats({ orders }: UsersStatsProps) {
         </div>
       </div>
 
-      {/* ================= META ROW ================= */}
+      {/*  META ROW  */}
       <div className="grid grid-cols-4 text-center border-b border-slate-200 pb-6 text-sm">
 
         <div>
@@ -153,7 +152,7 @@ export default function UsersStats({ orders }: UsersStatsProps) {
         </div>
       </div>
 
-      {/* ================= SERVICE PREF ================= */}
+      {/*  SERVICE PREF  */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <ShoppingBag className="w-3 h-3" />
@@ -185,7 +184,7 @@ export default function UsersStats({ orders }: UsersStatsProps) {
         </div>
       </div>
 
-      {/* ================= BOTTOM GRID ================= */}
+      {/*  BOTTOM GRID  */}
       <div className="grid grid-cols-2 gap-8 pt-2">
 
         {/* Geographic */}
@@ -200,10 +199,10 @@ export default function UsersStats({ orders }: UsersStatsProps) {
             }
           </div>
 
-          <button className="w-full h-10 rounded-full border border-slate-300 flex items-center justify-center gap-2 text-sm font-medium hover:bg-slate-50 transition">
+          {/* <button className="w-full h-10 rounded-full border border-slate-300 flex items-center justify-center gap-2 text-sm font-medium hover:bg-slate-50 transition">
             <Eye className="w-4 h-4" />
             View on Logistics Map
-          </button>
+          </button> */}
         </div>
 
         {/* Notes */}
