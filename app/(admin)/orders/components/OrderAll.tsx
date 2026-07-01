@@ -80,7 +80,7 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
     const matchesSearch =
       !search ||
       order.userName.toLowerCase().includes(search.toLowerCase()) ||
-      order.id.includes(search);
+      order.id.includes(search) || order.orderNumber?.toLowerCase().includes(search.toLowerCase());
 
     const matchesStatus =
       !statusFilter || order.latestStatus.status === statusFilter;

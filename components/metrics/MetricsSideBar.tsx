@@ -9,7 +9,7 @@ const navItems = [
   // { name: "Overview",          href: "/metrics/overview"           },
   // { name: "Revenue",           href: "/metrics/revenue"            },
   // { name: "Unpaid",            href: "/metrics/unpaid"             },
-  // { name: "Orders",            href: "/metrics/orders"             },
+  { name: "Orders",            href: "/metrics/orders"             },
   { name: "Customers",         href: "/metrics/customers"          },
   // { name: "Subscriptions",     href: "/metrics/subscriptions"      },
   { name: "Top Selling",       href: "/metrics/top-selling"      },
