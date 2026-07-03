@@ -121,3 +121,4 @@ export function mapOrder(doc: QueryDocumentSnapshot<DocumentData>): Order {
     updatedAt: data.updatedAt?.toMillis?.() ?? data.updatedAt ?? 0,
   };
 }
+

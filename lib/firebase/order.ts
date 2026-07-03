@@ -774,3 +774,21 @@ export async function generateUniqueOrderNumber(): Promise<string> {
 
   throw new Error("Unable to generate a unique order number.");
 }
+
+// get orders by theri business id
+export function subscribeToAllOrdersByBusinessId(
+  businessAccountId: string,
+  callback: (orders: Order[]) => void
+): () => void {
+  const q = query(
+    collection(db, "orders"),
+    where("businessAccountId", "==", businessAccountId)
+  );
+
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const orders = snapshot.docs.map((d) => mapOrder(d)); // reuse your existing order mapper
+    callback(orders);
+  });
+
+  return unsubscribe;
+}

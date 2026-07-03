@@ -219,3 +219,10 @@ export async function getBusinessMembers(businessId: string): Promise<BusinessMe
 export async function removeBusinessMember(userId: string): Promise<void> {
   await updateDoc(doc(db, "users", userId), { businessAccountId: null });
 }
+
+// get single business
+export async function getBusinessById(businessId: string): Promise<Business | null> {
+  const snap = await getDoc(doc(db, "businesses", businessId));
+  if (!snap.exists()) return null;
+  return mapBusiness(snap as any);
+}
