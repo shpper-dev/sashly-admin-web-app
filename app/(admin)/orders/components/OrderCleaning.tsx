@@ -3,8 +3,6 @@ import { PencilLine, Search } from "lucide-react";
 import React, { useState } from "react";
 import { Order } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
-import FilterDropdown from "@/components/buttons/FilterDropdown";
-// import CustomerCell from "@/components/orders/CustomerCell";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
 import { OrderStatuses } from "@/lib/models/order.model";
@@ -81,22 +79,22 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
           </div>
         );
 
-      // case "customer":
-      //   return (
-      //      <CustomerCell
-      //      userId={row.userId}
-      //      userName={row.userName}
-      //      userPhone={row.userPhone}
-      //      onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
-      //    />
-      //   );
       case "customer":
         return (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
-            <span className="text-[10px] text-slate-400">{row.userPhone}</span>
-          </div>
+           <CustomerCell
+           userId={row.userId}
+           userName={row.userName}
+           userPhone={row.userPhone}
+           onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
+         />
         );
+      // case "customer":
+      //   return (
+      //     <div className="flex flex-col gap-0.5">
+      //       <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
+      //       <span className="text-[10px] text-slate-400">{row.userPhone}</span>
+      //     </div>
+      //   );
 
       case "address":
         return (

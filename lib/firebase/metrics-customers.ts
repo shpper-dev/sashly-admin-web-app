@@ -6,21 +6,51 @@ import { mapUser } from "../mappers/user.mapper";
 import { mapOrder } from "../mappers/order.mapper";
 
 
+// export interface CustomerMetric {
+//   userId: string;
+//   name: string;
+//   email: string;
+//   phone: string;
+//   signupDate: number;           // ms — from user.createdAt
+//   isNew: boolean;               // signed up within the selected range
+//   isReturning: boolean;         // had orders BEFORE the range start
+//   ordersInRange: number;        // order count within the selected date range
+//   totalOrdersAllTime: number;   // all-time order count
+//   spendInRange: number;         // SAR spent within range
+//   ltv: number;                  // total SAR spent all time (Lifetime Value)
+//   lastOrderAt: number | null;   // ms of most recent order
+//   isDeleted: boolean;
+//   hasOrdersInRange: boolean;    // placed at least one order in range
+// }
 export interface CustomerMetric {
   userId: string;
   name: string;
   email: string;
   phone: string;
-  signupDate: number;           // ms — from user.createdAt
-  isNew: boolean;               // signed up within the selected range
-  isReturning: boolean;         // had orders BEFORE the range start
-  ordersInRange: number;        // order count within the selected date range
-  totalOrdersAllTime: number;   // all-time order count
-  spendInRange: number;         // SAR spent within range
-  ltv: number;                  // total SAR spent all time (Lifetime Value)
-  lastOrderAt: number | null;   // ms of most recent order
+
+  signupDate: number;
+
+  isNew: boolean;
+  isReturning: boolean;
+
+  ordersInRange: number;
+  totalOrdersAllTime: number;
+
+  spendInRange: number;
+
+  // Actual lifetime revenue from this customer
+  ltv: number;
+
+  // NEW
+  firstOrderAt: number | null;
+  lastOrderAt: number | null;
+
+  customerLifespanMonths: number;
+  purchaseFrequency: number; // orders/month
+  avgOrderValue: number;
+
   isDeleted: boolean;
-  hasOrdersInRange: boolean;    // placed at least one order in range
+  hasOrdersInRange: boolean;
 }
 
 export interface CustomerPageStats {
@@ -75,6 +105,42 @@ export async function getCustomerMetrics(
     const lastOrderAt = allOrders.length > 0
       ? Math.max(...allOrders.map(o => o.createdAt))
       : null;
+    // const spendInRange = inRange.reduce((sum, o) => sum + o.totalPrice, 0);
+
+// Historical revenue (actual customer value)
+// const ltv = allOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+
+const firstOrderAt =
+  allOrders.length > 0
+    ? Math.min(...allOrders.map(o => o.createdAt))
+    : null;
+
+// const lastOrderAt =
+//   allOrders.length > 0
+//     ? Math.max(...allOrders.map(o => o.createdAt))
+//     : null;
+
+// Lifetime in months
+let customerLifespanMonths = 0;
+
+if (firstOrderAt && lastOrderAt) {
+  customerLifespanMonths = Math.max(
+    1,
+    (lastOrderAt - firstOrderAt) / (1000 * 60 * 60 * 24 * 30.44)
+  );
+}
+
+// Orders per month
+const purchaseFrequency =
+  customerLifespanMonths > 0
+    ? allOrders.length / customerLifespanMonths
+    : 0;
+
+// Average order value for this customer
+const avgOrderValue =
+  allOrders.length > 0
+    ? ltv / allOrders.length
+    : 0;
 
     // A customer is "new" if their account was created within the range
     const isNew = user.createdAt >= startMs && user.createdAt <= endMs;
@@ -82,22 +148,49 @@ export async function getCustomerMetrics(
     // A customer is "returning" if they had orders before the range AND placed orders in range
     const isReturning = beforeRange.length > 0 && inRange.length > 0;
 
+    // customers.push({
+    //   userId:            user.userId,
+    //   name:              user.name ?? "Unknown",
+    //   email:             user.email ?? "",
+    //   phone:             user.phone ?? user.phoneCode ?? "",
+    //   signupDate:        user.createdAt,
+    //   isNew,
+    //   isReturning,
+    //   ordersInRange:     inRange.length,
+    //   totalOrdersAllTime: allOrders.length,
+    //   spendInRange,
+    //   ltv,
+    //   lastOrderAt,
+    //   isDeleted:         user.isDeleted ?? false,
+    //   hasOrdersInRange:  inRange.length > 0,
+    // });
     customers.push({
-      userId:            user.userId,
-      name:              user.name ?? "Unknown",
-      email:             user.email ?? "",
-      phone:             user.phone ?? user.phoneCode ?? "",
-      signupDate:        user.createdAt,
-      isNew,
-      isReturning,
-      ordersInRange:     inRange.length,
-      totalOrdersAllTime: allOrders.length,
-      spendInRange,
-      ltv,
-      lastOrderAt,
-      isDeleted:         user.isDeleted ?? false,
-      hasOrdersInRange:  inRange.length > 0,
-    });
+  userId: user.userId,
+  name: user.name ?? "Unknown",
+  email: user.email ?? "",
+  phone: user.phone ?? user.phoneCode ?? "",
+
+  signupDate: user.createdAt,
+
+  isNew,
+  isReturning,
+
+  ordersInRange: inRange.length,
+  totalOrdersAllTime: allOrders.length,
+
+  spendInRange,
+  ltv,
+
+  firstOrderAt,
+  lastOrderAt,
+
+  customerLifespanMonths,
+  purchaseFrequency,
+  avgOrderValue,
+
+  isDeleted: user.isDeleted ?? false,
+  hasOrdersInRange: inRange.length > 0,
+});
   }
 
   //Aggregate stats
@@ -107,10 +200,56 @@ export async function getCustomerMetrics(
     ? activeCustomers.reduce((sum, c) => sum + c.ordersInRange, 0) / activeCustomers.length
     : 0;
 
-  const customersWithOrders = customers.filter(c => c.totalOrdersAllTime > 0);
-  const avgLTV = customersWithOrders.length > 0
-    ? customersWithOrders.reduce((sum, c) => sum + c.ltv, 0) / customersWithOrders.length
+  // const customersWithOrders = customers.filter(c => c.totalOrdersAllTime > 0);
+  // const avgLTV = customersWithOrders.length > 0
+  //   ? customersWithOrders.reduce((sum, c) => sum + c.ltv, 0) / customersWithOrders.length
+  //   : 0;
+
+  // const activeCustomers = customers.filter(c => c.hasOrdersInRange);
+
+const customersWithOrders = customers.filter(
+  c => c.totalOrdersAllTime > 0
+);
+
+// Average purchase frequency (orders/month)
+const avgPurchaseFrequency =
+  customersWithOrders.length > 0
+    ? customersWithOrders.reduce(
+        (sum, c) => sum + c.purchaseFrequency,
+        0
+      ) / customersWithOrders.length
     : 0;
+
+// Average order value across all orders
+const totalRevenue = customersWithOrders.reduce(
+  (sum, c) => sum + c.ltv,
+  0
+);
+
+const totalOrders = customersWithOrders.reduce(
+  (sum, c) => sum + c.totalOrdersAllTime,
+  0
+);
+
+const averageOrderValue =
+  totalOrders > 0
+    ? totalRevenue / totalOrders
+    : 0;
+
+// Average customer lifespan
+const averageCustomerLifespan =
+  customersWithOrders.length > 0
+    ? customersWithOrders.reduce(
+        (sum, c) => sum + c.customerLifespanMonths,
+        0
+      ) / customersWithOrders.length
+    : 0;
+
+// Marketing LTV estimate
+const avgLTV =
+  averageOrderValue *
+  avgPurchaseFrequency *
+  averageCustomerLifespan;
 
   return {
     totalCustomers:   customers.filter(c => !c.isDeleted).length,

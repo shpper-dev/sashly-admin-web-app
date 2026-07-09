@@ -4,9 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Order } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
 import { OrderTabProps } from "./OrdersPageClient";
-import FilterButton from "@/components/buttons/FilterDropdown";
 import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog";
-// import CustomerCell from "@/components/orders/CustomerCell";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import { OrderTable } from "@/components/orders/OrderTable";
@@ -96,22 +94,22 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
           </div>
         );
 
-      // case "customer":
-      //   return (
-      //     <CustomerCell
-      //      userId={row.userId}
-      //      userName={row.userName}
-      //      userPhone={row.userPhone}
-      //      onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
-      //    />
-      //   );
       case "customer":
         return (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
-            <span className="text-[10px] text-slate-400">{row.userPhone}</span>
-          </div>
+          <CustomerCell
+           userId={row.userId}
+           userName={row.userName}
+           userPhone={row.userPhone}
+           onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
+         />
         );
+      // case "customer":
+      //   return (
+      //     <div className="flex flex-col gap-0.5">
+      //       <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
+      //       <span className="text-[10px] text-slate-400">{row.userPhone}</span>
+      //     </div>
+      //   );
 
       case "order_details": {
         const visibleCount = 3;

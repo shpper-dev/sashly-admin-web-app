@@ -12,7 +12,7 @@ interface Props {
   userId: string;
 }
 
-// ── Config maps ───────────────────────────────────────────────────────────────
+// ─ Config maps 
 const TYPE_CONFIG: Record<TransactionType, { label: string; icon: React.ReactNode; color: string }> = {
   topup:    { label: "Top Up",   icon: <ArrowDownCircle className="h-4 w-4" />, color: "text-green-600 bg-green-50"   },
   payment:  { label: "Payment",  icon: <CreditCard       className="h-4 w-4" />, color: "text-blue-600 bg-blue-50"     },
@@ -99,7 +99,7 @@ export default function UsersWallet({ userId }: Props) {
   return (
     <div className="flex flex-col gap-5 px-6 py-5">
 
-      {/* ── Balance summary cards ──────────────────────────────────────────── */}
+      {/*  Balance summary cards  */}
       <div className="grid grid-cols-3 gap-3">
         <BalanceCard
           label="Current Balance"
@@ -113,7 +113,7 @@ export default function UsersWallet({ userId }: Props) {
         <BalanceCard label="Pending"         value={wallet.totalPending}  />
       </div>
 
-      {/* ── Filters ───────────────────────────────────────────────────────── */}
+      {/*  Filters ─ */}
       <div className="flex items-center gap-3">
         <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold shrink-0">
           Filter
@@ -150,7 +150,7 @@ export default function UsersWallet({ userId }: Props) {
         </span>
       </div>
 
-      {/* ── Transactions table ─────────────────────────────────────────────── */}
+      {/*  Transactions table */}
       <div className="rounded-xl border border-slate-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50">
@@ -249,7 +249,7 @@ export default function UsersWallet({ userId }: Props) {
   );
 }
 
-// ── Helper ────────────────────────────────────────────────────────────────────
+//  Helper 
 function BalanceCard({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
     <div className={`flex flex-col gap-0.5 px-4 py-3 rounded-xl border ${highlight ? "bg-[#7F50F4]/5 border-[#7F50F4]/20" : "bg-white border-slate-100"}`}>

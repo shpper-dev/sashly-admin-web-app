@@ -5,14 +5,11 @@ import { Order, OrderStatuses } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
 import { OrderTabProps } from "./OrdersPageClient";
 import FilterButton from "@/components/buttons/FilterDropdown";
-import ConfirmDeliveryDialog from "@/components/orders/ConfirmDeliveryDialog";
-// import CustomerCell from "@/components/orders/CustomerCell";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import Link from "next/link";
 import { OrderTable } from "@/components/orders/OrderTable";
 import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
-import OrderPaymentDialog from "@/components/orders/OrderPaymentDialog";
 import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
 
@@ -63,22 +60,22 @@ export default function OrderPickups({ orders, loading, onStatusUpdate, currentP
           </div>
         );
 
-      // case "customer":
-      //   return (
-      //      <CustomerCell
-      //      userId={row.userId}
-      //      userName={row.userName}
-      //      userPhone={row.userPhone}
-      //      onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
-      //    />
-      //   );
       case "customer":
         return (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
-            <span className="text-[10px] text-slate-400">{row.userPhone}</span>
-          </div>
+           <CustomerCell
+           userId={row.userId}
+           userName={row.userName}
+           userPhone={row.userPhone}
+           onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
+         />
         );
+      // case "customer":
+      //   return (
+      //     <div className="flex flex-col gap-0.5">
+      //       <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
+      //       <span className="text-[10px] text-slate-400">{row.userPhone}</span>
+      //     </div>
+      //   );
 
       // route is not on Order model yet - add when updated
       // case "route":

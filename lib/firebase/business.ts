@@ -168,6 +168,73 @@ export async function seedCatalogFromGlobal(businessId: string, replace = false)
   }
 }
 
+//  Catalog discount 
+
+// Builds a lookup of standard (undiscounted) prices from the global Items/Services
+// collection, keyed the same way seedCatalogFromGlobal names its catalog entries.
+function catalogEntryKey(name: string, serviceType: string | null | undefined): string {
+  return `${name}::${serviceType ?? ""}`;
+}
+
+async function getGlobalStandardPriceMap(): Promise<Map<string, number>> {
+  const itemsSnap = await getDocs(collection(db, "Items"));
+  const priceMap = new Map<string, number>();
+
+  for (const itemDoc of itemsSnap.docs) {
+    const item = itemDoc.data();
+    const services: any[] = item.services ?? [];
+
+    if (services.length === 0) {
+      priceMap.set(catalogEntryKey(item.name as string, null), 0);
+    } else {
+      for (const svc of services) {
+        priceMap.set(catalogEntryKey(item.name as string, svc.name as string), svc.price ?? 0);
+      }
+    }
+  }
+
+  return priceMap;
+}
+
+// Applies a % discount to every catalog item, computed relative to that item's
+// standard price in the global Items price list (not relative to its current price,
+// so re-applying a different percentage never compounds). Items with no matching
+// global item (e.g. manually added ones) are left untouched.
+export async function applyCatalogDiscount(
+  businessId: string,
+  percentage: number
+): Promise<{ updated: number; skipped: number }> {
+  const clampedPct = Math.min(100, Math.max(0, percentage));
+
+  const [catalog, standardPrices] = await Promise.all([
+    getCatalog(businessId),
+    getGlobalStandardPriceMap(),
+  ]);
+
+  const catalogRef = collection(db, "businesses", businessId, "catalog");
+  let updated = 0;
+  let skipped = 0;
+
+  for (let i = 0; i < catalog.length; i += 499) {
+    const batch = writeBatch(db);
+    catalog.slice(i, i + 499).forEach((item) => {
+      const standardPrice = standardPrices.get(catalogEntryKey(item.name, item.serviceType));
+
+      if (standardPrice === undefined) {
+        skipped++;
+        return; // no matching global item — nothing to discount relative to
+      }
+
+      const discountedPrice = Math.round(standardPrice * (1 - clampedPct / 100) * 100) / 100;
+      batch.update(doc(catalogRef, item.id), { price: discountedPrice });
+      updated++;
+    });
+    await batch.commit();
+  }
+
+  return { updated, skipped };
+}
+
 //  duplicate: copies contact info, clones catalog, generates a NEW unique join code
 export async function duplicateBusiness(sourceId: string, newName: string): Promise<string> {
   // Fetch source to copy contact info (createBusiness always makes a fresh join code)
@@ -219,3 +286,11 @@ export async function getBusinessMembers(businessId: string): Promise<BusinessMe
 export async function removeBusinessMember(userId: string): Promise<void> {
   await updateDoc(doc(db, "users", userId), { businessAccountId: null });
 }
+
+// get single business
+export async function getBusinessById(businessId: string): Promise<Business | null> {
+  const snap = await getDoc(doc(db, "businesses", businessId));
+  if (!snap.exists()) return null;
+  return mapBusiness(snap as any);
+}
+
