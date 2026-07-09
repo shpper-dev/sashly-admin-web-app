@@ -5,14 +5,11 @@ import { Order, OrderStatuses } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
 import { OrderTabProps } from "./OrdersPageClient";
 import FilterButton from "@/components/buttons/FilterDropdown";
-import ConfirmDeliveryDialog from "@/components/orders/ConfirmDeliveryDialog";
-// import CustomerCell from "@/components/orders/CustomerCell";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import Link from "next/link";
 import { OrderTable } from "@/components/orders/OrderTable";
 import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
-import OrderPaymentDialog from "@/components/orders/OrderPaymentDialog";
 import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
 

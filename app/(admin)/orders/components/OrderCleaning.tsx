@@ -3,8 +3,6 @@ import { PencilLine, Search } from "lucide-react";
 import React, { useState } from "react";
 import { Order } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
-import FilterDropdown from "@/components/buttons/FilterDropdown";
-// import CustomerCell from "@/components/orders/CustomerCell";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
 import { OrderStatuses } from "@/lib/models/order.model";
