@@ -10,10 +10,12 @@ import {
   getCatalog, upsertCatalogItem, deleteCatalogItem,
   seedCatalogFromGlobal, getBusinessMembers, removeBusinessMember,
   BusinessMember,
+  applyCatalogDiscount,
 } from "@/lib/firebase/business";
 import {
   X, Plus, Loader2, Copy, RefreshCw, Check,
   Trash2, Pencil, Users, BookOpen, Info,
+  Percent,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import ConfirmActionDialog from "@/components/ConfirmActionDialog";
@@ -87,6 +89,8 @@ const [marker, setMarker] = useState<{
   const [newPrice,       setNewPrice]       = useState("");
   const [newCategory,    setNewCategory]    = useState("");
   const [newSvcType,     setNewSvcType]     = useState("");
+  const [discountPct,      setDiscountPct]      = useState<string>("0");
+  const [applyingDiscount, setApplyingDiscount]  = useState(false);
 
   // Members 
   const [members,        setMembers]        = useState<BusinessMember[]>([]);
@@ -185,6 +189,7 @@ const loadMembers = async () => {
     setEditingItem(null);
     setAddingNew(false);
     setSeedReplaceOpen(false);
+    setDiscountPct("0");
   };
 
   //Join code helpers
@@ -243,6 +248,31 @@ const loadMembers = async () => {
     console.error(err);
   }
 };
+
+const handleApplyDiscount = async () => {
+    if (!business?.id) return;
+    const pct = parseFloat(discountPct);
+    if (isNaN(pct) || pct < 0 || pct > 100) {
+      showToast("Enter a valid percentage between 0 and 100", "error");
+      return;
+    }
+    setApplyingDiscount(true);
+    try {
+      const { updated, skipped } = await applyCatalogDiscount(business.id, pct);
+      showToast(
+        skipped > 0
+          ? `${pct}% discount applied to ${updated} item(s) — ${skipped} skipped (no matching price list item)`
+          : `${pct}% discount applied to ${updated} item(s)`,
+        "success"
+      );
+      await loadCatalog();
+    } catch (e) {
+      console.error("applyDiscount failed:", e);
+      showToast("Failed to apply discount", "error");
+    } finally {
+      setApplyingDiscount(false);
+    }
+  };
 
   // Details submit 
 
@@ -606,6 +636,41 @@ const loadMembers = async () => {
                   {seeding ? <Loader2 size={12} className="animate-spin" /> : <BookOpen size={12} />}
                   Copy default price list
                 </button>
+              </div>
+
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-purple-50 border border-purple-100">
+                <div className="w-8 h-8 rounded-lg bg-white border border-purple-200 flex items-center justify-center shrink-0">
+                  <Percent size={14} className="text-[#7F50F4]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-slate-700">Catalog Discount</p>
+                  <p className="text-[11px] text-slate-400">
+                    Applies a % discount off the standard price list. Items not in the global price list (added manually) are skipped.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.1"
+                      value={discountPct}
+                      onChange={(e) => setDiscountPct(e.target.value)}
+                      className="h-9 w-20 pl-3 pr-6 rounded-lg border border-slate-200 bg-white text-sm text-right outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">%</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleApplyDiscount}
+                    disabled={applyingDiscount || catalog.length === 0}
+                    className="h-9 px-4 rounded-lg bg-[#7F50F4] text-white text-xs font-bold hover:bg-[#6B3FD4] disabled:opacity-50 transition flex items-center gap-1.5"
+                  >
+                    {applyingDiscount ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                    Apply
+                  </button>
+                </div>
               </div>
 
               {seedReplaceOpen && (

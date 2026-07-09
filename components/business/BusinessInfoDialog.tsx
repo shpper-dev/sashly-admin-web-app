@@ -1,14 +1,15 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
-import { Building2, Copy, Check, Users, BookOpen, Phone, MapPin, Calendar, Loader2, LucideIcon, ShoppingBag } from 'lucide-react';
+import { Building2, Copy, Check, Users, BookOpen, Phone, MapPin, Calendar, Loader2, LucideIcon, ShoppingBag, ChartNoAxesColumn } from 'lucide-react';
 import { Business, CatalogItem } from '@/lib/models/business.model';
 import { getCatalog, getBusinessMembers, BusinessMember } from '@/lib/firebase/business';
 import { subscribeToAllOrdersByBusinessId } from '@/lib/firebase/order';
 import { Order } from '@/lib/models/order.model';
 import BusinessOrders from './BusinessOrders';
+import BusinessStats from './BusinessStats';
 
-type TabName = "orders" | "catalog" | "members";
+type TabName = "orders" | "stats" | "catalog" | "members";
 
 interface BusinessInfoDialogProps {
   children: React.ReactNode;
@@ -201,13 +202,15 @@ export default function BusinessInfoDialog({ children, business, autoOpen }: Bus
             {/* Main content */}
             <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
               <div className="flex items-center border-b border-slate-100 px-4 overflow-x-auto shrink-0">
-                <HeaderTab name="Orders"   icon={ShoppingBag} active={activeTab === "orders"}   onClick={() => setActiveTab("orders")} />
-                <HeaderTab name="Catalog"  icon={BookOpen}    active={activeTab === "catalog"}  onClick={() => setActiveTab("catalog")} />
-                <HeaderTab name="Members"  icon={Users}       active={activeTab === "members"}  onClick={() => setActiveTab("members")} />
+                <HeaderTab name="Orders"   icon={ShoppingBag}       active={activeTab === "orders"}  onClick={() => setActiveTab("orders")} />
+                <HeaderTab name="Stats"    icon={ChartNoAxesColumn} active={activeTab === "stats"}   onClick={() => setActiveTab("stats")} />
+                <HeaderTab name="Catalog"  icon={BookOpen}          active={activeTab === "catalog"} onClick={() => setActiveTab("catalog")} />
+                <HeaderTab name="Members"  icon={Users}             active={activeTab === "members"} onClick={() => setActiveTab("members")} />
               </div>
 
               <div className="flex-1 overflow-y-auto">
                 {activeTab === "orders"  && <BusinessOrders orders={orders} loading={loadingOrders} />}
+                {activeTab === "stats"   && <BusinessStats orders={orders} business={business} />}
                 {activeTab === "catalog" && <CatalogTab catalog={catalog} loading={loadingCatalog} />}
                 {activeTab === "members" && <MembersTab members={members} loading={loadingMembers} />}
               </div>
