@@ -54,12 +54,34 @@ const defaultFilters: SearchFilters = {
 };
 
 
+const ORDER_STATUS_OPTIONS = [
+  { label: "Confirmed",         value: "confirmed"        },
+  { label: "Picked Up",         value: "pickedUp"         },
+  { label: "Sorting",           value: "sorting"          },
+  { label: "Detailing",         value: "detailing"        },
+  { label: "Cleaning",          value: "cleaning"         },
+  { label: "Ready To Deliver",  value: "readyToDeliver"   },
+  { label: "Delivered",         value: "delivered"        },
+  { label: "Disputed",          value: "disputed"         },
+  { label: "Dispute Resolved",  value: "disputeResolved"  },
+  { label: "Cancelled",         value: "cancelled"        },
+];
+
+const ORDER_TYPE_OPTIONS = [
+  { label: "Ordinary", value: "ordinary" },
+  { label: "Express",  value: "express"  },
+];
+
+
 
 export default function SearchPage() {
   const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
   const [hasSearched, setHasSearched] = useState(false);
   const [results, setResults] = useState<Order[]>([]);
   const [activeFilters, setActiveFilters] = useState<SearchFilters>(defaultFilters);
+
+  const [orderStatus, setOrderStatus] = useState("");
+  const [orderType, setOrderType] = useState("");
 
   const PAGE_SIZE = 10;
   const [currentPage, setCurrentPage] = useState(1);
@@ -74,15 +96,18 @@ export default function SearchPage() {
     setActiveFilters(defaultFilters);
     setHasSearched(false);
     setResults([]);
+    setOrderStatus("");
+    setOrderType("");
   };
 
-  // Meilisearch pagination is stateless offset/limit — no cursor array to
-  // track across pages the way the old Firestore version needed.
-  const runSearch = async (f: SearchFilters, page = 1) => {
+ 
+  const runSearch = async (f: SearchFilters, page: number, status: string, type: string) => {
     const res = await searchOrders({
       filters: f,
       pageSize: PAGE_SIZE,
       page,
+      status,
+      orderType: type,
     });
 
     setResults(res.orders);
@@ -95,13 +120,16 @@ export default function SearchPage() {
     setActiveFilters({ ...filters });
     setHasSearched(true);
     setCurrentPage(1);
+ 
+    setOrderStatus("");
+    setOrderType("");
 
-    runSearch(filters, 1);
+    runSearch(filters, 1, "", "");
   };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    runSearch(activeFilters, page);
+    runSearch(activeFilters, page, orderStatus, orderType);
   };
 
   const handleEditSearch = () => {
@@ -113,7 +141,19 @@ export default function SearchPage() {
     setActiveFilters(updated);
     setFilters(updated);
     setCurrentPage(1);
-    runSearch(updated, 1);
+    runSearch(updated, 1, orderStatus, orderType);
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setOrderStatus(value);
+    setCurrentPage(1);
+    runSearch(activeFilters, 1, value, orderType);
+  };
+
+  const handleTypeFilterChange = (value: string) => {
+    setOrderType(value);
+    setCurrentPage(1);
+    runSearch(activeFilters, 1, orderStatus, value);
   };
 
   const inputClass = 'px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 shadow-inner text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all w-full disabled:cursor-not-allowed disabled:opacity-40';
@@ -130,11 +170,23 @@ export default function SearchPage() {
             <h2 className='text-slate-900 text-lg font-bold'>Search</h2>
             <p className='text-slate-500 text-xs'>Explore different ways to search orders</p>
           </div>
-          <div className='flex items-center gap-2'>
-            <FilterDropdown label='Orders' />
-            <FilterDropdown label='Order Status' />
-            <FilterDropdown label='Order Type' />
-          </div>
+
+          {hasSearched && (
+            <div className='flex items-center gap-2'>
+              <FilterDropdown
+                label='Order Status'
+                options={ORDER_STATUS_OPTIONS}
+                defaultValue={orderStatus || undefined}
+                onChange={handleStatusFilterChange}
+              />
+              <FilterDropdown
+                label='Order Type'
+                options={ORDER_TYPE_OPTIONS}
+                defaultValue={orderType || undefined}
+                onChange={handleTypeFilterChange}
+              />
+            </div>
+          )}
         </section>
 
         {/* Search Form + Ready State — replaced by results once searched */}

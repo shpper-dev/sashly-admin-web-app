@@ -498,24 +498,22 @@ export async function deleteOrderItem(orderId: string, itemIndex: number) {
 function escapeFilterValue(v: string): string {
   return v.replace(/"/g, '\\"');
 }
-
-// Structured, exact/range filters — email, orderId/orderNumber, payment status,
-// and date ranges all map to Meilisearch filter expressions.
+ 
 function buildMeiliFilter(filters: Partial<SearchFilters>): string {
   const clauses: string[] = [];
-
+ 
   if (filters.orderId) {
     const v = escapeFilterValue(filters.orderId.trim());
     clauses.push(`(orderNumber = "${v}" OR id = "${v}")`);
   }
-
+ 
   if (filters.email) {
     clauses.push(`userEmail = "${escapeFilterValue(filters.email.trim().toLowerCase())}"`);
   }
-
+ 
   if (filters.payment === "paid") clauses.push("isPaid = true");
   if (filters.payment === "unpaid") clauses.push("isPaid = false");
-
+ 
   if (filters.placedAfter) {
     clauses.push(`createdAt >= ${new Date(filters.placedAfter).getTime()}`);
   }
@@ -528,47 +526,59 @@ function buildMeiliFilter(filters: Partial<SearchFilters>): string {
   if (filters.paidBefore) {
     clauses.push(`paymentDate <= ${new Date(filters.paidBefore).getTime()}`);
   }
-
-
+ 
   return clauses.join(" AND ");
 }
-
+ 
 function buildMeiliQuery(filters: Partial<SearchFilters>): string {
   return [filters.name, filters.phone].filter(Boolean).join(" ").trim();
 }
-
+ 
 export async function searchOrders({
   filters,
   pageSize = 10,
   page = 1,
+  status,
+  orderType,
 }: {
   filters: Partial<SearchFilters>;
   pageSize?: number;
   page?: number;
+  // Post-search refinement filters — the Order Status / Order Type dropdowns
+  // shown once results are on screen. Kept separate from `filters` since
+  // they're not part of the search form itself.
+  status?: string;
+  orderType?: string;
 }): Promise<{ orders: Order[]; hasMore: boolean }> {
   const q = buildMeiliQuery(filters);
-  const filter = buildMeiliFilter(filters);
+ 
+  const clauses = [buildMeiliFilter(filters)];
+  if (status) clauses.push(`latestStatus.status = "${escapeFilterValue(status)}"`);
+  if (orderType) clauses.push(`serviceType = "${escapeFilterValue(orderType)}"`);
+  const filter = clauses.filter(Boolean).join(" AND ");
+ 
   const offset = (page - 1) * pageSize;
-
+ 
   const params = new URLSearchParams({
     q,
     limit: String(pageSize),
     offset: String(offset),
   });
   if (filter) params.set("filter", filter);
-
+ 
   const res = await fetch(`/api/orders/search?${params.toString()}`);
   if (!res.ok) {
     throw new Error(`Search failed with status ${res.status}`);
   }
-
+ 
   const data: { hits: Order[]; estimatedTotalHits: number } = await res.json();
-
+ 
   return {
     orders: data.hits,
     hasMore: offset + data.hits.length < data.estimatedTotalHits,
   };
 }
+ 
 
 // get order by id
 export async function getOrderById(

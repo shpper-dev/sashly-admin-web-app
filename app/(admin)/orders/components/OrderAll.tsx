@@ -60,10 +60,24 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
   const { showToast } = useToast();
 
 
-  const {
-    search, setSearch, isSearchActive, searchLoading,
-    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,
-  } = useOrderSearch({ pageSize });
+const meiliFilter = statusFilter
+  ? `latestStatus.status = "${statusFilter}"`
+  : undefined;
+
+const {
+  search,
+  setSearch,
+  isSearchActive,
+  searchLoading,
+  searchResults,
+  searchPage,
+  searchHasNextPage,
+  onSearchNext,
+  onSearchPrev,
+} = useOrderSearch({
+  pageSize,
+  filter: meiliFilter,
+});
 
   // Auto-open dialog state
   const [autoOrder, setAutoOrder] = useState<Order | null>(null);
@@ -81,11 +95,7 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
     }
   }, [autoOpenOrderId, orders, loading]);
 
-  // Source rows: Meilisearch results while actively searching, Firestore-loaded page otherwise.
-  // Status filter still applies on top, client-side, either way.
-  const baseRows = isSearchActive ? searchResults : orders;
-  const filtered = baseRows.filter((order) => !statusFilter || order.latestStatus.status === statusFilter);
-
+  const filtered = isSearchActive ? searchResults: orders;
   const effectiveLoading = isSearchActive ? searchLoading : loading;
   const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
   const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;

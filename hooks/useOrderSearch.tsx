@@ -30,7 +30,9 @@ export function useOrderSearch({ filter, pageSize, debounceMs = 300 }: UseOrderS
   const [loading, setLoading] = useState(false);
   const [hasNextPage, setHasNextPage] = useState(false);
 
-  const isSearchActive = debouncedQuery.trim().length > 0;
+ const isSearchActive =
+    debouncedQuery.trim().length > 0 ||
+    !!filter;
 
   // Debounce raw input
   useEffect(() => {

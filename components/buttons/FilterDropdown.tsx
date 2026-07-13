@@ -7,7 +7,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
 
 interface FilterOption {
   label: string
@@ -18,6 +17,10 @@ interface FilterOption {
 interface FilterDropdownProps {
   label: string
   options?: FilterOption[]
+  // NOTE: despite the name, this now acts as the current controlled value,
+  // not just an initial one — the parent is the single source of truth.
+  // Kept as `defaultValue` to avoid touching every existing call site;
+  // consider renaming to `value` for clarity next time this is touched.
   defaultValue?: string
   onChange?: (value: string) => void
 }
@@ -28,18 +31,21 @@ export default function FilterDropdown({
   defaultValue,
   onChange,
 }: FilterDropdownProps) {
-  const [selected, setSelected] = useState(defaultValue);
   const router = useRouter();
+
+  // Fully controlled by the parent now — previously this was seeded into
+  // local useState once on mount, which meant an external reset (e.g. the
+  // parent clearing the filter after a new search) never updated what the
+  // dropdown visually showed as selected.
+  const selected = defaultValue;
 
   const handleSelect = (option: FilterOption) => {
     // Toggle off if the same option is clicked again — lets users clear the filter
     const isDeselecting = selected === option.value;
     const nextValue = isDeselecting ? undefined : option.value;
 
-    setSelected(nextValue);
     onChange?.(nextValue ?? "");
 
-    
     if (option.href && !onChange) {
       router.push(option.href);
     }
