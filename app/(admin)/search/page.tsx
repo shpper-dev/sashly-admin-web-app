@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select"
 import SearchResults from '@/components/search/SearchResults';
 import { Order } from '@/lib/models/order.model';
-import { getOrders, searchOrders } from '@/lib/firebase/order';
+import { searchOrders } from '@/lib/firebase/order';
 
 export interface SearchFilters {
   name: string;
@@ -63,7 +63,6 @@ export default function SearchPage() {
 
   const PAGE_SIZE = 10;
   const [currentPage, setCurrentPage] = useState(1);
-  const [lastDocs, setLastDocs] = useState<any[]>([]);
   const [hasNext, setHasNext] = useState(true);
 
   const handleChange = (field: keyof SearchFilters, value: string) => {
@@ -77,40 +76,33 @@ export default function SearchPage() {
     setResults([]);
   };
 
+  // Meilisearch pagination is stateless offset/limit — no cursor array to
+  // track across pages the way the old Firestore version needed.
   const runSearch = async (f: SearchFilters, page = 1) => {
-  const lastDoc = lastDocs[page - 1] ?? null;
+    const res = await searchOrders({
+      filters: f,
+      pageSize: PAGE_SIZE,
+      page,
+    });
 
-  const res = await searchOrders({
-    filters: f,
-    pageSize: PAGE_SIZE,
-    lastDoc,
-  });
-
-  setResults(res.orders);
-  setHasNext(res.hasMore);
-
-  const updated = [...lastDocs];
-  updated[page] = res.lastDoc;
-  setLastDocs(updated);
-};
+    setResults(res.orders);
+    setHasNext(res.hasMore);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  setActiveFilters({ ...filters });
-  setHasSearched(true);
+    setActiveFilters({ ...filters });
+    setHasSearched(true);
+    setCurrentPage(1);
 
-  // reset pagination
-  setCurrentPage(1);
-  setLastDocs([]);
+    runSearch(filters, 1);
+  };
 
-  runSearch(filters, 1);
-};
-
-const handlePageChange = (page: number) => {
-  setCurrentPage(page);
-  runSearch(activeFilters, page);
-};
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    runSearch(activeFilters, page);
+  };
 
   const handleEditSearch = () => {
     setHasSearched(false);
@@ -120,7 +112,8 @@ const handlePageChange = (page: number) => {
     const updated = { ...activeFilters, [field]: '' };
     setActiveFilters(updated);
     setFilters(updated);
-    runSearch(updated);
+    setCurrentPage(1);
+    runSearch(updated, 1);
   };
 
   const inputClass = 'px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 shadow-inner text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all w-full disabled:cursor-not-allowed disabled:opacity-40';
@@ -235,8 +228,6 @@ const handlePageChange = (page: number) => {
                       <SelectContent className="rounded-xl">
                         <SelectItem value="paid" className="rounded-lg cursor-pointer text-xs">Paid</SelectItem>
                         <SelectItem value="unpaid" className="rounded-lg cursor-pointer text-xs">Unpaid</SelectItem>
-                        {/* <SelectItem value="partial" className="rounded-lg cursor-pointer text-xs">Partial</SelectItem>
-                        <SelectItem value="refunded" className="rounded-lg cursor-pointer text-xs">Refunded</SelectItem> */}
                       </SelectContent>
                     </Select>
                   </div>

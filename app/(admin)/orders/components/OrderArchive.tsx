@@ -9,6 +9,7 @@ import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog";
 import { OrderTabProps } from "./OrdersPageClient";
 import CustomerCell from "@/components/orders/CustomerCell";
+import { useOrderSearch } from "@/hooks/useOrderSearch";
 
 const archiveHeadings: TableHeading[] = [
   { id: "id",       title: "ID"      },
@@ -25,21 +26,29 @@ const ARCHIVE_STATUS_STYLE: Record<string, string> = {
   cancelled: "bg-red-50 text-red-600",
 };
 
+
+const ARCHIVE_TAB_FILTER = "isDelivered = true OR isCancelled = true";
+
 export default function OrderArchive({
   orders, loading, onStatusUpdate,
   currentPage, hasNextPage, onNext, onPrev, pageSize,
   autoOpenOrderId,
 }: OrderTabProps) {
-  const [search, setSearch] = useState("");
   const [autoOrder, setAutoOrder] = useState<Order | null>(null);
   const [autoDialogOpen, setAutoDialogOpen] = useState(false);
 
-  const filtered = orders.filter(
-    (o) =>
-      !search ||
-      o.userName.toLowerCase().includes(search.toLowerCase()) ||
-      o.id.includes(search)
-  );
+  const {
+    search, setSearch, isSearchActive, searchLoading,
+    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,
+  } = useOrderSearch({ filter: ARCHIVE_TAB_FILTER, pageSize });
+
+  const filtered = isSearchActive ? searchResults : orders;
+
+  const effectiveLoading = isSearchActive ? searchLoading : loading;
+  const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
+  const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
+  const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
+  const effectiveOnPrev = isSearchActive ? onSearchPrev : onPrev;
 
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
@@ -58,21 +67,14 @@ export default function OrderArchive({
           </div>
         );
 
-      // case "customer":
-      //   return (
-      //     <div className="flex flex-col gap-0.5">
-      //       <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
-      //       <span className="text-[10px] text-slate-400">{row.userPhone}</span>
-      //     </div>
-      //   );
-       case "customer":
-         return (
-            <CustomerCell
-            userId={row.userId}
-            userName={row.userName}
-            userPhone={row.userPhone}
-          
-          />
+      case "customer":
+        return (
+           <CustomerCell
+           userId={row.userId}
+           userName={row.userName}
+           userPhone={row.userPhone}
+         
+         />
            
          );
 
@@ -129,20 +131,20 @@ export default function OrderArchive({
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>
 
-      {loading && filtered.length === 0 ? (
+      {effectiveLoading && filtered.length === 0 ? (
         <TableSkeleton tableHeadings={archiveHeadings} />
       ) : (
-        <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+        <div className={effectiveLoading ? "opacity-50 pointer-events-none" : ""}>
           <OrderTable
             headings={archiveHeadings}
             rows={filtered}
             renderCell={renderCell}
-            currentPage={currentPage}
-            hasNextPage={hasNextPage}
-            onNext={onNext}
-            onPrev={onPrev}
+            currentPage={effectiveCurrentPage}
+            hasNextPage={effectiveHasNextPage}
+            onNext={effectiveOnNext}
+            onPrev={effectiveOnPrev}
             pageSize={pageSize}
-            loading={loading}
+            loading={effectiveLoading}
           />
         </div>
       )}

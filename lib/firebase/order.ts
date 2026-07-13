@@ -372,126 +372,202 @@ export async function deleteOrderItem(orderId: string, itemIndex: number) {
   
 }
 
-// search orders
-export async function searchOrders({
-  filters,
-  pageSize = 10,
-  lastDoc,
-}: {
-  filters: Partial<SearchFilters>;
-  pageSize?: number;
-  lastDoc?: QueryDocumentSnapshot | null;
-}) {
-  const constraints: any[] = [];
+// // search orders
+// export async function searchOrders({
+//   filters,
+//   pageSize = 10,
+//   lastDoc,
+// }: {
+//   filters: Partial<SearchFilters>;
+//   pageSize?: number;
+//   lastDoc?: QueryDocumentSnapshot | null;
+// }) {
+//   const constraints: any[] = [];
 
-  // Server-side filters
+//   // Server-side filters
+//   if (filters.orderId) {
+//     constraints.push(where("id", "==", filters.orderId));
+//   }
+
+//   if (filters.payment === "paid") {
+//     constraints.push(where("isPaid", "==", true));
+//   }
+
+//   if (filters.payment === "unpaid") {
+//     constraints.push(where("isPaid", "==", false));
+//   }
+
+//   if (filters.email) {
+//     constraints.push(
+//       where("userEmail", "==", filters.email.trim().toLowerCase())
+//     );
+//   }
+
+//   if (filters.placedAfter) {
+//     constraints.push(
+//       where("createdAt", ">=", new Date(filters.placedAfter).getTime())
+//     );
+//   }
+
+//   if (filters.placedBefore) {
+//     constraints.push(
+//       where("createdAt", "<=", new Date(filters.placedBefore).getTime())
+//     );
+//   }
+
+//   if (filters.paidAfter) {
+//     constraints.push(
+//       where("paymentDate", ">=", new Date(filters.paidAfter).getTime())
+//     );
+//   }
+
+//   if (filters.paidBefore) {
+//     constraints.push(
+//       where("paymentDate", "<=", new Date(filters.paidBefore).getTime())
+//     );
+//   }
+
+//   const FETCH_SIZE = 50;
+
+//   let cursor = lastDoc;
+//   let hasMore = true;
+
+//   const results: Order[] = [];
+
+//   while (results.length < pageSize && hasMore) {
+//     const batchConstraints = [
+//       ...constraints,
+//       orderBy("createdAt", "desc"),
+//       ...(cursor ? [startAfter(cursor)] : []),
+//       limit(FETCH_SIZE),
+//     ];
+
+//     const q = query(collection(db, "orders"), ...batchConstraints);
+//     const snapshot = await getDocs(q);
+
+//     if (snapshot.empty) {
+//       hasMore = false;
+//       break;
+//     }
+
+//     const fetchedOrders = snapshot.docs.map(mapOrder);
+
+//     const filteredOrders = applyClientFilters(
+//       fetchedOrders,
+//       filters
+//     );
+
+//     results.push(...filteredOrders);
+
+//     cursor = snapshot.docs[snapshot.docs.length - 1];
+
+//     if (snapshot.docs.length < FETCH_SIZE) {
+//       hasMore = false;
+//     }
+//   }
+
+//   return {
+//     orders: results.slice(0, pageSize),
+//     lastDoc: cursor,
+//     hasMore,
+//   };
+// }
+
+// function applyClientFilters(orders: Order[], filters: Partial<SearchFilters>) {
+//   return orders.filter((order) => {
+//     if (filters.name && !order.userName.toLowerCase().includes(filters.name.toLowerCase())) {
+//       return false;
+//     }
+
+//     if (filters.phone && !order.userPhone.includes(filters.phone)) {
+//       return false;
+//     }
+
+//     if (filters.summary) {
+//       const match = order.items.some((item) =>
+//         item.name.toLowerCase().includes(filters.summary!.toLowerCase())
+//       );
+//       if (!match) return false;
+//     }
+
+//     return true;
+//   });
+// }
+
+
+function escapeFilterValue(v: string): string {
+  return v.replace(/"/g, '\\"');
+}
+
+// Structured, exact/range filters — email, orderId/orderNumber, payment status,
+// and date ranges all map to Meilisearch filter expressions.
+function buildMeiliFilter(filters: Partial<SearchFilters>): string {
+  const clauses: string[] = [];
+
   if (filters.orderId) {
-    constraints.push(where("id", "==", filters.orderId));
-  }
-
-  if (filters.payment === "paid") {
-    constraints.push(where("isPaid", "==", true));
-  }
-
-  if (filters.payment === "unpaid") {
-    constraints.push(where("isPaid", "==", false));
+    const v = escapeFilterValue(filters.orderId.trim());
+    clauses.push(`(orderNumber = "${v}" OR id = "${v}")`);
   }
 
   if (filters.email) {
-    constraints.push(
-      where("userEmail", "==", filters.email.trim().toLowerCase())
-    );
+    clauses.push(`userEmail = "${escapeFilterValue(filters.email.trim().toLowerCase())}"`);
   }
+
+  if (filters.payment === "paid") clauses.push("isPaid = true");
+  if (filters.payment === "unpaid") clauses.push("isPaid = false");
 
   if (filters.placedAfter) {
-    constraints.push(
-      where("createdAt", ">=", new Date(filters.placedAfter).getTime())
-    );
+    clauses.push(`createdAt >= ${new Date(filters.placedAfter).getTime()}`);
   }
-
   if (filters.placedBefore) {
-    constraints.push(
-      where("createdAt", "<=", new Date(filters.placedBefore).getTime())
-    );
+    clauses.push(`createdAt <= ${new Date(filters.placedBefore).getTime()}`);
   }
-
   if (filters.paidAfter) {
-    constraints.push(
-      where("paymentDate", ">=", new Date(filters.paidAfter).getTime())
-    );
+    clauses.push(`paymentDate >= ${new Date(filters.paidAfter).getTime()}`);
   }
-
   if (filters.paidBefore) {
-    constraints.push(
-      where("paymentDate", "<=", new Date(filters.paidBefore).getTime())
-    );
+    clauses.push(`paymentDate <= ${new Date(filters.paidBefore).getTime()}`);
   }
 
-  const FETCH_SIZE = 50;
 
-  let cursor = lastDoc;
-  let hasMore = true;
-
-  const results: Order[] = [];
-
-  while (results.length < pageSize && hasMore) {
-    const batchConstraints = [
-      ...constraints,
-      orderBy("createdAt", "desc"),
-      ...(cursor ? [startAfter(cursor)] : []),
-      limit(FETCH_SIZE),
-    ];
-
-    const q = query(collection(db, "orders"), ...batchConstraints);
-    const snapshot = await getDocs(q);
-
-    if (snapshot.empty) {
-      hasMore = false;
-      break;
-    }
-
-    const fetchedOrders = snapshot.docs.map(mapOrder);
-
-    const filteredOrders = applyClientFilters(
-      fetchedOrders,
-      filters
-    );
-
-    results.push(...filteredOrders);
-
-    cursor = snapshot.docs[snapshot.docs.length - 1];
-
-    if (snapshot.docs.length < FETCH_SIZE) {
-      hasMore = false;
-    }
-  }
-
-  return {
-    orders: results.slice(0, pageSize),
-    lastDoc: cursor,
-    hasMore,
-  };
+  return clauses.join(" AND ");
 }
 
-function applyClientFilters(orders: Order[], filters: Partial<SearchFilters>) {
-  return orders.filter((order) => {
-    if (filters.name && !order.userName.toLowerCase().includes(filters.name.toLowerCase())) {
-      return false;
-    }
+function buildMeiliQuery(filters: Partial<SearchFilters>): string {
+  return [filters.name, filters.phone].filter(Boolean).join(" ").trim();
+}
 
-    if (filters.phone && !order.userPhone.includes(filters.phone)) {
-      return false;
-    }
+export async function searchOrders({
+  filters,
+  pageSize = 10,
+  page = 1,
+}: {
+  filters: Partial<SearchFilters>;
+  pageSize?: number;
+  page?: number;
+}): Promise<{ orders: Order[]; hasMore: boolean }> {
+  const q = buildMeiliQuery(filters);
+  const filter = buildMeiliFilter(filters);
+  const offset = (page - 1) * pageSize;
 
-    if (filters.summary) {
-      const match = order.items.some((item) =>
-        item.name.toLowerCase().includes(filters.summary!.toLowerCase())
-      );
-      if (!match) return false;
-    }
-
-    return true;
+  const params = new URLSearchParams({
+    q,
+    limit: String(pageSize),
+    offset: String(offset),
   });
+  if (filter) params.set("filter", filter);
+
+  const res = await fetch(`/api/orders/search?${params.toString()}`);
+  if (!res.ok) {
+    throw new Error(`Search failed with status ${res.status}`);
+  }
+
+  const data: { hits: Order[]; estimatedTotalHits: number } = await res.json();
+
+  return {
+    orders: data.hits,
+    hasMore: offset + data.hits.length < data.estimatedTotalHits,
+  };
 }
 
 // get order by id

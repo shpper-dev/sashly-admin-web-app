@@ -11,6 +11,7 @@ import { OrderTable } from "@/components/orders/OrderTable";
 import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
 import { OrderTabProps } from "./OrdersPageClient";
+import { useOrderSearch } from "@/hooks/useOrderSearch";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -34,16 +35,24 @@ const cleaningReportOptions = [
   { label: "Detailed Today",      value: "detailed",   href: "/orders/reports/detailed"   },
 ];
 
+const CLEANING_TAB_FILTER = "latestStatus.status = cleaning";
+
 export default function OrderCleaning({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
-  const [search, setSearch] = useState("");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const {showToast} = useToast();
 
-  const filtered = orders.filter((o) =>
-    !search ||
-    o.userName.toLowerCase().includes(search.toLowerCase()) ||
-    o.id.includes(search)
-  );
+  const {
+    search, setSearch, isSearchActive, searchLoading,
+    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,
+  } = useOrderSearch({ filter: CLEANING_TAB_FILTER, pageSize });
+
+  const filtered = isSearchActive ? searchResults : orders;
+
+  const effectiveLoading = isSearchActive ? searchLoading : loading;
+  const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
+  const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
+  const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
+  const effectiveOnPrev = isSearchActive ? onSearchPrev : onPrev;
 
   const toggleItems = (id: string) => {
     setExpandedItems((prev) => ({
@@ -88,13 +97,6 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
            onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
          />
         );
-      // case "customer":
-      //   return (
-      //     <div className="flex flex-col gap-0.5">
-      //       <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
-      //       <span className="text-[10px] text-slate-400">{row.userPhone}</span>
-      //     </div>
-      //   );
 
       case "address":
         return (
@@ -204,17 +206,17 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>
 
-      {loading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
+      {effectiveLoading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
         <OrderTable
           headings={orderHeadings}
           rows={filtered}
           renderCell={renderCell}
-          currentPage={currentPage}
-          hasNextPage={hasNextPage}
-          onNext={onNext}
-          onPrev={onPrev}
+          currentPage={effectiveCurrentPage}
+          hasNextPage={effectiveHasNextPage}
+          onNext={effectiveOnNext}
+          onPrev={effectiveOnPrev}
           pageSize={pageSize}
-          loading={loading}
+          loading={effectiveLoading}
         />
       )}
     </div>

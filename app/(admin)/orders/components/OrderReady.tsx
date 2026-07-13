@@ -12,6 +12,7 @@ import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import { markDelivered, markDeliveryStarted } from "@/lib/firebase/order";
 import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
+import { useOrderSearch } from "@/hooks/useOrderSearch";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -27,16 +28,24 @@ const orderHeadings: TableHeading[] = [
   { id: "actions",      title: ""             },
 ];
 
+const READY_TAB_FILTER = "latestStatus.status = readyToDeliver";
+
 export default function OrderReady({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
-  const [search, setSearch] = useState("");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
 
-  const filtered = orders.filter((o) =>
-    !search ||
-    o.userName.toLowerCase().includes(search.toLowerCase()) ||
-    o.id.includes(search)
-  );
+  const {
+    search, setSearch, isSearchActive, searchLoading,
+    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,
+  } = useOrderSearch({ filter: READY_TAB_FILTER, pageSize });
+
+  const filtered = isSearchActive ? searchResults : orders;
+
+  const effectiveLoading = isSearchActive ? searchLoading : loading;
+  const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
+  const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
+  const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
+  const effectiveOnPrev = isSearchActive ? onSearchPrev : onPrev;
 
   const toggleItems = (id: string) => {
   setExpandedItems((prev) => ({
@@ -70,8 +79,7 @@ export default function OrderReady({ orders, loading, onStatusUpdate, currentPag
             <span className={`${row.serviceType === "ordinary" ? "bg-[#02d0ff]": "bg-purple-600"} p-1.5 text-[10px] text-white rounded-lg`}>{row.serviceType}</span>
           </div>
         );
-
-      case "customer":
+       case "customer":
         return (
            <CustomerCell
            userId={row.userId}
@@ -220,17 +228,17 @@ export default function OrderReady({ orders, loading, onStatusUpdate, currentPag
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>
 
-      {loading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
+      {effectiveLoading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
         <OrderTable
           headings={orderHeadings}
           rows={filtered}
           renderCell={renderCell}
-          currentPage={currentPage}
-          hasNextPage={hasNextPage}
-          onNext={onNext}
-          onPrev={onPrev}
+          currentPage={effectiveCurrentPage}
+          hasNextPage={effectiveHasNextPage}
+          onNext={effectiveOnNext}
+          onPrev={effectiveOnPrev}
           pageSize={pageSize}
-          loading={loading}
+          loading={effectiveLoading}
         />
       )}
     </div>
