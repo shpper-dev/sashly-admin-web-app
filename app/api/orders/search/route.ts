@@ -7,9 +7,6 @@ export async function GET(req: Request) {
   const limit = Number(searchParams.get("limit") ?? 20);
   const offset = Number(searchParams.get("offset") ?? 0);
 
-  // Raw Meilisearch filter expression, e.g. "status = readyToDeliver AND isCancelled = false"
-  // Fields referenced here MUST be listed in the index's filterableAttributes,
-  // otherwise Meilisearch returns a 400.
   const filter = searchParams.get("filter") ?? undefined;
 
   try {
