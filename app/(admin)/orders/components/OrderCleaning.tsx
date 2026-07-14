@@ -12,6 +12,7 @@ import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
 import { OrderTabProps } from "./OrdersPageClient";
 import { useOrderSearch } from "@/hooks/useOrderSearch";
+import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -43,7 +44,7 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
 
   const {
     search, setSearch, isSearchActive, searchLoading,
-    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,
+    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,refresh
   } = useOrderSearch({ filter: CLEANING_TAB_FILTER, pageSize });
 
   const filtered = isSearchActive ? searchResults : orders;
@@ -65,7 +66,10 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
       case "id":
-        return <span className="text-xs font-mono text-slate-500">#{row?.orderNumber ?? row.id.slice(6,13)}</span>;
+        return (
+        <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
+            <span className="text-xs text-slate-500 hover:text-purple-600 cursor-pointer">#{row?.orderNumber ?? row.id.slice(6,13)}</span>
+        </OrderDetailsDialog>);
 
       case "ready_by":
         return (
@@ -180,7 +184,7 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
             <UpdateOrderDialog
               orderId={row.id}
               currentStatus={row.latestStatus.status as OrderStatuses}
-              onSuccess={onStatusUpdate}
+              onSuccess={refresh}
             >
               <button className="px-3 py-1.5 flex items-center gap-2 text-xs font-medium text-white bg-[#02D0FF] rounded-lg hover:bg-blue-200 transition-colors">
                 <PencilLine className="w-4 h-4 text-white" />

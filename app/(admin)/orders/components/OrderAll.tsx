@@ -60,9 +60,9 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
   const { showToast } = useToast();
 
 
-const meiliFilter = statusFilter
-  ? `latestStatus.status = "${statusFilter}"`
-  : undefined;
+const statusMeiliFilter = statusFilter
+    ? `latestStatus.status = "${statusFilter}"`
+    : undefined;
 
 const {
   search,
@@ -74,9 +74,10 @@ const {
   searchHasNextPage,
   onSearchNext,
   onSearchPrev,
+  refresh,
 } = useOrderSearch({
   pageSize,
-  filter: meiliFilter,
+  extraFilter: statusMeiliFilter,
 });
 
   // Auto-open dialog state
@@ -113,7 +114,7 @@ const {
     switch (heading.id) {
       case "id":
         return (
-        <OrderDetailsDialog order={row} onStatusUpdate={onStatusUpdate}>
+        <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
             <span className="text-xs text-slate-500 hover:text-purple-600 cursor-pointer">#{row?.orderNumber ?? row.id.slice(6,13)}</span>
         </OrderDetailsDialog>);
 
@@ -243,7 +244,7 @@ const {
           order={autoOrder}
           open={true}
           onOpenChange={(open) => { if (!open) setAutoOrder(null); }}
-          onStatusUpdate={onStatusUpdate}
+          onStatusUpdate={refresh}
         >
           <span />
         </OrderDetailsDialog>

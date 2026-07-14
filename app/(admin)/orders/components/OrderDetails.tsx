@@ -42,7 +42,7 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
 
   const {
     search, setSearch, isSearchActive, searchLoading,
-    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,
+    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,refresh
   } = useOrderSearch({ filter: DETAIL_TAB_FILTER, pageSize });
 
   // Auto-open dialog state
@@ -82,7 +82,10 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
       case "id":
-        return <span className="text-xs text-slate-500">#{row?.orderNumber ?? row.id.slice(6,13)}</span>;
+         return (
+         <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
+             <span className="text-xs text-slate-500 hover:text-purple-600 cursor-pointer">#{row?.orderNumber ?? row.id.slice(6,13)}</span>
+         </OrderDetailsDialog>);
 
       case "ready_by":
         return (
@@ -182,7 +185,7 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
       case "actions":
         return (
           <div className="flex items-center gap-1 justify-end">
-            <OrderDetailsDialog order={row} onStatusUpdate={onStatusUpdate}>
+            <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
               <button className="px-3 py-1.5 flex items-center gap-2 text-xs font-medium bg-blue-200/30 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
                <PencilLine className="w-4 h-4 text-slate-400 hover:text-slate-600" />
                 DETAILS
@@ -202,7 +205,7 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
           order={autoOrder}
           open={true}
           onOpenChange={(open) => { if (!open) setAutoOrder(null); }}
-          onStatusUpdate={onStatusUpdate}
+          onStatusUpdate={refresh}
         >
           <span />
         </OrderDetailsDialog>

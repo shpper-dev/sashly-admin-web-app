@@ -17,6 +17,8 @@ import { SearchFilters } from "@/app/(admin)/search/page";
 import { createDispute } from "./dispute";
 import { UserAddress } from "../models/user.model";
 import { getCatalog } from "./business";
+import { meili } from "../meili/config";
+import { mapOrderData } from "../mappers/order.admin.mapper";
 
 //Filters type
 export interface OrderFilters {
@@ -95,6 +97,23 @@ export function getAllowedNextStatuses(current: OrderStatuses): OrderStatuses[] 
   return STATUS_TRANSITIONS[current] ?? [];
 }
 
+async function syncOrderToMeiliTemp(orderId: string): Promise<void> {
+  try {
+    const snap = await getDoc(doc(db, "orders", orderId));
+    if (!snap.exists()) return;
+ 
+    const order = mapOrderData(orderId, snap.data());
+ 
+    await fetch("/api/orders/sync-to-meili", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order }),
+    });
+  } catch (err) {
+    console.error(`Meili test-sync failed for order ${orderId} (non-fatal):`, err);
+  }
+}
+
 export async function advanceOrderStatus(
   orderId: string,
   newStatus: OrderStatuses,
@@ -118,28 +137,9 @@ export async function advanceOrderStatus(
   
   if (newStatus === "cancelled")      updates.isCancelled = true;
 
-  // refine this once the disputes flow is finalised 
-  if (newStatus === "disputed") {
-    try {
-     
-      // temp dispute creation
-      await createDispute({
-        orderId,
-        userId: senderId,
-        issueType: "missing_item",
-        description:"Shorts is missing",
-        priority:"high"
-      },
-      );
-
-      
-    } catch (msgError) {
-      console.error("Failed to create dispute message:", msgError);
-      throw new Error("Failed to create message.")
-    }
-  }
 
   await updateDoc(doc(db, "orders", orderId), updates);
+  await syncOrderToMeiliTemp(orderId);
 }
 
 export async function confirmOrderPayment(
@@ -156,6 +156,7 @@ export async function confirmOrderPayment(
   paymentDate: Date.now(), //new
   updatedAt: Date.now(),
 });
+await syncOrderToMeiliTemp(orderId);
 }
 
 // delivery
@@ -272,6 +273,7 @@ export async function addItemToOrder(orderId: string, newItem: OrderItem) {
     totalPrice: total,
     updatedAt: Date.now()
   });
+  await syncOrderToMeiliTemp(orderId);
 }
 
 // multiple items added together
@@ -303,6 +305,7 @@ export async function addItemsToOrder(orderId: string, newItems: OrderItem[]) {
     totalPrice: total,
     updatedAt: Date.now(),
   });
+  await syncOrderToMeiliTemp(orderId);
 }
 
 
@@ -340,7 +343,8 @@ export async function updateOrderItem(orderId: string, itemIndex: number, update
     items,
     totalPrice: total,
     updatedAt: Date.now(),
-  })
+  });
+  await syncOrderToMeiliTemp(orderId);
 }
 
 // delete orderItem from an existing order
@@ -367,7 +371,8 @@ export async function deleteOrderItem(orderId: string, itemIndex: number) {
     items,
     totalPrice: total,
     updatedAt: Date.now(),
-  })
+  });
+  await syncOrderToMeiliTemp(orderId);
 
   
 }
