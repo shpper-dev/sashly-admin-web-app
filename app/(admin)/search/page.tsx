@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select"
 import SearchResults from '@/components/search/SearchResults';
 import { Order } from '@/lib/models/order.model';
-import { getOrders, searchOrders } from '@/lib/firebase/order';
+import { searchOrders } from '@/lib/firebase/order';
 
 export interface SearchFilters {
   name: string;
@@ -54,6 +54,25 @@ const defaultFilters: SearchFilters = {
 };
 
 
+const ORDER_STATUS_OPTIONS = [
+  { label: "Confirmed",         value: "confirmed"        },
+  { label: "Picked Up",         value: "pickedUp"         },
+  { label: "Sorting",           value: "sorting"          },
+  { label: "Detailing",         value: "detailing"        },
+  { label: "Cleaning",          value: "cleaning"         },
+  { label: "Ready To Deliver",  value: "readyToDeliver"   },
+  { label: "Delivered",         value: "delivered"        },
+  { label: "Disputed",          value: "disputed"         },
+  { label: "Dispute Resolved",  value: "disputeResolved"  },
+  { label: "Cancelled",         value: "cancelled"        },
+];
+
+const ORDER_TYPE_OPTIONS = [
+  { label: "Ordinary", value: "ordinary" },
+  { label: "Express",  value: "express"  },
+];
+
+
 
 export default function SearchPage() {
   const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
@@ -61,9 +80,11 @@ export default function SearchPage() {
   const [results, setResults] = useState<Order[]>([]);
   const [activeFilters, setActiveFilters] = useState<SearchFilters>(defaultFilters);
 
+  const [orderStatus, setOrderStatus] = useState("");
+  const [orderType, setOrderType] = useState("");
+
   const PAGE_SIZE = 10;
   const [currentPage, setCurrentPage] = useState(1);
-  const [lastDocs, setLastDocs] = useState<any[]>([]);
   const [hasNext, setHasNext] = useState(true);
 
   const handleChange = (field: keyof SearchFilters, value: string) => {
@@ -75,42 +96,41 @@ export default function SearchPage() {
     setActiveFilters(defaultFilters);
     setHasSearched(false);
     setResults([]);
+    setOrderStatus("");
+    setOrderType("");
   };
 
-  const runSearch = async (f: SearchFilters, page = 1) => {
-  const lastDoc = lastDocs[page - 1] ?? null;
+ 
+  const runSearch = async (f: SearchFilters, page: number, status: string, type: string) => {
+    const res = await searchOrders({
+      filters: f,
+      pageSize: PAGE_SIZE,
+      page,
+      status,
+      orderType: type,
+    });
 
-  const res = await searchOrders({
-    filters: f,
-    pageSize: PAGE_SIZE,
-    lastDoc,
-  });
-
-  setResults(res.orders);
-  setHasNext(res.hasMore);
-
-  const updated = [...lastDocs];
-  updated[page] = res.lastDoc;
-  setLastDocs(updated);
-};
+    setResults(res.orders);
+    setHasNext(res.hasMore);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  setActiveFilters({ ...filters });
-  setHasSearched(true);
+    setActiveFilters({ ...filters });
+    setHasSearched(true);
+    setCurrentPage(1);
+ 
+    setOrderStatus("");
+    setOrderType("");
 
-  // reset pagination
-  setCurrentPage(1);
-  setLastDocs([]);
+    runSearch(filters, 1, "", "");
+  };
 
-  runSearch(filters, 1);
-};
-
-const handlePageChange = (page: number) => {
-  setCurrentPage(page);
-  runSearch(activeFilters, page);
-};
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    runSearch(activeFilters, page, orderStatus, orderType);
+  };
 
   const handleEditSearch = () => {
     setHasSearched(false);
@@ -120,7 +140,20 @@ const handlePageChange = (page: number) => {
     const updated = { ...activeFilters, [field]: '' };
     setActiveFilters(updated);
     setFilters(updated);
-    runSearch(updated);
+    setCurrentPage(1);
+    runSearch(updated, 1, orderStatus, orderType);
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setOrderStatus(value);
+    setCurrentPage(1);
+    runSearch(activeFilters, 1, value, orderType);
+  };
+
+  const handleTypeFilterChange = (value: string) => {
+    setOrderType(value);
+    setCurrentPage(1);
+    runSearch(activeFilters, 1, orderStatus, value);
   };
 
   const inputClass = 'px-2.5 py-1.5 rounded-lg border border-slate-300 bg-slate-50 shadow-inner text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all w-full disabled:cursor-not-allowed disabled:opacity-40';
@@ -137,11 +170,23 @@ const handlePageChange = (page: number) => {
             <h2 className='text-slate-900 text-lg font-bold'>Search</h2>
             <p className='text-slate-500 text-xs'>Explore different ways to search orders</p>
           </div>
-          <div className='flex items-center gap-2'>
-            <FilterDropdown label='Orders' />
-            <FilterDropdown label='Order Status' />
-            <FilterDropdown label='Order Type' />
-          </div>
+
+          {hasSearched && (
+            <div className='flex items-center gap-2'>
+              <FilterDropdown
+                label='Order Status'
+                options={ORDER_STATUS_OPTIONS}
+                defaultValue={orderStatus || undefined}
+                onChange={handleStatusFilterChange}
+              />
+              <FilterDropdown
+                label='Order Type'
+                options={ORDER_TYPE_OPTIONS}
+                defaultValue={orderType || undefined}
+                onChange={handleTypeFilterChange}
+              />
+            </div>
+          )}
         </section>
 
         {/* Search Form + Ready State — replaced by results once searched */}
@@ -235,8 +280,6 @@ const handlePageChange = (page: number) => {
                       <SelectContent className="rounded-xl">
                         <SelectItem value="paid" className="rounded-lg cursor-pointer text-xs">Paid</SelectItem>
                         <SelectItem value="unpaid" className="rounded-lg cursor-pointer text-xs">Unpaid</SelectItem>
-                        {/* <SelectItem value="partial" className="rounded-lg cursor-pointer text-xs">Partial</SelectItem>
-                        <SelectItem value="refunded" className="rounded-lg cursor-pointer text-xs">Refunded</SelectItem> */}
                       </SelectContent>
                     </Select>
                   </div>

@@ -12,6 +12,8 @@ import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import { markDelivered, markDeliveryStarted } from "@/lib/firebase/order";
 import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
+import { useOrderSearch } from "@/hooks/useOrderSearch";
+import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -27,16 +29,24 @@ const orderHeadings: TableHeading[] = [
   { id: "actions",      title: ""             },
 ];
 
+const READY_TAB_FILTER = "latestStatus.status = readyToDeliver";
+
 export default function OrderReady({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
-  const [search, setSearch] = useState("");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
 
-  const filtered = orders.filter((o) =>
-    !search ||
-    o.userName.toLowerCase().includes(search.toLowerCase()) ||
-    o.id.includes(search)
-  );
+  const {
+    search, setSearch, isSearchActive, searchLoading,
+    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,refresh
+  } = useOrderSearch({ filter: READY_TAB_FILTER, pageSize });
+
+  const filtered = isSearchActive ? searchResults : orders;
+
+  const effectiveLoading = isSearchActive ? searchLoading : loading;
+  const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
+  const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
+  const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
+  const effectiveOnPrev = isSearchActive ? onSearchPrev : onPrev;
 
   const toggleItems = (id: string) => {
   setExpandedItems((prev) => ({
@@ -48,8 +58,10 @@ export default function OrderReady({ orders, loading, onStatusUpdate, currentPag
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
       case "id":
-        return <span className="text-xs font-mono text-slate-500">#{row?.orderNumber ?? row.id.slice(6,13)}</span>;
-
+         return (
+         <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
+             <span className="text-xs text-slate-500 hover:text-purple-600 cursor-pointer">#{row?.orderNumber ?? row.id.slice(6,13)}</span>
+         </OrderDetailsDialog>);
       case "ready_by":
         return (
           <div className="flex flex-col items-start">
@@ -70,8 +82,7 @@ export default function OrderReady({ orders, loading, onStatusUpdate, currentPag
             <span className={`${row.serviceType === "ordinary" ? "bg-[#02d0ff]": "bg-purple-600"} p-1.5 text-[10px] text-white rounded-lg`}>{row.serviceType}</span>
           </div>
         );
-
-      case "customer":
+       case "customer":
         return (
            <CustomerCell
            userId={row.userId}
@@ -181,7 +192,7 @@ export default function OrderReady({ orders, loading, onStatusUpdate, currentPag
           description="This will set delivery start time and advance status to Ready to Deliver."
           confirmLabel="Start Delivery"
           onConfirm={() => markDeliveryStarted(row.id)}
-          onSuccess={onStatusUpdate}
+          onSuccess={refresh}
         >
           <button className="px-2 py-1.5 flex items-center gap-1.5 text-xs font-medium bg-blue-200/50 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
             <PencilLine className="w-3.5 h-3.5" />
@@ -195,7 +206,7 @@ export default function OrderReady({ orders, loading, onStatusUpdate, currentPag
           description="This will mark the order as delivered, set delivery end time and update status history."
           confirmLabel="Confirm Delivered"
           onConfirm={() => markDelivered(row.id)}
-          onSuccess={onStatusUpdate}
+          onSuccess={refresh}
         >
           <button className="px-2 py-1.5 text-xs flex items-center gap-2 font-medium text-white bg-[#02D0FF] rounded-md hover:bg-blue-400 transition-colors cursor-pointer">
              <PencilLine className="w-3.5 h-3.5" />
@@ -220,17 +231,17 @@ export default function OrderReady({ orders, loading, onStatusUpdate, currentPag
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>
 
-      {loading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
+      {effectiveLoading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
         <OrderTable
           headings={orderHeadings}
           rows={filtered}
           renderCell={renderCell}
-          currentPage={currentPage}
-          hasNextPage={hasNextPage}
-          onNext={onNext}
-          onPrev={onPrev}
+          currentPage={effectiveCurrentPage}
+          hasNextPage={effectiveHasNextPage}
+          onNext={effectiveOnNext}
+          onPrev={effectiveOnPrev}
           pageSize={pageSize}
-          loading={loading}
+          loading={effectiveLoading}
         />
       )}
     </div>

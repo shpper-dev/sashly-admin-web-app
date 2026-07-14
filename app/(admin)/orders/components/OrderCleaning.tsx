@@ -11,6 +11,8 @@ import { OrderTable } from "@/components/orders/OrderTable";
 import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
 import { OrderTabProps } from "./OrdersPageClient";
+import { useOrderSearch } from "@/hooks/useOrderSearch";
+import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -34,16 +36,24 @@ const cleaningReportOptions = [
   { label: "Detailed Today",      value: "detailed",   href: "/orders/reports/detailed"   },
 ];
 
+const CLEANING_TAB_FILTER = "latestStatus.status = cleaning";
+
 export default function OrderCleaning({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
-  const [search, setSearch] = useState("");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const {showToast} = useToast();
 
-  const filtered = orders.filter((o) =>
-    !search ||
-    o.userName.toLowerCase().includes(search.toLowerCase()) ||
-    o.id.includes(search)
-  );
+  const {
+    search, setSearch, isSearchActive, searchLoading,
+    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,refresh
+  } = useOrderSearch({ filter: CLEANING_TAB_FILTER, pageSize });
+
+  const filtered = isSearchActive ? searchResults : orders;
+
+  const effectiveLoading = isSearchActive ? searchLoading : loading;
+  const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
+  const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
+  const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
+  const effectiveOnPrev = isSearchActive ? onSearchPrev : onPrev;
 
   const toggleItems = (id: string) => {
     setExpandedItems((prev) => ({
@@ -56,7 +66,10 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
       case "id":
-        return <span className="text-xs font-mono text-slate-500">#{row?.orderNumber ?? row.id.slice(6,13)}</span>;
+        return (
+        <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
+            <span className="text-xs text-slate-500 hover:text-purple-600 cursor-pointer">#{row?.orderNumber ?? row.id.slice(6,13)}</span>
+        </OrderDetailsDialog>);
 
       case "ready_by":
         return (
@@ -88,13 +101,6 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
            onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
          />
         );
-      // case "customer":
-      //   return (
-      //     <div className="flex flex-col gap-0.5">
-      //       <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
-      //       <span className="text-[10px] text-slate-400">{row.userPhone}</span>
-      //     </div>
-      //   );
 
       case "address":
         return (
@@ -178,7 +184,7 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
             <UpdateOrderDialog
               orderId={row.id}
               currentStatus={row.latestStatus.status as OrderStatuses}
-              onSuccess={onStatusUpdate}
+              onSuccess={refresh}
             >
               <button className="px-3 py-1.5 flex items-center gap-2 text-xs font-medium text-white bg-[#02D0FF] rounded-lg hover:bg-blue-200 transition-colors">
                 <PencilLine className="w-4 h-4 text-white" />
@@ -204,17 +210,17 @@ export default function OrderCleaning({ orders, loading, onStatusUpdate, current
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>
 
-      {loading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
+      {effectiveLoading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
         <OrderTable
           headings={orderHeadings}
           rows={filtered}
           renderCell={renderCell}
-          currentPage={currentPage}
-          hasNextPage={hasNextPage}
-          onNext={onNext}
-          onPrev={onPrev}
+          currentPage={effectiveCurrentPage}
+          hasNextPage={effectiveHasNextPage}
+          onNext={effectiveOnNext}
+          onPrev={effectiveOnPrev}
           pageSize={pageSize}
-          loading={loading}
+          loading={effectiveLoading}
         />
       )}
     </div>

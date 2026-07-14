@@ -9,6 +9,8 @@ import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog";
 import { OrderTabProps } from "./OrdersPageClient";
 import CustomerCell from "@/components/orders/CustomerCell";
+import { useOrderSearch } from "@/hooks/useOrderSearch";
+import { refresh } from "next/cache";
 
 const archiveHeadings: TableHeading[] = [
   { id: "id",       title: "ID"      },
@@ -25,26 +27,39 @@ const ARCHIVE_STATUS_STYLE: Record<string, string> = {
   cancelled: "bg-red-50 text-red-600",
 };
 
+
+const ARCHIVE_TAB_FILTER = "isDelivered = true OR isCancelled = true";
+
 export default function OrderArchive({
   orders, loading, onStatusUpdate,
   currentPage, hasNextPage, onNext, onPrev, pageSize,
   autoOpenOrderId,
 }: OrderTabProps) {
-  const [search, setSearch] = useState("");
   const [autoOrder, setAutoOrder] = useState<Order | null>(null);
   const [autoDialogOpen, setAutoDialogOpen] = useState(false);
 
-  const filtered = orders.filter(
-    (o) =>
-      !search ||
-      o.userName.toLowerCase().includes(search.toLowerCase()) ||
-      o.id.includes(search)
-  );
+  const {
+    search, setSearch, isSearchActive, searchLoading,
+    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,refresh
+  } = useOrderSearch({ filter: ARCHIVE_TAB_FILTER, pageSize });
+
+  const filtered = isSearchActive ? searchResults : orders;
+
+  const effectiveLoading = isSearchActive ? searchLoading : loading;
+  const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
+  const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
+  const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
+  const effectiveOnPrev = isSearchActive ? onSearchPrev : onPrev;
 
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
+      // case "id":
+      //   return <span className="text-xs text-slate-500">#{row?.orderNumber ?? row.id.slice(6,13)}</span>;
       case "id":
-        return <span className="text-xs text-slate-500">#{row?.orderNumber ?? row.id.slice(6,13)}</span>;
+              return (
+              <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
+                  <span className="text-xs text-slate-500 hover:text-purple-600 cursor-pointer">#{row?.orderNumber ?? row.id.slice(6,13)}</span>
+              </OrderDetailsDialog>);
 
       case "placed":
         return (
@@ -58,21 +73,14 @@ export default function OrderArchive({
           </div>
         );
 
-      // case "customer":
-      //   return (
-      //     <div className="flex flex-col gap-0.5">
-      //       <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
-      //       <span className="text-[10px] text-slate-400">{row.userPhone}</span>
-      //     </div>
-      //   );
-       case "customer":
-         return (
-            <CustomerCell
-            userId={row.userId}
-            userName={row.userName}
-            userPhone={row.userPhone}
-          
-          />
+      case "customer":
+        return (
+           <CustomerCell
+           userId={row.userId}
+           userName={row.userName}
+           userPhone={row.userPhone}
+         
+         />
            
          );
 
@@ -96,7 +104,7 @@ export default function OrderArchive({
       case "actions":
         return (
           <div className="flex items-center gap-1 justify-end">
-            <OrderDetailsDialog order={row} onStatusUpdate={onStatusUpdate}>
+            <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
               <button className="px-3 py-1.5 flex items-center gap-2 text-xs font-medium bg-blue-200/30 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
                 <PencilLine className="w-4 h-4 text-slate-400" />
                 DETAILS
@@ -118,7 +126,7 @@ export default function OrderArchive({
           order={autoOrder}
           open={autoDialogOpen}
           onOpenChange={(val) => { setAutoDialogOpen(val); if (!val) setAutoOrder(null); }}
-          onStatusUpdate={onStatusUpdate}
+          onStatusUpdate={refresh}
         >
           <span />
         </OrderDetailsDialog>
@@ -129,20 +137,20 @@ export default function OrderArchive({
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>
 
-      {loading && filtered.length === 0 ? (
+      {effectiveLoading && filtered.length === 0 ? (
         <TableSkeleton tableHeadings={archiveHeadings} />
       ) : (
-        <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+        <div className={effectiveLoading ? "opacity-50 pointer-events-none" : ""}>
           <OrderTable
             headings={archiveHeadings}
             rows={filtered}
             renderCell={renderCell}
-            currentPage={currentPage}
-            hasNextPage={hasNextPage}
-            onNext={onNext}
-            onPrev={onPrev}
+            currentPage={effectiveCurrentPage}
+            hasNextPage={effectiveHasNextPage}
+            onNext={effectiveOnNext}
+            onPrev={effectiveOnPrev}
             pageSize={pageSize}
-            loading={loading}
+            loading={effectiveLoading}
           />
         </div>
       )}

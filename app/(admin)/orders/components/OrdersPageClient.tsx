@@ -14,6 +14,7 @@ import OrderReady from "./OrderReady";
 import OrderArchive from "./OrderArchive";
 import OrderAll from "./OrderAll";
 import AddBusinessOrderDialog from "@/components/orders/AddBusinessOrderDialog";
+import { useOrderSearch } from "@/hooks/useOrderSearch";
 
 export type TabKey ="all" | "detail" | "cleaning" | "ready" | "pickups" | "archive";
 

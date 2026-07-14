@@ -12,6 +12,8 @@ import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import UpdateOrderDialog from "@/components/orders/UpdateOrderDialog";
 import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
+import { useOrderSearch } from "@/hooks/useOrderSearch";
+import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -27,16 +29,25 @@ const orderHeadings: TableHeading[] = [
   { id: "actions",      title: ""             },
 ];
 
+
+const PICKUPS_TAB_FILTER = "latestStatus.status = confirmed AND hasDriver = true";
+
 export default function OrderPickups({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
-  const [search, setSearch] = useState("");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
 
-  const filtered = orders.filter((o) =>
-    !search ||
-    o.userName.toLowerCase().includes(search.toLowerCase()) ||
-    o.id.includes(search)
-  );
+  const {
+    search, setSearch, isSearchActive, searchLoading,
+    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,refresh
+  } = useOrderSearch({ filter: PICKUPS_TAB_FILTER, pageSize });
+
+  const filtered = isSearchActive ? searchResults : orders;
+
+  const effectiveLoading = isSearchActive ? searchLoading : loading;
+  const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
+  const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
+  const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
+  const effectiveOnPrev = isSearchActive ? onSearchPrev : onPrev;
 
   const toggleItems = (id: string) => {
     setExpandedItems((prev) => ({
@@ -48,7 +59,10 @@ export default function OrderPickups({ orders, loading, onStatusUpdate, currentP
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
       case "id":
-        return <span className="text-xs font-mono text-slate-500">#{row?.orderNumber ?? row.id.slice(6,13)}</span>;
+        return (
+        <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
+            <span className="text-xs text-slate-500 hover:text-purple-600 cursor-pointer">#{row?.orderNumber ?? row.id.slice(6,13)}</span>
+        </OrderDetailsDialog>);
 
       case "placed":
         return (
@@ -69,13 +83,6 @@ export default function OrderPickups({ orders, loading, onStatusUpdate, currentP
            onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
          />
         );
-      // case "customer":
-      //   return (
-      //     <div className="flex flex-col gap-0.5">
-      //       <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
-      //       <span className="text-[10px] text-slate-400">{row.userPhone}</span>
-      //     </div>
-      //   );
 
       // route is not on Order model yet - add when updated
       // case "route":
@@ -169,7 +176,7 @@ export default function OrderPickups({ orders, loading, onStatusUpdate, currentP
               <UpdateOrderDialog
               orderId={row.id}
               currentStatus={row.latestStatus.status as OrderStatuses}
-              onSuccess={onStatusUpdate}>
+              onSuccess={refresh}>
               <button className="px-2 py-1.5 text-xs flex items-center gap-2 font-medium bg-blue-200/50 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
               <PencilLine className="w-4 h-4 text-slate-400 hover:text-slate-600" />
               PICKUP
@@ -200,17 +207,17 @@ export default function OrderPickups({ orders, loading, onStatusUpdate, currentP
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>
 
-      {loading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
+      {effectiveLoading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
         <OrderTable
           headings={orderHeadings}
           rows={filtered}
           renderCell={renderCell}
-          currentPage={currentPage}
-          hasNextPage={hasNextPage}
-          onNext={onNext}
-          onPrev={onPrev}
+          currentPage={effectiveCurrentPage}
+          hasNextPage={effectiveHasNextPage}
+          onNext={effectiveOnNext}
+          onPrev={effectiveOnPrev}
           pageSize={pageSize}
-          loading={loading}
+          loading={effectiveLoading}
         />
       )}
     </div>

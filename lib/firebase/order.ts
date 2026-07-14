@@ -17,6 +17,8 @@ import { SearchFilters } from "@/app/(admin)/search/page";
 import { createDispute } from "./dispute";
 import { UserAddress } from "../models/user.model";
 import { getCatalog } from "./business";
+import { meili } from "../meili/config";
+import { mapOrderData } from "../mappers/order.admin.mapper";
 
 //Filters type
 export interface OrderFilters {
@@ -95,6 +97,23 @@ export function getAllowedNextStatuses(current: OrderStatuses): OrderStatuses[] 
   return STATUS_TRANSITIONS[current] ?? [];
 }
 
+async function syncOrderToMeiliTemp(orderId: string): Promise<void> {
+  try {
+    const snap = await getDoc(doc(db, "orders", orderId));
+    if (!snap.exists()) return;
+ 
+    const order = mapOrderData(orderId, snap.data());
+ 
+    await fetch("/api/orders/sync-to-meili", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order }),
+    });
+  } catch (err) {
+    console.error(`Meili test-sync failed for order ${orderId} (non-fatal):`, err);
+  }
+}
+
 export async function advanceOrderStatus(
   orderId: string,
   newStatus: OrderStatuses,
@@ -118,28 +137,9 @@ export async function advanceOrderStatus(
   
   if (newStatus === "cancelled")      updates.isCancelled = true;
 
-  // refine this once the disputes flow is finalised 
-  if (newStatus === "disputed") {
-    try {
-     
-      // temp dispute creation
-      await createDispute({
-        orderId,
-        userId: senderId,
-        issueType: "missing_item",
-        description:"Shorts is missing",
-        priority:"high"
-      },
-      );
-
-      
-    } catch (msgError) {
-      console.error("Failed to create dispute message:", msgError);
-      throw new Error("Failed to create message.")
-    }
-  }
 
   await updateDoc(doc(db, "orders", orderId), updates);
+  await syncOrderToMeiliTemp(orderId);
 }
 
 export async function confirmOrderPayment(
@@ -156,6 +156,7 @@ export async function confirmOrderPayment(
   paymentDate: Date.now(), //new
   updatedAt: Date.now(),
 });
+await syncOrderToMeiliTemp(orderId);
 }
 
 // delivery
@@ -272,6 +273,7 @@ export async function addItemToOrder(orderId: string, newItem: OrderItem) {
     totalPrice: total,
     updatedAt: Date.now()
   });
+  await syncOrderToMeiliTemp(orderId);
 }
 
 // multiple items added together
@@ -303,6 +305,7 @@ export async function addItemsToOrder(orderId: string, newItems: OrderItem[]) {
     totalPrice: total,
     updatedAt: Date.now(),
   });
+  await syncOrderToMeiliTemp(orderId);
 }
 
 
@@ -340,7 +343,8 @@ export async function updateOrderItem(orderId: string, itemIndex: number, update
     items,
     totalPrice: total,
     updatedAt: Date.now(),
-  })
+  });
+  await syncOrderToMeiliTemp(orderId);
 }
 
 // delete orderItem from an existing order
@@ -367,132 +371,219 @@ export async function deleteOrderItem(orderId: string, itemIndex: number) {
     items,
     totalPrice: total,
     updatedAt: Date.now(),
-  })
+  });
+  await syncOrderToMeiliTemp(orderId);
 
   
 }
 
-// search orders
+// // search orders
+// export async function searchOrders({
+//   filters,
+//   pageSize = 10,
+//   lastDoc,
+// }: {
+//   filters: Partial<SearchFilters>;
+//   pageSize?: number;
+//   lastDoc?: QueryDocumentSnapshot | null;
+// }) {
+//   const constraints: any[] = [];
+
+//   // Server-side filters
+//   if (filters.orderId) {
+//     constraints.push(where("id", "==", filters.orderId));
+//   }
+
+//   if (filters.payment === "paid") {
+//     constraints.push(where("isPaid", "==", true));
+//   }
+
+//   if (filters.payment === "unpaid") {
+//     constraints.push(where("isPaid", "==", false));
+//   }
+
+//   if (filters.email) {
+//     constraints.push(
+//       where("userEmail", "==", filters.email.trim().toLowerCase())
+//     );
+//   }
+
+//   if (filters.placedAfter) {
+//     constraints.push(
+//       where("createdAt", ">=", new Date(filters.placedAfter).getTime())
+//     );
+//   }
+
+//   if (filters.placedBefore) {
+//     constraints.push(
+//       where("createdAt", "<=", new Date(filters.placedBefore).getTime())
+//     );
+//   }
+
+//   if (filters.paidAfter) {
+//     constraints.push(
+//       where("paymentDate", ">=", new Date(filters.paidAfter).getTime())
+//     );
+//   }
+
+//   if (filters.paidBefore) {
+//     constraints.push(
+//       where("paymentDate", "<=", new Date(filters.paidBefore).getTime())
+//     );
+//   }
+
+//   const FETCH_SIZE = 50;
+
+//   let cursor = lastDoc;
+//   let hasMore = true;
+
+//   const results: Order[] = [];
+
+//   while (results.length < pageSize && hasMore) {
+//     const batchConstraints = [
+//       ...constraints,
+//       orderBy("createdAt", "desc"),
+//       ...(cursor ? [startAfter(cursor)] : []),
+//       limit(FETCH_SIZE),
+//     ];
+
+//     const q = query(collection(db, "orders"), ...batchConstraints);
+//     const snapshot = await getDocs(q);
+
+//     if (snapshot.empty) {
+//       hasMore = false;
+//       break;
+//     }
+
+//     const fetchedOrders = snapshot.docs.map(mapOrder);
+
+//     const filteredOrders = applyClientFilters(
+//       fetchedOrders,
+//       filters
+//     );
+
+//     results.push(...filteredOrders);
+
+//     cursor = snapshot.docs[snapshot.docs.length - 1];
+
+//     if (snapshot.docs.length < FETCH_SIZE) {
+//       hasMore = false;
+//     }
+//   }
+
+//   return {
+//     orders: results.slice(0, pageSize),
+//     lastDoc: cursor,
+//     hasMore,
+//   };
+// }
+
+// function applyClientFilters(orders: Order[], filters: Partial<SearchFilters>) {
+//   return orders.filter((order) => {
+//     if (filters.name && !order.userName.toLowerCase().includes(filters.name.toLowerCase())) {
+//       return false;
+//     }
+
+//     if (filters.phone && !order.userPhone.includes(filters.phone)) {
+//       return false;
+//     }
+
+//     if (filters.summary) {
+//       const match = order.items.some((item) =>
+//         item.name.toLowerCase().includes(filters.summary!.toLowerCase())
+//       );
+//       if (!match) return false;
+//     }
+
+//     return true;
+//   });
+// }
+
+
+function escapeFilterValue(v: string): string {
+  return v.replace(/"/g, '\\"');
+}
+ 
+function buildMeiliFilter(filters: Partial<SearchFilters>): string {
+  const clauses: string[] = [];
+ 
+  if (filters.orderId) {
+    const v = escapeFilterValue(filters.orderId.trim());
+    clauses.push(`(orderNumber = "${v}" OR id = "${v}")`);
+  }
+ 
+  if (filters.email) {
+    clauses.push(`userEmail = "${escapeFilterValue(filters.email.trim().toLowerCase())}"`);
+  }
+ 
+  if (filters.payment === "paid") clauses.push("isPaid = true");
+  if (filters.payment === "unpaid") clauses.push("isPaid = false");
+ 
+  if (filters.placedAfter) {
+    clauses.push(`createdAt >= ${new Date(filters.placedAfter).getTime()}`);
+  }
+  if (filters.placedBefore) {
+    clauses.push(`createdAt <= ${new Date(filters.placedBefore).getTime()}`);
+  }
+  if (filters.paidAfter) {
+    clauses.push(`paymentDate >= ${new Date(filters.paidAfter).getTime()}`);
+  }
+  if (filters.paidBefore) {
+    clauses.push(`paymentDate <= ${new Date(filters.paidBefore).getTime()}`);
+  }
+ 
+  return clauses.join(" AND ");
+}
+ 
+function buildMeiliQuery(filters: Partial<SearchFilters>): string {
+  return [filters.name, filters.phone].filter(Boolean).join(" ").trim();
+}
+ 
 export async function searchOrders({
   filters,
   pageSize = 10,
-  lastDoc,
+  page = 1,
+  status,
+  orderType,
 }: {
   filters: Partial<SearchFilters>;
   pageSize?: number;
-  lastDoc?: QueryDocumentSnapshot | null;
-}) {
-  const constraints: any[] = [];
-
-  // Server-side filters
-  if (filters.orderId) {
-    constraints.push(where("id", "==", filters.orderId));
+  page?: number;
+  // Post-search refinement filters — the Order Status / Order Type dropdowns
+  // shown once results are on screen. Kept separate from `filters` since
+  // they're not part of the search form itself.
+  status?: string;
+  orderType?: string;
+}): Promise<{ orders: Order[]; hasMore: boolean }> {
+  const q = buildMeiliQuery(filters);
+ 
+  const clauses = [buildMeiliFilter(filters)];
+  if (status) clauses.push(`latestStatus.status = "${escapeFilterValue(status)}"`);
+  if (orderType) clauses.push(`serviceType = "${escapeFilterValue(orderType)}"`);
+  const filter = clauses.filter(Boolean).join(" AND ");
+ 
+  const offset = (page - 1) * pageSize;
+ 
+  const params = new URLSearchParams({
+    q,
+    limit: String(pageSize),
+    offset: String(offset),
+  });
+  if (filter) params.set("filter", filter);
+ 
+  const res = await fetch(`/api/orders/search?${params.toString()}`);
+  if (!res.ok) {
+    throw new Error(`Search failed with status ${res.status}`);
   }
-
-  if (filters.payment === "paid") {
-    constraints.push(where("isPaid", "==", true));
-  }
-
-  if (filters.payment === "unpaid") {
-    constraints.push(where("isPaid", "==", false));
-  }
-
-  if (filters.email) {
-    constraints.push(
-      where("userEmail", "==", filters.email.trim().toLowerCase())
-    );
-  }
-
-  if (filters.placedAfter) {
-    constraints.push(
-      where("createdAt", ">=", new Date(filters.placedAfter).getTime())
-    );
-  }
-
-  if (filters.placedBefore) {
-    constraints.push(
-      where("createdAt", "<=", new Date(filters.placedBefore).getTime())
-    );
-  }
-
-  if (filters.paidAfter) {
-    constraints.push(
-      where("paymentDate", ">=", new Date(filters.paidAfter).getTime())
-    );
-  }
-
-  if (filters.paidBefore) {
-    constraints.push(
-      where("paymentDate", "<=", new Date(filters.paidBefore).getTime())
-    );
-  }
-
-  const FETCH_SIZE = 50;
-
-  let cursor = lastDoc;
-  let hasMore = true;
-
-  const results: Order[] = [];
-
-  while (results.length < pageSize && hasMore) {
-    const batchConstraints = [
-      ...constraints,
-      orderBy("createdAt", "desc"),
-      ...(cursor ? [startAfter(cursor)] : []),
-      limit(FETCH_SIZE),
-    ];
-
-    const q = query(collection(db, "orders"), ...batchConstraints);
-    const snapshot = await getDocs(q);
-
-    if (snapshot.empty) {
-      hasMore = false;
-      break;
-    }
-
-    const fetchedOrders = snapshot.docs.map(mapOrder);
-
-    const filteredOrders = applyClientFilters(
-      fetchedOrders,
-      filters
-    );
-
-    results.push(...filteredOrders);
-
-    cursor = snapshot.docs[snapshot.docs.length - 1];
-
-    if (snapshot.docs.length < FETCH_SIZE) {
-      hasMore = false;
-    }
-  }
-
+ 
+  const data: { hits: Order[]; estimatedTotalHits: number } = await res.json();
+ 
   return {
-    orders: results.slice(0, pageSize),
-    lastDoc: cursor,
-    hasMore,
+    orders: data.hits,
+    hasMore: offset + data.hits.length < data.estimatedTotalHits,
   };
 }
-
-function applyClientFilters(orders: Order[], filters: Partial<SearchFilters>) {
-  return orders.filter((order) => {
-    if (filters.name && !order.userName.toLowerCase().includes(filters.name.toLowerCase())) {
-      return false;
-    }
-
-    if (filters.phone && !order.userPhone.includes(filters.phone)) {
-      return false;
-    }
-
-    if (filters.summary) {
-      const match = order.items.some((item) =>
-        item.name.toLowerCase().includes(filters.summary!.toLowerCase())
-      );
-      if (!match) return false;
-    }
-
-    return true;
-  });
-}
+ 
 
 // get order by id
 export async function getOrderById(

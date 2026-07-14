@@ -12,6 +12,7 @@ import { OrderTable } from "@/components/orders/OrderTable";
 import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
 import { getOrderById } from "@/lib/firebase/order";
+import { useOrderSearch } from "@/hooks/useOrderSearch";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -54,10 +55,30 @@ const OrderStatusOptions = [
 ];
 
 export default function OrderAll({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize, autoOpenOrderId }: OrderTabProps) {
-  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(""); // "" = no filter applied
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
+
+
+const statusMeiliFilter = statusFilter
+    ? `latestStatus.status = "${statusFilter}"`
+    : undefined;
+
+const {
+  search,
+  setSearch,
+  isSearchActive,
+  searchLoading,
+  searchResults,
+  searchPage,
+  searchHasNextPage,
+  onSearchNext,
+  onSearchPrev,
+  refresh,
+} = useOrderSearch({
+  pageSize,
+  extraFilter: statusMeiliFilter,
+});
 
   // Auto-open dialog state
   const [autoOrder, setAutoOrder] = useState<Order | null>(null);
@@ -75,18 +96,12 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
     }
   }, [autoOpenOrderId, orders, loading]);
 
-  // Filtering — status AND search both apply, combined with AND logic
-  const filtered = orders.filter((order) => {
-    const matchesSearch =
-      !search ||
-      order.userName.toLowerCase().includes(search.toLowerCase()) ||
-      order.id.includes(search) || order.orderNumber?.toLowerCase().includes(search.toLowerCase());
-
-    const matchesStatus =
-      !statusFilter || order.latestStatus.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
+  const filtered = isSearchActive ? searchResults: orders;
+  const effectiveLoading = isSearchActive ? searchLoading : loading;
+  const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
+  const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
+  const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
+  const effectiveOnPrev = isSearchActive ? onSearchPrev : onPrev;
 
   const toggleItems = (id: string) => {
     setExpandedItems((prev) => ({
@@ -99,7 +114,7 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
     switch (heading.id) {
       case "id":
         return (
-        <OrderDetailsDialog order={row} onStatusUpdate={onStatusUpdate}>
+        <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
             <span className="text-xs text-slate-500 hover:text-purple-600 cursor-pointer">#{row?.orderNumber ?? row.id.slice(6,13)}</span>
         </OrderDetailsDialog>);
 
@@ -124,15 +139,17 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
           </div>
         );
 
-      case "customer":
+         case "customer":
         return (
-          <CustomerCell
+           <CustomerCell
            userId={row.userId}
            userName={row.userName}
            userPhone={row.userPhone}
            onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
          />
+          
         );
+
       // case "customer":
       //   return (
       //     <div className="flex flex-col gap-0.5">
@@ -227,7 +244,7 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
           order={autoOrder}
           open={true}
           onOpenChange={(open) => { if (!open) setAutoOrder(null); }}
-          onStatusUpdate={onStatusUpdate}
+          onStatusUpdate={refresh}
         >
           <span />
         </OrderDetailsDialog>
@@ -241,32 +258,24 @@ export default function OrderAll({ orders, loading, onStatusUpdate, currentPage,
             defaultValue={statusFilter || undefined}
             onChange={setStatusFilter}
           />
-          {/* {statusFilter && (
-            <button
-              onClick={() => setStatusFilter("")}
-              className="text-xs text-slate-400 hover:text-slate-600 underline transition"
-            >
-              Clear filter
-            </button>
-          )} */}
         </div>
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>
 
-      {loading && filtered.length === 0 ? (
+      {effectiveLoading && filtered.length === 0 ? (
         <TableSkeleton tableHeadings={orderHeadings} />
       ) : (
-        <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+        <div className={effectiveLoading ? "opacity-50 pointer-events-none" : ""}>
           <OrderTable
             headings={orderHeadings}
             rows={filtered}
             renderCell={renderCell}
-            currentPage={currentPage}
-            hasNextPage={hasNextPage}
-            onNext={onNext}
-            onPrev={onPrev}
+            currentPage={effectiveCurrentPage}
+            hasNextPage={effectiveHasNextPage}
+            onNext={effectiveOnNext}
+            onPrev={effectiveOnPrev}
             pageSize={pageSize}
-            loading={loading}
+            loading={effectiveLoading}
           />
         </div>
       )}

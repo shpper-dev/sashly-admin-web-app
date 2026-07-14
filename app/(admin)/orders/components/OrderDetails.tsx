@@ -11,6 +11,7 @@ import { OrderTable } from "@/components/orders/OrderTable";
 import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
 import { getOrderById } from "@/lib/firebase/order";
+import { useOrderSearch } from "@/hooks/useOrderSearch";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -31,10 +32,18 @@ const STATUS_STYLE: Record<string, string> = {
   detailing: "bg-pink-50 text-pink-600",
 };
 
+
+const DETAIL_TAB_FILTER =
+  "(latestStatus.status = pickedUp OR latestStatus.status = sorting OR latestStatus.status = detailing) AND isCancelled != true AND isDelivered != true";
+
 export default function OrderDetails({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize, autoOpenOrderId }: OrderTabProps) {
-  const [search, setSearch] = useState("");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
+
+  const {
+    search, setSearch, isSearchActive, searchLoading,
+    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,refresh
+  } = useOrderSearch({ filter: DETAIL_TAB_FILTER, pageSize });
 
   // Auto-open dialog state
   const [autoOrder, setAutoOrder] = useState<Order | null>(null);
@@ -54,11 +63,13 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
     }
   }, [autoOpenOrderId, orders, loading]);
 
-  const filtered = orders.filter((order) =>
-    !search ||
-    order.userName.toLowerCase().includes(search.toLowerCase()) ||
-    order.id.includes(search)
-  );
+  const filtered = isSearchActive ? searchResults : orders;
+
+  const effectiveLoading = isSearchActive ? searchLoading : loading;
+  const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
+  const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
+  const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
+  const effectiveOnPrev = isSearchActive ? onSearchPrev : onPrev;
 
   const toggleItems = (id: string) => {
     setExpandedItems((prev) => ({
@@ -71,7 +82,10 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
       case "id":
-        return <span className="text-xs text-slate-500">#{row?.orderNumber ?? row.id.slice(6,13)}</span>;
+         return (
+         <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
+             <span className="text-xs text-slate-500 hover:text-purple-600 cursor-pointer">#{row?.orderNumber ?? row.id.slice(6,13)}</span>
+         </OrderDetailsDialog>);
 
       case "ready_by":
         return (
@@ -103,13 +117,6 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
            onDelete={() => { showToast(`Deleted ${row.userName}`,"error")}}
          />
         );
-      // case "customer":
-      //   return (
-      //     <div className="flex flex-col gap-0.5">
-      //       <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
-      //       <span className="text-[10px] text-slate-400">{row.userPhone}</span>
-      //     </div>
-      //   );
 
       case "order_details": {
         const visibleCount = 3;
@@ -178,7 +185,7 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
       case "actions":
         return (
           <div className="flex items-center gap-1 justify-end">
-            <OrderDetailsDialog order={row} onStatusUpdate={onStatusUpdate}>
+            <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
               <button className="px-3 py-1.5 flex items-center gap-2 text-xs font-medium bg-blue-200/30 text-[#02D0FF] rounded-md hover:bg-blue-200 transition-colors cursor-pointer">
                <PencilLine className="w-4 h-4 text-slate-400 hover:text-slate-600" />
                 DETAILS
@@ -198,7 +205,7 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
           order={autoOrder}
           open={true}
           onOpenChange={(open) => { if (!open) setAutoOrder(null); }}
-          onStatusUpdate={onStatusUpdate}
+          onStatusUpdate={refresh}
         >
           <span />
         </OrderDetailsDialog>
@@ -213,20 +220,20 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>
 
-      {loading && filtered.length === 0 ? (
+      {effectiveLoading && filtered.length === 0 ? (
         <TableSkeleton tableHeadings={orderHeadings} />
       ) : (
-        <div className={loading ? "opacity-50 pointer-events-none" : ""}>
+        <div className={effectiveLoading ? "opacity-50 pointer-events-none" : ""}>
           <OrderTable
             headings={orderHeadings}
             rows={filtered}
             renderCell={renderCell}
-            currentPage={currentPage}
-            hasNextPage={hasNextPage}
-            onNext={onNext}
-            onPrev={onPrev}
+            currentPage={effectiveCurrentPage}
+            hasNextPage={effectiveHasNextPage}
+            onNext={effectiveOnNext}
+            onPrev={effectiveOnPrev}
             pageSize={pageSize}
-            loading={loading}
+            loading={effectiveLoading}
           />
         </div>
       )}
