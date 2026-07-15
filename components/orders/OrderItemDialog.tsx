@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,41 +8,58 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { X, Loader2, Plus, Minus, Trash2, ShoppingCart } from "lucide-react";
+import { X, Loader2, Plus, Minus, Trash2, ShoppingCart, Building2 } from "lucide-react";
 import { getServices, getItems } from "@/lib/firebase/product";
+import { getCatalog } from "@/lib/firebase/business";
 import { Item, Service } from "@/lib/models/product.model";
+import { CatalogItem } from "@/lib/models/business.model";
 import { OrderItem } from "@/lib/models/order.model";
-import { addItemsToOrder, addItemToOrder, updateOrderItem } from "@/lib/firebase/order";
+import { addItemsToOrder, updateOrderItem } from "@/lib/firebase/order";
 import { useToast } from "@/lib/providers/ToastProvider";
 
 type Props =
-  | { mode: "add";  orderId: string; orderItem?: never; itemIndex?: never; children: React.ReactNode; onSuccess?: () => void }
-  | { mode: "edit"; orderId: string; orderItem: OrderItem; itemIndex: number; children: React.ReactNode; onSuccess?: () => void };
+  | { mode: "add";  orderId: string; businessAccountId?: string | null; orderItem?: never; itemIndex?: never; children: React.ReactNode; onSuccess?: () => void }
+  | { mode: "edit"; orderId: string; businessAccountId?: string | null; orderItem: OrderItem; itemIndex: number; children: React.ReactNode; onSuccess?: () => void };
 
-// Cart entry used only in "add" mode
+// Normalized shape both standard (Item + Service) and business (CatalogItem)
+// selections get mapped into, so cart/confirm logic doesn't need to branch.
+interface NormalizedProduct {
+  id: string;
+  name: string;
+  arabicName: string;
+  categoryId: string;
+  serviceName: string;
+  serviceArabicName: string;
+  price: number;
+  photoUrl: string | null;
+}
+
 interface CartEntry {
-  item: Item;
-  service: Service;
+  product: NormalizedProduct;
   quantity: number;
 }
 
-export default function OrderItemDialog({ mode, orderId, orderItem, itemIndex, children, onSuccess }: Props) {
+export default function OrderItemDialog({ mode, orderId, businessAccountId, orderItem, itemIndex, children, onSuccess }: Props) {
   const isEdit = mode === "edit";
+  const isBusiness = !!businessAccountId;
   const [open, setOpen] = useState(false);
 
-  // data
+  // standard-order data
   const [items, setItems]       = useState<Item[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [selectedItem, setSelectedItem]       = useState<Item | null>(null);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+
+  // business-order data
+  const [catalog, setCatalog]                       = useState<CatalogItem[]>([]);
+  const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
+
   const [loading, setLoading]   = useState(false);
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState<string>("");
+  const [quantity, setQuantity] = useState(1);
 
-  // current selection (the "staging" row before adding to cart)
-  const [selectedItem, setSelectedItem]       = useState<Item | null>(null);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [quantity, setQuantity]               = useState(1);
-
-  // cart — only used in add mode
+  // cart — used in add mode, for either source
   const [cart, setCart] = useState<CartEntry[]>([]);
 
   const { showToast } = useToast();
@@ -52,16 +69,31 @@ export default function OrderItemDialog({ mode, orderId, orderItem, itemIndex, c
     async function fetchData() {
       setLoading(true);
       try {
-        const [fetchedItems] = await Promise.all([getItems(), getServices()]);
-        setItems(fetchedItems);
+        if (isBusiness && businessAccountId) {
+          const catalogItems = await getCatalog(businessAccountId);
+          const activeCatalog = catalogItems.filter((c) => c.isActive);
+          setCatalog(activeCatalog);
 
-        // Edit mode — pre-populate the single selection
-        if (isEdit && orderItem) {
-          const currentItem = fetchedItems.find((i) => i.id === orderItem.id);
-          setSelectedItem(currentItem ?? null);
-          setServices(currentItem?.services ?? []);
-          setSelectedService(currentItem?.services.find((s) => s.name === orderItem.serviceName) ?? null);
-          setQuantity(orderItem.count);
+          if (isEdit && orderItem) {
+            // Match back to the catalog entry by name + serviceType, since
+            // CatalogItem has no other stable link to the OrderItem it produced.
+            const match = activeCatalog.find(
+              (c) => c.name === orderItem.name && (c.serviceType ?? "") === (orderItem.serviceName ?? "")
+            );
+            setSelectedCatalogItem(match ?? null);
+            setQuantity(orderItem.count);
+          }
+        } else {
+          const [fetchedItems] = await Promise.all([getItems(), getServices()]);
+          setItems(fetchedItems);
+
+          if (isEdit && orderItem) {
+            const currentItem = fetchedItems.find((i) => i.id === orderItem.id);
+            setSelectedItem(currentItem ?? null);
+            setServices(currentItem?.services ?? []);
+            setSelectedService(currentItem?.services.find((s) => s.name === orderItem.serviceName) ?? null);
+            setQuantity(orderItem.count);
+          }
         }
       } catch (e) {
         console.error("Failed to fetch:", e);
@@ -70,37 +102,64 @@ export default function OrderItemDialog({ mode, orderId, orderItem, itemIndex, c
       }
     }
     fetchData();
-  }, [open, isEdit, orderItem]);
+  }, [open, isEdit, orderItem, isBusiness, businessAccountId]);
 
-  // Sync services when item changes
+  // Sync services when item changes (standard mode only)
   useEffect(() => {
-    if (!selectedItem) return;
+    if (isBusiness || !selectedItem) return;
     setServices(selectedItem.services || []);
     if (!isEdit) setSelectedService(selectedItem.services?.[0] || null);
-  }, [selectedItem]);
+  }, [selectedItem, isBusiness]);
+
+  // ── Normalize whatever is currently staged into one common shape ──
+  const selectedProduct: NormalizedProduct | null = useMemo(() => {
+    if (isBusiness) {
+      if (!selectedCatalogItem) return null;
+      return {
+        id: selectedCatalogItem.id,
+        name: selectedCatalogItem.name,
+        arabicName: selectedCatalogItem.name, // CatalogItem has no arabicName — falls back to English name
+        categoryId: selectedCatalogItem.category ?? "",
+        serviceName: selectedCatalogItem.serviceType ?? "",
+        serviceArabicName: "",
+        price: selectedCatalogItem.price,
+        photoUrl: selectedCatalogItem.imageUrl ?? null,
+      };
+    }
+    if (!selectedItem || !selectedService) return null;
+    return {
+      id: selectedItem.id,
+      name: selectedItem.name,
+      arabicName: selectedItem.arabicName || "",
+      categoryId: selectedItem.categoryId || "",
+      serviceName: selectedService.name,
+      serviceArabicName: selectedService.arabicName || "",
+      price: selectedService.price,
+      photoUrl: selectedItem.photoUrl || null,
+    };
+  }, [isBusiness, selectedCatalogItem, selectedItem, selectedService]);
 
   // ── Cart helpers (add mode only) ──
 
-  // Add the current staged selection into the cart
   const addToCart = () => {
-    if (!selectedItem || !selectedService) return;
+    if (!selectedProduct) return;
 
     setCart((prev) => {
-      // If same item+service already in cart, just bump quantity
       const existing = prev.findIndex(
-        (e) => e.item.id === selectedItem.id && e.service.id === selectedService.id
+        (e) => e.product.id === selectedProduct.id && e.product.serviceName === selectedProduct.serviceName
       );
       if (existing !== -1) {
         return prev.map((e, i) =>
           i === existing ? { ...e, quantity: e.quantity + quantity } : e
         );
       }
-      return [...prev, { item: selectedItem, service: selectedService, quantity }];
+      return [...prev, { product: selectedProduct, quantity }];
     });
 
     // Reset staging area so the user can pick the next item
     setSelectedItem(null);
     setSelectedService(null);
+    setSelectedCatalogItem(null);
     setQuantity(1);
   };
 
@@ -110,8 +169,7 @@ export default function OrderItemDialog({ mode, orderId, orderItem, itemIndex, c
 
   const updateCartQty = (index: number, delta: number) => {
     setCart((prev) =>
-      prev
-        .map((e, i) => (i === index ? { ...e, quantity: Math.max(1, e.quantity + delta) } : e))
+      prev.map((e, i) => (i === index ? { ...e, quantity: Math.max(1, e.quantity + delta) } : e))
     );
   };
 
@@ -119,21 +177,21 @@ export default function OrderItemDialog({ mode, orderId, orderItem, itemIndex, c
   const handleConfirm = async () => {
     setError("");
 
-    // Edit mode — single item update (unchanged behaviour)
+    // Edit mode — single item update
     if (isEdit) {
-      if (!selectedItem || !selectedService) return;
+      if (!selectedProduct) return;
       setSaving(true);
       try {
         const payload: OrderItem = {
-          id: selectedItem.id,
-          name: selectedItem.name,
-          arabicName: selectedItem.arabicName || "",
-          categoryId: selectedItem.categoryId || "",
-          serviceName: selectedService.name,
-          serviceArabicName: selectedService.arabicName || "",
-          servicePrice: selectedService.price,
+          id: selectedProduct.id,
+          name: selectedProduct.name,
+          arabicName: selectedProduct.arabicName,
+          categoryId: selectedProduct.categoryId,
+          serviceName: selectedProduct.serviceName,
+          serviceArabicName: selectedProduct.serviceArabicName,
+          servicePrice: selectedProduct.price,
           count: quantity,
-          photoUrl: selectedItem.photoUrl || null,
+          photoUrl: selectedProduct.photoUrl,
         };
         await updateOrderItem(orderId, itemIndex!, payload);
         onSuccess?.();
@@ -152,21 +210,20 @@ export default function OrderItemDialog({ mode, orderId, orderItem, itemIndex, c
     if (cart.length === 0) return;
     setSaving(true);
     try {
-      // add all items
       await addItemsToOrder(
-          orderId,
-          cart.map((entry) => ({
-            id: entry.item.id,
-            name: entry.item.name,
-            arabicName: entry.item.arabicName || "",
-            categoryId: entry.item.categoryId || "",
-            serviceName: entry.service.name,
-            serviceArabicName: entry.service.arabicName || "",
-            servicePrice: entry.service.price,
-            count: entry.quantity,
-            photoUrl: entry.item.photoUrl || null,
-          }))
-        );
+        orderId,
+        cart.map((entry) => ({
+          id: entry.product.id,
+          name: entry.product.name,
+          arabicName: entry.product.arabicName,
+          categoryId: entry.product.categoryId,
+          serviceName: entry.product.serviceName,
+          serviceArabicName: entry.product.serviceArabicName,
+          servicePrice: entry.product.price,
+          count: entry.quantity,
+          photoUrl: entry.product.photoUrl,
+        }))
+      );
       onSuccess?.();
       reset();
       setOpen(false);
@@ -183,18 +240,17 @@ export default function OrderItemDialog({ mode, orderId, orderItem, itemIndex, c
     if (!isEdit) {
       setSelectedItem(null);
       setSelectedService(null);
+      setSelectedCatalogItem(null);
       setQuantity(1);
       setCart([]);
     }
     setError("");
   };
 
-  // Staging row is ready to add to cart
-  const canStage   = !!selectedItem && !!selectedService && quantity >= 1;
-  // Confirm is enabled when cart has items (add) or staging is ready (edit)
+  const canStage   = !!selectedProduct && quantity >= 1;
   const canConfirm = isEdit ? canStage : cart.length > 0;
 
-  const cartTotal = cart.reduce((acc, e) => acc + e.service.price * e.quantity, 0);
+  const cartTotal = cart.reduce((acc, e) => acc + e.product.price * e.quantity, 0);
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
@@ -203,9 +259,16 @@ export default function OrderItemDialog({ mode, orderId, orderItem, itemIndex, c
       <DialogContent className="max-w-lg p-0 overflow-hidden rounded-2xl">
         {/* Header */}
         <DialogHeader className="px-5 py-4 border-b flex flex-row items-center justify-between">
-          <DialogTitle className="text-base font-bold text-slate-800">
-            {isEdit ? "Edit Item" : "Add Items"}
-          </DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle className="text-base font-bold text-slate-800">
+              {isEdit ? "Edit Item" : "Add Items"}
+            </DialogTitle>
+            {isBusiness && (
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-bold uppercase tracking-wide">
+                <Building2 size={10} /> Business Pricing
+              </span>
+            )}
+          </div>
           <DialogClose onClick={reset}>
             <X className="w-4 h-4 text-slate-400" />
           </DialogClose>
@@ -223,72 +286,115 @@ export default function OrderItemDialog({ mode, orderId, orderItem, itemIndex, c
                 <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">{error}</div>
               )}
 
-              {/* ITEM PICKER */}
-              <div>
-                <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-3">
-                  Select Item
-                </p>
-                {items.length === 0 ? (
-                  <p className="text-xs text-slate-400">No items found.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {items.map((item) => {
-                      const active = selectedItem?.id === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => setSelectedItem(active ? null : item)}
-                          disabled={isEdit && item.id !== selectedItem?.id}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium border transition-all ${
-                            active
-                              ? "border-cyan-400 text-cyan-600 bg-cyan-50"
-                              : "border-slate-200 text-slate-500 bg-white hover:border-slate-300"
-                          } disabled:cursor-not-allowed disabled:opacity-40`}
-                        >
-                          {item.photoUrl && (
-                            <img src={item.photoUrl} alt={item.name} className="w-4 h-4 rounded-full object-cover shrink-0" />
-                          )}
-                          {item.name}
-                        </button>
-                      );
-                    })}
+              {isBusiness ? (
+                /* ── BUSINESS CATALOG PICKER ── single step: each entry is already item+service+price ── */
+                <div>
+                  <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-3">
+                    Select Item — {catalog.length} in catalog
+                  </p>
+                  {catalog.length === 0 ? (
+                    <p className="text-xs text-slate-400">No catalog items found for this business.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {catalog.map((c) => {
+                        const active = selectedCatalogItem?.id === c.id;
+                        return (
+                          <button
+                            key={c.id}
+                            onClick={() => setSelectedCatalogItem(active ? null : c)}
+                            disabled={isEdit && c.id !== selectedCatalogItem?.id}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium border transition-all ${
+                              active
+                                ? "border-cyan-400 text-cyan-600 bg-cyan-50"
+                                : "border-slate-200 text-slate-500 bg-white hover:border-slate-300"
+                            } disabled:cursor-not-allowed disabled:opacity-40`}
+                          >
+                            {c.imageUrl && (
+                              <img src={c.imageUrl} alt={c.name} className="w-4 h-4 rounded-full object-cover shrink-0" />
+                            )}
+                            {c.name}
+                            {c.serviceType && <span className="text-slate-400">· {c.serviceType}</span>}
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                              active ? "bg-cyan-100 text-cyan-700" : "bg-slate-100 text-slate-400"
+                            }`}>
+                              SAR {c.price.toFixed(2)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* ITEM PICKER */}
+                  <div>
+                    <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-3">
+                      Select Item
+                    </p>
+                    {items.length === 0 ? (
+                      <p className="text-xs text-slate-400">No items found.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {items.map((item) => {
+                          const active = selectedItem?.id === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => setSelectedItem(active ? null : item)}
+                              disabled={isEdit && item.id !== selectedItem?.id}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium border transition-all ${
+                                active
+                                  ? "border-cyan-400 text-cyan-600 bg-cyan-50"
+                                  : "border-slate-200 text-slate-500 bg-white hover:border-slate-300"
+                              } disabled:cursor-not-allowed disabled:opacity-40`}
+                            >
+                              {item.photoUrl && (
+                                <img src={item.photoUrl} alt={item.name} className="w-4 h-4 rounded-full object-cover shrink-0" />
+                              )}
+                              {item.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* SERVICE PICKER */}
-              <div>
-                <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-3">
-                  Select Service
-                </p>
-                {services.length === 0 ? (
-                  <p className="text-xs text-slate-400">{selectedItem ? "No services for this item." : "Select an item first."}</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {services.map((svc) => {
-                      const active = selectedService?.id === svc.id;
-                      return (
-                        <button
-                          key={svc.id}
-                          onClick={() => setSelectedService(active ? null : svc)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium border transition-all ${
-                            active
-                              ? "border-cyan-400 text-cyan-600 bg-cyan-50"
-                              : "border-slate-200 text-slate-500 bg-white hover:border-slate-300"
-                          }`}
-                        >
-                          {svc.name}
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                            active ? "bg-cyan-100 text-cyan-700" : "bg-slate-100 text-slate-400"
-                          }`}>
-                            SAR {svc.price}
-                          </span>
-                        </button>
-                      );
-                    })}
+                  {/* SERVICE PICKER */}
+                  <div>
+                    <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-3">
+                      Select Service
+                    </p>
+                    {services.length === 0 ? (
+                      <p className="text-xs text-slate-400">{selectedItem ? "No services for this item." : "Select an item first."}</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {services.map((svc) => {
+                          const active = selectedService?.id === svc.id;
+                          return (
+                            <button
+                              key={svc.id}
+                              onClick={() => setSelectedService(active ? null : svc)}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium border transition-all ${
+                                active
+                                  ? "border-cyan-400 text-cyan-600 bg-cyan-50"
+                                  : "border-slate-200 text-slate-500 bg-white hover:border-slate-300"
+                              }`}
+                            >
+                              {svc.name}
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                                active ? "bg-cyan-100 text-cyan-700" : "bg-slate-100 text-slate-400"
+                              }`}>
+                                SAR {svc.price}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
 
               {/* QUANTITY + ADD TO CART ROW */}
               <div className="flex items-center justify-between gap-4">
@@ -335,9 +441,9 @@ export default function OrderItemDialog({ mode, orderId, orderItem, itemIndex, c
                     {cart.map((entry, i) => (
                       <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-slate-50 border border-slate-100 rounded-xl">
 
-                        {/* Item photo */}
-                        {entry.item.photoUrl ? (
-                          <img src={entry.item.photoUrl} alt={entry.item.name} className="w-7 h-7 rounded-lg object-cover shrink-0 border" />
+                        {/* Product photo */}
+                        {entry.product.photoUrl ? (
+                          <img src={entry.product.photoUrl} alt={entry.product.name} className="w-7 h-7 rounded-lg object-cover shrink-0 border" />
                         ) : (
                           <div className="w-7 h-7 rounded-lg bg-slate-200 shrink-0" />
                         )}
@@ -345,10 +451,10 @@ export default function OrderItemDialog({ mode, orderId, orderItem, itemIndex, c
                         {/* Info */}
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold text-slate-800 truncate">
-                            {entry.item.name} · {entry.service.name}
+                            {entry.product.name}{entry.product.serviceName ? ` · ${entry.product.serviceName}` : ""}
                           </p>
                           <p className="text-[10px] text-slate-400">
-                            SAR {entry.service.price.toFixed(2)} × {entry.quantity} = SAR {(entry.service.price * entry.quantity).toFixed(2)}
+                            SAR {entry.product.price.toFixed(2)} × {entry.quantity} = SAR {(entry.product.price * entry.quantity).toFixed(2)}
                           </p>
                         </div>
 
@@ -393,14 +499,14 @@ export default function OrderItemDialog({ mode, orderId, orderItem, itemIndex, c
                 <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl">
                   <div className="flex flex-col gap-0.5">
                     <span className="text-xs font-semibold text-slate-700">
-                      {selectedItem!.name} · {selectedService!.name}
+                      {selectedProduct!.name}{selectedProduct!.serviceName ? ` · ${selectedProduct!.serviceName}` : ""}
                     </span>
                     <span className="text-[10px] text-slate-400">
-                      SAR {selectedService!.price.toFixed(2)} × {quantity}
+                      SAR {selectedProduct!.price.toFixed(2)} × {quantity}
                     </span>
                   </div>
                   <span className="text-sm font-black text-slate-800">
-                    SAR {(selectedService!.price * quantity).toFixed(2)}
+                    SAR {(selectedProduct!.price * quantity).toFixed(2)}
                   </span>
                 </div>
               )}

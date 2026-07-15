@@ -149,3 +149,46 @@ export async function getUsersCount(filters: UserFilters = {}) {
   const snap = await getCountFromServer(q);
   return snap.data().count;
 }
+
+
+function buildPrefixQuery(field: string, term: string, max: number) {
+  return query(
+    collection(db, "users"),
+    orderBy(field),
+    where(field, ">=", term),
+    where(field, "<=", term + "\uf8ff"),
+    limit(max)
+  );
+}
+
+
+export async function searchUsers(term: string, maxResults = 50): Promise<User[]> {
+  const raw = term.trim();
+  if (!raw) return [];
+
+  const queries = [
+    getDocs(buildPrefixQuery("name", raw, maxResults)),
+    getDocs(buildPrefixQuery("email", raw, maxResults)),
+  ];
+
+  // Only search phone if the term looks numeric/phone-like — avoids a wasted query
+  // on every keystroke of a name search.
+  const looksLikePhone = /^\+?\d[\d\s-]*$/.test(raw);
+  if (looksLikePhone) {
+    queries.push(getDocs(buildPrefixQuery("phone", raw, maxResults)));
+  }
+
+  const snapshots = await Promise.all(queries);
+
+  const merged = new Map<string, User>();
+  snapshots.forEach((snap) => {
+    snap.docs.forEach((d) => {
+      merged.set(d.id, { userId: d.id, ...d.data() } as User);
+    });
+  });
+
+  return Array.from(merged.values())
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, maxResults);
+}
+

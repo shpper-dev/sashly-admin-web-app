@@ -1,4 +1,4 @@
-import { DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
+import { DocumentData } from "firebase/firestore";
 import { Order, OrderItem, OrderStatus, OrderRating } from "../models/order.model";
 
 export function mapOrderData(id: string, data: DocumentData | undefined): Order {
