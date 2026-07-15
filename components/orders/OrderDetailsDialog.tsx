@@ -212,7 +212,7 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
             <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6 border-r border-slate-100">
                 {/* Line items */}
               <Section title={`Line Items (${order.items.length})`} titleButton={ !order.isPaid ? (
-                <OrderItemDialog mode="add" orderId={order.id} onSuccess={onStatusUpdate}  >
+                <OrderItemDialog mode="add" orderId={order.id} onSuccess={onStatusUpdate} businessAccountId={order.businessAccountId ?? null}  >
                   <button className="flex items-center gap-1 text-[10px] px-2 py-1 shadow-sm border border-cyan-300 rounded-lg text-[#02d0ff]">
                   <Plus className="h-2.5 w-2.5" strokeWidth={3} /> Add Item(s)
                 </button>
@@ -225,7 +225,7 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
                       {/* Edit + Delete icons */}
                      {!order.isPaid && (
                        <div className="absolute top-[-9] right-[-10] flex items-center gap-2">
-                        <OrderItemDialog mode="edit" orderId={order.id} orderItem={item} itemIndex={i} onSuccess={onStatusUpdate}>
+                        <OrderItemDialog mode="edit" orderId={order.id} orderItem={item} itemIndex={i} onSuccess={onStatusUpdate } businessAccountId={order.businessAccountId ?? null}>
                           <button className="w-5 h-5 bg-purple-100 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-400 hover:text-indigo-500 cursor-pointer transition-colors shadow-sm">
                             <Pencil className="h-3 w-3" />
                           </button>
