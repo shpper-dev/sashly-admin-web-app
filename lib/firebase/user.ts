@@ -11,7 +11,8 @@ import {
   doc,
   Query,
   getCountFromServer,
-  getDoc
+  getDoc,
+  documentId
 } from "firebase/firestore";
 import { QuerySnapshot, DocumentData } from "firebase/firestore";
 
@@ -192,3 +193,25 @@ export async function searchUsers(term: string, maxResults = 50): Promise<User[]
     .slice(0, maxResults);
 }
 
+
+
+// for finance page
+export async function getUsersDisplayInfo(
+  userIds: string[]
+): Promise<Map<string, { name: string; phone?: string | null }>> {
+  const unique = Array.from(new Set(userIds)).filter(Boolean);
+  const result = new Map<string, { name: string; phone?: string | null }>();
+  if (unique.length === 0) return result;
+
+  for (let i = 0; i < unique.length; i += 30) {
+    const chunk = unique.slice(i, i + 30);
+    const snap = await getDocs(
+      query(collection(db, "users"), where(documentId(), "in", chunk))
+    );
+    snap.docs.forEach((d) => {
+      const data = d.data();
+      result.set(d.id, { name: data.name ?? "Unknown", phone: data.phone ?? null });
+    });
+  }
+  return result;
+}
