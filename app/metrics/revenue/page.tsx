@@ -1,321 +1,547 @@
 "use client";
-
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Header from "@/components/Header";
+import MetricsSidebar from "@/components/metrics/MetricsSideBar";
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+  Banknote, Clock, XCircle, TrendingUp, TrendingDown, Loader2,
+  Tag, Award, BarChart3, Building2, UserPlus, Settings2,
+  PlusCircle, Undo2, AlertTriangle,
+} from "lucide-react";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, CartesianGrid } from "recharts";
-import { ArrowDown, ChevronDown, FileText, List, Notebook } from "lucide-react";
+import {
+  getRevenueMetrics,
+  calculateNetProfit,
+  DEFAULT_COST_FACTORS,
+  RevenueCostFactors,
+  RevenueMetrics,
+} from "@/lib/firebase/metrics-revenue";
+import { presetToRange } from "@/lib/date-presets";
+import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
 
-export default function RevenuePage() {
-  const [showSubtotal, setShowSubtotal] = useState(true);
-  const [showTips, setShowTips]         = useState(true);
-  const [showDelivery, setShowDelivery] = useState(true);
+type ChartMetric = "grossRevenue" | "realizedRevenue" | "cancelledRevenue" | "netProfit" | "refundedAmount";
 
-  const tableHeadings = [
-    "date", "revenue", "cash", "card", "regular",
-    "check", "bank",
-    ...(showTips ? ["tips"] : []),
-    "credit", "discount",
-    ...(showSubtotal ? ["subtotal"] : []),
-  ];
-
-  const rows = Array(8).fill({
-    date: "Oct 28, 2023", revenue: 339, cash: 300,
-    card: 2450, regular: 2450, check: 2450, bank: 2450,
-    tips: 0, credit: 100, discount: 100, subtotal: 1078.9,
-  });
-
-  const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("weekly");
-
-const chartDataMap = {
-  daily: [
-    { day: "Mon", revenue: 120 },
-    { day: "Tue", revenue: 200 },
-    { day: "Wed", revenue: 150 },
-    { day: "Thu", revenue: 250 },
-    { day: "Fri", revenue: 180 },
-    { day: "Sat", revenue: 300 },
-    { day: "Sun", revenue: 220 },
-  ],
-  weekly: [
-    { day: "W1", revenue: 200 },
-    { day: "W2", revenue: 450 },
-    { day: "W3", revenue: 300 },
-    { day: "W4", revenue: 550 },
-  ],
-  monthly: [
-    { day: "Jan", revenue: 1200 },
-    { day: "Feb", revenue: 1800 },
-    { day: "Mar", revenue: 1500 },
-    { day: "Apr", revenue: 2200 },
-    { day: "May", revenue: 1200 },
-    { day: "Jun", revenue: 1800 },
-    { day: "Jul", revenue: 1500 },
-    { day: "Aug", revenue: 2200 },
-    { day: "Sep", revenue: 1200 },
-    { day: "Oct", revenue: 1800 },
-    { day: "Nov", revenue: 1500 },
-    { day: "Dec", revenue: 2200 },
-  ],
+const ISSUE_TYPE_LABELS: Record<string, string> = {
+  missing_item: "Missing Item",
+  damaged: "Damaged Item",
+  wrong_service: "Wrong Service",
+  driver_behaviour: "Driver Behaviour",
+  delivery_problem: "Delivery Problem",
+  other: "Other",
 };
-
-const getChartData = () => chartDataMap[period];
-
-const chartConfig = {
-  revenue: {
-    label: "Revenue",
-    color: "#7F50F4",
-  },
-};
-
 
 function PurpleTopBar(props: any) {
   const { x, y, width, height } = props;
   if (!width || !height) return null;
-
-  const radius = 8; 
+  const radius = 6;
   const color = "#7F50F4";
-  const pathData = `
-    M ${x},${y + height}
-    L ${x},${y + radius}
-    Q ${x},${y} ${x + radius},${y}
-    L ${x + width - radius},${y}
-    Q ${x + width},${y} ${x + width},${y + radius}
-    L ${x + width},${y + height}
-    Z
-  `;
-
   return (
     <g>
-      <path d={pathData} fill="rgba(59,130,246,0.18)" />
-      {/* Top Border Only */}
-      <path
-        d={`M ${x},${y + radius} Q ${x},${y} ${x + radius},${y} L ${x + width - radius},${y} Q ${x + width},${y} ${x + width},${y + radius}`}
-        fill="none"
-        stroke={color}
-        strokeWidth={2.5}
-        strokeLinecap="round"
-      />
+      <path d={`M ${x},${y + height} L ${x},${y + radius} Q ${x},${y} ${x + radius},${y} L ${x + width - radius},${y} Q ${x + width},${y} ${x + width},${y + radius} L ${x + width},${y + height} Z`} fill="rgba(127,80,244,0.12)" />
+      <path d={`M ${x},${y + radius} Q ${x},${y} ${x + radius},${y} L ${x + width - radius},${y} Q ${x + width},${y} ${x + width},${y + radius}`} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" />
     </g>
   );
 }
+
+function fmtSAR(n: number): string {
+  return `SAR ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+export default function MetricsRevenuePage() {
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [chartMetric, setChartMetric] = useState<ChartMetric>("realizedRevenue");
+  const [metrics, setMetrics] = useState<RevenueMetrics | null>(null);
+  const [rangeLabel, setRangeLabel] = useState("30d");
+  const [currentRange, setCurrentRange] = useState<{ startMs: number; endMs: number }>(() => presetToRange("30d"));
+  const [costFactors, setCostFactors] = useState<RevenueCostFactors>(DEFAULT_COST_FACTORS);
+
+  const fetchData = async (startMs: number, endMs: number, currentPeriod: "daily" | "weekly" | "monthly") => {
+    setLoading(true);
+    try {
+      const data = await getRevenueMetrics(startMs, endMs, currentPeriod);
+      setMetrics(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(currentRange.startMs, currentRange.endMs, period); }, [period, currentRange]);
+
+  const handleRangeChange = ({ startMs, endMs, label }: DateRangeChangePayload) => {
+    setRangeLabel(label);
+    setCurrentRange({ startMs, endMs });
+  };
+
+  const netProfit = useMemo(() => {
+    if (!metrics) return null;
+    return calculateNetProfit(
+      metrics.realizedRevenue,
+      metrics.completedOrdersCount,
+      metrics.driverEarningsTotal,
+      metrics.refunds.totalRefunded,
+      costFactors
+    );
+  }, [metrics, costFactors]);
+
+  const chartData = useMemo(() => {
+    if (!metrics) return [];
+    return metrics.chartData.map((p) => ({
+      ...p,
+      netProfit: calculateNetProfit(p.realizedRevenue, p.completedOrders, p.driverEarnings, p.refundedAmount, costFactors).netProfit,
+    }));
+  }, [metrics, costFactors]);
+
+  const chartConfig = { [chartMetric]: { label: chartMetric, color: "#7F50F4" } };
+
   return (
-    <div className="bg-white min-h-screen">
-      <Header />
+    <div className="flex h-screen bg-white">
+      <MetricsSidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+        <div className="flex-1 overflow-y-auto pt-16 pl-60 pb-16">
 
-      <main className="flex flex-col gap-6 pt-16 pl-60 min-h-screen pb-6">
-
-        <section className="px-6">
-          {/* TOP BAR */}
-            <div className="flex items-center justify-between pb-4">
-
-              {/* LEFT: Title */}
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">
-                  Revenue Analytics
-                </h1>
-                <p className="text-sm text-slate-400 mt-1">
-                  Revenue stats
-                </p>
-              </div>
-
-              {/* RIGHT: Controls */}
-              <div className="flex items-center gap-4">
-
-                {/* Date Picker */}
-                <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-600 shadow-sm hover:bg-slate-50 transition">
-                  <span className="text-slate-400">📅</span>
-                  Oct 01, 2023 - Oct 31, 2023
-                  <span className="text-slate-400"><ChevronDown strokeWidth={3} className="h-3 w-3"/></span>
-                </button>
-
-                {/* Divider */}
-                <div className="h-6 w-px bg-slate-200" />
-
-                {/* Export PDF */}
-                <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-600 hover:bg-slate-50 transition">
-                  <FileText className="h-4 w-4" />
-                  Export PDF
-                </button>
-
-                {/* Export CSV */}
-                <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#16B4CF] hover:bg-[#119CB4] text-white text-sm font-semibold shadow-md transition">
-                  <ArrowDown className="h-4 w-5" />
-                  Export CSV
-                </button>
-
-              </div>
+          <section className="flex items-center justify-between px-8 py-5 border-b border-slate-100">
+            <div>
+              <h1 className="text-xl font-bold text-slate-800">Revenue Metrics</h1>
+              <p className="text-sm text-slate-400">Revenue composition, growth, and profitability analysis</p>
             </div>
-            {/*Stats  */}
-            <div className="grid grid-cols-4 gap-4">
-              <StatCard title="Unpaid Orders"      value="SAR 128,430.00" change="+12.5%" />
-              <StatCard title="Avg. Order Value"   value="SAR 1,562.80"   change="-2.1%"  />
-              <StatCard title="Card Transactions"  value="843"            change="+5.4%"  />
-              <StatCard title="Bank Transfers"     value="SAR 128,430.00" change="+1.2%"  />
+            <DateRangePicker defaultPreset="30d" onRangeChange={handleRangeChange} />
+          </section>
+
+          {loading || !metrics || !netProfit ? (
+            <div className="flex flex-col justify-center items-center py-40 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+              <p className="text-xs text-slate-400 font-medium tracking-wide">Compiling revenue ledger...</p>
             </div>
-        </section>
+          ) : (
+            <div className="flex flex-col gap-8 px-8 py-6">
 
-        {/* Chart  */}
-        <section className="px-6">
-          <div className="bg-white border border-slate-100 rounded-2xl shadow-sm px-8 pt-10 pb-8 flex flex-col gap-8">
-        
-            {/* HEADER */}
-            <div className="flex items-center justify-between w-full">
-        
-              {/* LEFT */}
-              <div className="flex flex-col">
-                <h2 className="text-[20px] font-bold text-slate-900">
-                  Revenue
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Visual representation of revenues for the chosen time period
-                </p>
+              {/* Row 1: Core revenue KPIs */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard label="Gross Revenue" value={fmtSAR(metrics.grossRevenue)} desc="Billed, all orders in period" icon={Banknote} color="text-blue-500" bg="bg-blue-50" />
+                <KpiCard
+                  label="Realized Revenue"
+                  value={fmtSAR(metrics.realizedRevenue)}
+                  icon={Banknote}
+                  color="text-emerald-500"
+                  bg="bg-emerald-50"
+                  customSub={
+                    metrics.revenueGrowthPct === null ? (
+                      <p className="text-[10px] text-slate-400 font-medium mt-0.5 leading-none">No prior-period data</p>
+                    ) : (
+                      <p className={`text-[10px] font-bold mt-0.5 leading-none flex items-center gap-1 ${metrics.revenueGrowthPct >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+                        {metrics.revenueGrowthPct >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                        {Math.abs(metrics.revenueGrowthPct).toFixed(1)}% vs previous period
+                      </p>
+                    )
+                  }
+                />
+                <KpiCard label="Awaiting Payment" value={fmtSAR(metrics.awaitingPaymentRevenue)} desc="Unpaid, still active" icon={Clock} color="text-amber-500" bg="bg-amber-50" />
+                <KpiCard label="Cancelled Revenue" value={fmtSAR(metrics.cancelledRevenue)} desc="Lost to cancellations" icon={XCircle} color="text-rose-500" bg="bg-rose-50" />
               </div>
-        
-              {/* RIGHT SWITCH */}
-              <div className="flex bg-slate-100 p-1 rounded-lg text-xs font-semibold">
-                {["daily", "weekly", "monthly"].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setPeriod(type as any)}
-                    className={`px-4 py-1.5 rounded-md transition ${
-                      period === type
-                        ? "bg-white text-[#7F50F4] shadow-sm"
-                        : "text-slate-500"
-                    }`}
-                  >
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </button>
-                ))}
+
+              {/* Row 2: Order-value + refund KPIs */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard label="Largest Order" value={fmtSAR(metrics.largestOrderValue)} desc="Single highest paid order" icon={Award} color="text-indigo-500" bg="bg-indigo-50" />
+                <KpiCard label="Median Order Value" value={fmtSAR(metrics.medianOrderValue)} desc="Typical paid order size" icon={BarChart3} color="text-purple-500" bg="bg-purple-50" />
+                <KpiCard label="Discount Given" value={fmtSAR(metrics.discountGiven)} desc="Coupons applied, active orders" icon={Tag} color="text-cyan-500" bg="bg-cyan-50" />
+                <KpiCard
+                  label="Revenue Concentration"
+                  value={`${metrics.revenueConcentration.topRevenuePct.toFixed(1)}%`}
+                  desc={`From top ${metrics.revenueConcentration.topSharePct}% of orders (${metrics.revenueConcentration.topOrdersCount})`}
+                  icon={TrendingUp} color="text-orange-500" bg="bg-orange-50"
+                />
+                <KpiCard
+                  label="Net Realized Revenue"
+                  value={fmtSAR(metrics.netRealizedRevenue)}
+                  desc="Realized revenue minus refunds & credits"
+                  icon={Banknote} color="text-emerald-500" bg="bg-emerald-50"
+                />
+                <KpiCard
+                  label="Refunds & Credits"
+                  value={fmtSAR(metrics.refunds.totalRefunded)}
+                  desc={`${metrics.refunds.refundedOrdersCount} order${metrics.refunds.refundedOrdersCount !== 1 ? "s" : ""} · ${metrics.refundRatePct.toFixed(1)}% of completed`}
+                  icon={Undo2} color="text-rose-500" bg="bg-rose-50"
+                />
               </div>
+
+              {/* Row 3: Revenue by Source / Customer Type */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <SplitCard
+                  title="Revenue by Source"
+                  icon={Building2}
+                  iconColor="text-blue-500"
+                  iconBg="bg-blue-50"
+                  totalValue={metrics.revenueBySource.totalRevenue}
+                  segments={[
+                    { label: "Individual", value: metrics.revenueBySource.individualRevenue, count: metrics.revenueBySource.individualOrders, pct: metrics.revenueBySource.individualPct, barColor: "bg-blue-500", textColor: "text-blue-600" },
+                    { label: "Business", value: metrics.revenueBySource.businessRevenue, count: metrics.revenueBySource.businessOrders, pct: metrics.revenueBySource.businessPct, barColor: "bg-indigo-500", textColor: "text-indigo-600" },
+                  ]}
+                />
+                <SplitCard
+                  title="Revenue by Customer Type"
+                  icon={UserPlus}
+                  iconColor="text-indigo-500"
+                  iconBg="bg-indigo-50"
+                  totalValue={metrics.revenueByCustomerType.totalRevenue}
+                  segments={[
+                    { label: "First-time", value: metrics.revenueByCustomerType.firstTimeRevenue, count: metrics.revenueByCustomerType.firstTimeOrders, pct: metrics.revenueByCustomerType.firstTimePct, barColor: "bg-indigo-500", textColor: "text-indigo-600" },
+                    { label: "Returning", value: metrics.revenueByCustomerType.returningRevenue, count: metrics.revenueByCustomerType.returningOrders, pct: metrics.revenueByCustomerType.returningPct, barColor: "bg-emerald-500", textColor: "text-emerald-600" },
+                  ]}
+                />
+              </div>
+
+              {/* Row 4: Refunds breakdown — by resolution type, and top reasons */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <SplitCard
+                  title="Refunds by Type"
+                  icon={Undo2}
+                  iconColor="text-rose-500"
+                  iconBg="bg-rose-50"
+                  totalValue={metrics.refunds.totalRefunded}
+                  unitLabel="cases"
+                  hideCount
+                  segments={[
+                    { label: "Full Refund", value: metrics.refunds.fullRefundAmount, pct: metrics.refunds.fullRefundPct, barColor: "bg-rose-500", textColor: "text-rose-600" },
+                    { label: "Partial Refund", value: metrics.refunds.partialRefundAmount, pct: metrics.refunds.partialRefundPct, barColor: "bg-orange-500", textColor: "text-orange-600" },
+                    { label: "Wallet Credit", value: metrics.refunds.walletCreditAmount, pct: metrics.refunds.walletCreditPct, barColor: "bg-purple-500", textColor: "text-purple-600" },
+                  ]}
+                />
+
+                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Top Refund Reasons</p>
+                    <div className="bg-rose-50 p-1 rounded-md"><AlertTriangle className="h-3.5 w-3.5 text-rose-500" /></div>
+                  </div>
+                  {metrics.refunds.byIssueType.length === 0 ? (
+                    <p className="text-xs text-slate-400 py-2">No refunds or credits in this period.</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {metrics.refunds.byIssueType.map((r) => (
+                        <div key={r.issueType} className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-slate-600">
+                            {ISSUE_TYPE_LABELS[r.issueType] ?? r.issueType}
+                            <span className="text-[10px] text-slate-400 font-normal ml-1">({r.count})</span>
+                          </span>
+                          <span className="text-xs font-bold text-rose-600">{fmtSAR(r.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 5: Net Profit panel — live-adjustable cost factors */}
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col gap-6">
+                <div className="flex items-center gap-2">
+                  <Settings2 className="h-4 w-4 text-slate-400" />
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900">Net Profit</h2>
+                    <p className="text-xs text-slate-400">Adjust cost assumptions below — recalculates instantly, no data reload</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Controls */}
+                  <div className="flex flex-col gap-5">
+                    <SliderRow
+                      label="Operational Cost" suffix="%" value={costFactors.operationalCostPct} min={0} max={50} step={0.5}
+                      onChange={(v) => setCostFactors((c) => ({ ...c, operationalCostPct: v }))}
+                    />
+                    <SliderRow
+                      label="Commission / Gateway Fee" suffix="%" value={costFactors.commissionPct} min={0} max={20} step={0.1}
+                      onChange={(v) => setCostFactors((c) => ({ ...c, commissionPct: v }))}
+                    />
+                    <SliderRow
+                      label="Delivery Cost per Order" suffix=" SAR" value={costFactors.deliveryCostPerOrder} min={0} max={50} step={0.5}
+                      onChange={(v) => setCostFactors((c) => ({ ...c, deliveryCostPerOrder: v }))}
+                    />
+                    {metrics.driverEarningsTotal > 0 &&
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={costFactors.includeDriverEarnings}
+                        onChange={(e) => setCostFactors((c) => ({ ...c, includeDriverEarnings: e.target.checked }))}
+                        className="accent-[#7F50F4] w-4 h-4"
+                      />
+                      Include driver earnings as a cost ({fmtSAR(metrics.driverEarningsTotal)})
+                    </label>
+                    }
+                    {metrics.refunds.totalRefunded > 0 &&
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={costFactors.includeRefunds}
+                        onChange={(e) => setCostFactors((c) => ({ ...c, includeRefunds: e.target.checked }))}
+                        className="accent-[#7F50F4] w-4 h-4"
+                      />
+                      Include refunds & credits as a cost ({fmtSAR(metrics.refunds.totalRefunded)})
+                    </label>
+                    }
+
+                    <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-100">
+                      <div className="flex items-center gap-1.5">
+                        <PlusCircle className="h-3.5 w-3.5 text-slate-400" />
+                        <span className="text-xs font-semibold text-slate-600">Manual Adjustment</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={costFactors.manualAdjustmentLabel}
+                          onChange={(e) => setCostFactors((c) => ({ ...c, manualAdjustmentLabel: e.target.value }))}
+                          placeholder="Label (e.g. packaging, marketing)"
+                          className="flex-1 h-8 px-2.5 rounded-lg border border-slate-200 text-xs outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                        />
+                        <div className="relative w-32 shrink-0">
+                          <input
+                            type="number"
+                            value={costFactors.manualAdjustment}
+                            onChange={(e) => setCostFactors((c) => ({ ...c, manualAdjustment: parseFloat(e.target.value) || 0 }))}
+                            className="h-8 w-full pl-2.5 pr-10 rounded-lg border border-slate-200 text-xs text-right outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                          />
+                          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-semibold">SAR</span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-400">
+                        Positive adds a cost, negative adds credit. Not persisted — resets on reload.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Breakdown */}
+                  <div className="flex flex-col gap-2 bg-slate-50 rounded-xl p-4">
+                    <BreakdownRow label="Realized Revenue" value={netProfit.realizedRevenue} positive />
+                    <BreakdownRow label="Driver Earnings" value={-netProfit.driverEarningsCost} />
+                    <BreakdownRow label="Refunds & Credits" value={-netProfit.refundCost} />
+                    <BreakdownRow label="Operational Cost" value={-netProfit.operationalCost} />
+                    <BreakdownRow label="Commission" value={-netProfit.commissionCost} />
+                    <BreakdownRow label="Delivery Cost" value={-netProfit.deliveryCost} />
+                    {netProfit.manualAdjustment !== 0 && (
+                      <BreakdownRow
+                        label={costFactors.manualAdjustmentLabel.trim() || "Manual Adjustment"}
+                        value={-netProfit.manualAdjustment}
+                      />
+                    )}
+                    <div className="h-px bg-slate-200 my-1" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-slate-800">Net Profit</span>
+                      <span className={`text-lg font-black ${netProfit.netProfit >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+                        {fmtSAR(netProfit.netProfit)}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 text-right font-semibold">
+                      {netProfit.netMarginPct.toFixed(1)}% margin
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 6: Chart */}
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col gap-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900">Revenue Trend</h2>
+                    <p className="text-xs text-slate-400">Visual mapping of revenue across time nodes</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex bg-slate-100 p-0.5 rounded-lg text-[11px] font-bold border border-slate-200">
+                      {[
+                        { key: "grossRevenue", label: "Gross" },
+                        { key: "realizedRevenue", label: "Realized" },
+                        { key: "cancelledRevenue", label: "Cancelled" },
+                        { key: "refundedAmount", label: "Refunds" },
+                        { key: "netProfit", label: "Net Profit" },
+                      ].map((m) => (
+                        <button key={m.key} onClick={() => setChartMetric(m.key as ChartMetric)}
+                          className={`px-3 py-1 rounded-md transition ${chartMetric === m.key ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex bg-slate-100 p-0.5 rounded-lg text-[11px] font-bold border border-slate-200">
+                      {(["daily", "weekly", "monthly"] as const).map((p) => (
+                        <button key={p} onClick={() => setPeriod(p)}
+                          className={`px-3 py-1 rounded-md transition capitalize ${period === p ? "bg-white text-[#7F50F4] shadow-sm" : "text-slate-500"}`}>
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <ChartContainer config={chartConfig} className="w-full h-60">
+                  <BarChart data={chartData}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#94A3B8", fontWeight: 600 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey={chartMetric} shape={<PurpleTopBar />} />
+                  </BarChart>
+                </ChartContainer>
+              </div>
+
+              {/* Row 7: Activity table */}
+              <div className="flex flex-col gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-slate-800">Revenue Activity Report</h2>
+                  <p className="text-xs text-slate-400">Aggregated daily revenue outputs</p>
+                </div>
+                <div className="border border-slate-200 rounded-2xl shadow-sm bg-white overflow-hidden">
+                  <div className="max-h-[550px] overflow-y-auto">
+                    <table className="w-full text-xs table-fixed min-w-[820px]">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider sticky top-0 z-10 shadow-[0_1px_0_0_rgba(226,232,240,1)]">
+                        <tr>
+                          <th className="px-6 py-4 text-left bg-slate-50 w-[14%]">Date</th>
+                          <th className="px-6 py-4 text-center bg-slate-50 w-[9%]">Orders</th>
+                          <th className="px-6 py-4 text-right bg-slate-50 w-[15%]">Gross Revenue</th>
+                          <th className="px-6 py-4 text-right bg-slate-50 w-[15%]">Realized Revenue</th>
+                          <th className="px-6 py-4 text-right bg-slate-50 w-[12%]">Cancelled</th>
+                          <th className="px-6 py-4 text-right bg-slate-50 w-[12%]">Refunds</th>
+                          <th className="px-6 py-4 text-right bg-slate-50 w-[11%]">Discount</th>
+                          <th className="px-6 py-4 text-right pr-8 bg-slate-50 w-[12%]">Avg Order</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {metrics.reportRows.length === 0 ? (
+                          <tr><td colSpan={8} className="px-6 py-10 text-center text-slate-400 font-medium">No records for this period.</td></tr>
+                        ) : (
+                          metrics.reportRows.map((r) => (
+                            <tr key={r.rawSortKey} className="hover:bg-slate-50/60 transition-colors">
+                              <td className="px-6 py-3.5 font-semibold text-slate-600 truncate">{r.date}</td>
+                              <td className="px-6 py-3.5 text-center font-bold text-slate-800">{r.orders}</td>
+                              <td className="px-6 py-3.5 text-right font-semibold text-slate-700">{fmtSAR(r.grossRevenue)}</td>
+                              <td className="px-6 py-3.5 text-right font-bold text-emerald-600">{fmtSAR(r.realizedRevenue)}</td>
+                              <td className="px-6 py-3.5 text-right text-rose-500 font-medium">{r.cancelledRevenue > 0 ? fmtSAR(r.cancelledRevenue) : "—"}</td>
+                              <td className="px-6 py-3.5 text-right text-rose-500 font-medium">{r.refundedAmount > 0 ? fmtSAR(r.refundedAmount) : "—"}</td>
+                              <td className="px-6 py-3.5 text-right text-cyan-600 font-medium">{r.discountGiven > 0 ? fmtSAR(r.discountGiven) : "—"}</td>
+                              <td className="px-6 py-3.5 text-right pr-8 font-bold text-slate-800">{fmtSAR(r.avgOrderValue)}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
             </div>
-        
-            {/* CHART */}
-            <div className="relative w-full h-95">
-
-               {/* GRID LINES */}
-               <div className="absolute inset-0 flex flex-col justify-between opacity-10 pointer-events-none">
-                 {Array(5).fill(0).map((_, i) => (
-                   <div key={i} className="border-t border-slate-900 w-full" />
-                 ))}
-               </div>             
-
-               <ChartContainer config={chartConfig} className="w-full h-full">
-                 <BarChart key={period} data={getChartData()} barGap={16}>
-                   
-                   <XAxis
-                     dataKey="day"
-                     axisLine={false}
-                     tickLine={false}
-                     tick={{ fontSize: 12, fill: "#94A3B8", fontWeight: 700 }}
-                   />             
-
-                   <ChartTooltip content={<ChartTooltipContent />} />             
-
-                   <Bar dataKey="revenue" shape={<PurpleTopBar />} />
-                 </BarChart>
-               </ChartContainer>
-             </div>
-        
-          </div>
-        </section>
-
-        <section className="flex flex-col gap-3 px-6">
-          {/*  Toggles */}
-        <div className="flex items-center gap-6 px-2">
-          <Toggle label="Show Subtotal"              value={showSubtotal}  onChange={setShowSubtotal}  />
-          <Toggle label="Show Tips"                  value={showTips}      onChange={setShowTips}      />
-          <Toggle label="Show Delivery Contribution" value={showDelivery}  onChange={setShowDelivery}  />
+          )}
         </div>
-
-        {/*  Table  */}
-        <div className="border border-slate-200 rounded-2xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                {tableHeadings.map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.map((row, i) => (
-                <tr key={i} className="hover:bg-slate-50 transition-colors">
-                  {tableHeadings.map((h) => (
-                    <td key={h} className="px-4 py-3 text-sm text-slate-700">
-                      {renderCellContent(h, row, showDelivery)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-            <tfoot className="bg-[#02D0FF]">
-              <tr>
-                <td className="px-4 py-3 text-white font-bold text-sm">TOTAL</td>
-                <td colSpan={tableHeadings.length - 1} className="px-4 py-3 text-white font-semibold text-sm">
-                  SAR 221,078.90
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        </section>
-
-      </main>
+      </div>
     </div>
   );
 }
 
-//  Helpers ─
-function StatCard({ title, value, change }: { title: string; value: string; change: string }) {
-  const positive = change.startsWith("+");
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col gap-1">
-      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{title}</p>
-      <h3 className="text-lg font-bold text-slate-800">{value}</h3>
-      <p className={`text-xs font-medium ${positive ? "text-green-500" : "text-red-500"}`}>
-        {change} vs last month
-      </p>
-    </div>
-  );
-}
+//  helpers 
 
-
-function Toggle({ label, value, onChange }: {
-  label: string; value: boolean; onChange: (v: boolean) => void;
+function KpiCard({
+  label, value, desc, icon: Icon, color, bg, customSub,
+}: {
+  label: string; value: string; desc?: string; icon: any; color: string; bg: string; customSub?: React.ReactNode;
 }) {
   return (
-    <button
-      onClick={() => onChange(!value)}
-      className="flex items-center gap-2 text-sm text-slate-600"
-    >
-      <div className={`w-9 h-5 rounded-full relative transition-colors ${value ? "bg-[#7F50F4]" : "bg-slate-300"}`}>
-        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${value ? "left-4" : "left-0.5"}`} />
+    <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between shadow-sm min-w-[140px]">
+      <div className="flex items-start justify-between w-full gap-2">
+        <p className="text-[9px] uppercase tracking-wider text-slate-400 font-bold leading-tight">{label}</p>
+        <div className={`${bg} p-1 rounded-md shrink-0`}><Icon className={`h-3.5 w-3.5 ${color}`} /></div>
       </div>
-      {label}
-    </button>
+      <div className="mt-3">
+        <h3 className="text-lg font-bold text-slate-800 tracking-tight">{value}</h3>
+        {desc && <p className="text-[10px] text-slate-400 font-medium mt-0.5 leading-none">{desc}</p>}
+        {customSub}
+      </div>
+    </div>
   );
 }
 
-function renderCellContent(key: string, row: any, showDelivery: boolean) {
-  if (key === "date") return <span className="text-slate-500 whitespace-nowrap">{row.date}</span>;
-
-  if (key === "revenue") {
-    return (
-      <div className="flex flex-col">
-        <span className="font-semibold text-slate-800">SAR {row.revenue}</span>
-        {showDelivery && <span className="text-[10px] text-purple-500">(SAR {row.revenue})</span>}
+function SliderRow({
+  label, value, min, max, step, suffix, onChange,
+}: {
+  label: string; value: number; min: number; max: number; step: number; suffix: string; onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-slate-600">{label}</span>
+        <span className="text-xs font-bold text-[#7F50F4]">{value}{suffix}</span>
       </div>
-    );
-  }
+      <input
+        type="range" min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="w-full accent-[#7F50F4]"
+      />
+    </div>
+  );
+}
 
-  const val = row[key];
-  if (val === undefined || val === null) return "—";
-  return <span>SAR {typeof val === "number" ? val.toFixed(2) : val}</span>;
+function SplitCard({
+  title, icon: Icon, iconColor, iconBg, totalValue, segments, unitLabel = "orders", hideCount,
+}: {
+  title: string;
+  icon: any;
+  iconColor: string;
+  iconBg: string;
+  totalValue: number;
+  segments: { label: string; value: number; count?: number; pct: number; barColor: string; textColor: string }[];
+  unitLabel?: string;
+  hideCount?: boolean;
+}) {
+  const visibleSegments = segments.filter((s) => s.value > 0);
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">{title}</p>
+        <div className={`${iconBg} p-1 rounded-md`}><Icon className={`h-3.5 w-3.5 ${iconColor}`} /></div>
+      </div>
+
+      {visibleSegments.length === 0 ? (
+        <p className="text-xs text-slate-400 py-2">No data for this period.</p>
+      ) : (
+        <>
+          <div className="flex w-full h-2 rounded-full overflow-hidden bg-slate-100">
+            {segments.map((s) => (
+              <div key={s.label} className={s.barColor} style={{ width: `${s.pct}%` }} />
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {segments.map((s) => (
+              <div key={s.label} className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${s.barColor}`} />
+                  <span className="text-xs font-semibold text-slate-600">{s.label}</span>
+                  {!hideCount && s.count !== undefined && (
+                    <span className="text-[10px] text-slate-400">({s.count} {unitLabel})</span>
+                  )}
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className={`text-xs font-bold ${s.textColor}`}>{fmtSAR(s.value)}</span>
+                  <span className="text-[10px] text-slate-400 font-semibold w-9 text-right">{s.pct.toFixed(0)}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-[10px] uppercase tracking-wide text-slate-400 font-bold">Total</span>
+            <span className="text-xs font-bold text-slate-700">{fmtSAR(totalValue)}</span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function BreakdownRow({ label, value, positive }: { label: string; value: number; positive?: boolean }) {
+  const isNegative = value < 0;
+  return (
+    <div className="flex items-center justify-between text-xs">
+      <span className="text-slate-500 font-medium">{label}</span>
+      <span className={`font-bold ${positive ? "text-emerald-600" : isNegative ? "text-rose-500" : "text-slate-700"}`}>
+        {isNegative ? "-" : ""}{fmtSAR(Math.abs(value))}
+      </span>
+    </div>
+  );
 }

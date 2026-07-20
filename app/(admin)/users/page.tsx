@@ -9,7 +9,7 @@ import FilterButtonWithBadge from '@/components/buttons/FilterButtonWithBadges';
 import { getUsers, getUsersNextPage, UserFilters, getUsersCount, searchUsers } from '@/lib/firebase/user';
 import { User } from '@/lib/models/user.model';
 import { useToast } from '@/lib/providers/ToastProvider';
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 50;
 
 const userHeadings: TableHeading[] = [
   { id: "name",         title: "NAME"          },

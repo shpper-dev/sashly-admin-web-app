@@ -58,7 +58,7 @@ export interface OperationalOrderMetrics {
   firstOrderRows: FirstTimeOrderRow[];
 }
 
-interface UserFirstOrderTracker {
+export interface UserFirstOrderTracker {
   firstOrderId: string;
   firstOrderTime: number;
 }
@@ -67,12 +67,12 @@ interface UserFirstOrderTracker {
 // DATE UTILITIES 
 
 
-function getDayString(timestamp: number): string {
+export function getDayString(timestamp: number): string {
   const d = new Date(timestamp);
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }); // e.g. "01 Jun"
 }
 
-function getWeekString(timestamp: number): string {
+export function getWeekString(timestamp: number): string {
   const date = new Date(timestamp);
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const day = d.getDay();
@@ -81,11 +81,11 @@ function getWeekString(timestamp: number): string {
   return `Wk ${d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}`;
 }
 
-function getMonthString(timestamp: number): string {
+export function getMonthString(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
 }
 
-function getSortKey(timestamp: number, period: "daily" | "weekly" | "monthly"): string {
+export function getSortKey(timestamp: number, period: "daily" | "weekly" | "monthly"): string {
   const d = new Date(timestamp);
   if (period === "daily") return d.toISOString().substring(0, 10);
   if (period === "monthly") return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -104,12 +104,12 @@ function getSortKey(timestamp: number, period: "daily" | "weekly" | "monthly"): 
 // cache it in-module for a short TTL. Call invalidateOrdersMetricsCache()
 // after any write that should be reflected immediately 
 
-type MappedOrder = ReturnType<typeof mapOrder>;
+export type MappedOrder = ReturnType<typeof mapOrder>;
 
 let ordersCache: { data: MappedOrder[]; timestamp: number } | null = null;
 const CACHE_TTL_MS = 60_000; // 1 minute
 
-async function getAllOrdersCached(forceRefresh = false): Promise<MappedOrder[]> {
+export async function getAllOrdersCached(forceRefresh = false): Promise<MappedOrder[]> {
   const now = Date.now();
   if (!forceRefresh && ordersCache && now - ordersCache.timestamp < CACHE_TTL_MS) {
     return ordersCache.data;
@@ -127,6 +127,18 @@ export function invalidateOrdersMetricsCache(): void {
 
 // CORE ANALYTICS IMPLEMENTATION 
 
+export function buildUserFirstOrderMap(orders: MappedOrder[]): Map<string, UserFirstOrderTracker> {
+  const userFirstOrderMap = new Map<string, UserFirstOrderTracker>();
+  for (const o of orders) {
+    const existing = userFirstOrderMap.get(o.userId);
+    if (!existing) {
+      userFirstOrderMap.set(o.userId, { firstOrderId: o.id, firstOrderTime: o.createdAt });
+    } else if (o.createdAt < existing.firstOrderTime) {
+      userFirstOrderMap.set(o.userId, { firstOrderId: o.id, firstOrderTime: o.createdAt });
+    }
+  }
+  return userFirstOrderMap;
+}
 
 export async function getOperationalOrderMetrics(
   startMs?: number,
@@ -139,15 +151,7 @@ export async function getOperationalOrderMetrics(
   const allOrders = await getAllOrdersCached(forceRefresh);
 
   //Identify First-Time conversion points across entire historical lifespan
-  const userFirstOrderMap = new Map<string, UserFirstOrderTracker>();
-  for (const o of allOrders) {
-    const existing = userFirstOrderMap.get(o.userId);
-    if (!existing) {
-      userFirstOrderMap.set(o.userId, { firstOrderId: o.id, firstOrderTime: o.createdAt });
-    } else if (o.createdAt < existing.firstOrderTime) {
-      userFirstOrderMap.set(o.userId, { firstOrderId: o.id, firstOrderTime: o.createdAt });
-    }
-  }
+  const userFirstOrderMap = buildUserFirstOrderMap(allOrders);
 
   //Apply operational date window filters
   const filteredOrders = allOrders.filter((o) => {
