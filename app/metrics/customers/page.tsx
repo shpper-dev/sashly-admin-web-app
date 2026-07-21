@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useTransition } from "react";
 import Header from "@/components/Header";
 import {
   getCustomerMetrics,
@@ -9,9 +9,9 @@ import {
 import {
   Users, RefreshCcw, UserPlus, ShoppingBag,
   TrendingUp, Search, Download, FileText,
-  ChevronDown, CalendarDays, Loader2, ArrowUpRight,
+  ChevronDown, CalendarDays, Loader2, ArrowUpRight, Wallet,
 } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
 import { presetToRange } from "@/lib/date-presets";
 
@@ -32,10 +32,9 @@ export default function MetricsCustomersPage() {
   const [sortDir,     setSortDir]     = useState<"asc" | "desc">("desc");
   const [rangeLabel, setRangeLabel] = useState("Last 30 days");
 
-  // Fetch 
+  const [isPending, startTransition] = useTransition();
 
   const fetchStats = useCallback(async (startMs: number, endMs: number) => {
-    
     try {
       const data = await getCustomerMetrics(startMs, endMs);
       setStats(data);
@@ -54,13 +53,14 @@ export default function MetricsCustomersPage() {
     fetchStats(startMs, endMs);
   };
 
+  const handleTabChange = (tab: TabType) => {
+    if (tab === activeTab) return;
+    startTransition(() => {
+      setActiveTab(tab);
+    });
+  };
+
   //  Tab filtering
-  // Each tab filters the master customer list differently:
-  // "New"              → signed up in the selected range
-  // "Returning"        → had prior orders AND ordered in range
-  // "No Recent Orders" → active users with zero orders in range
-  // "Deactivated"      → isDeleted === true
-  // "All Customers"    → non-deleted, regardless of orders
 
   const tabFiltered = useMemo<CustomerMetric[]>(() => {
     if (!stats) return [];
@@ -95,8 +95,10 @@ export default function MetricsCustomersPage() {
   }, [searched, sortKey, sortDir]);
 
   const toggleSort = (key: keyof CustomerMetric) => {
-    if (sortKey === key) setSortDir(d => d === "desc" ? "asc" : "desc");
-    else { setSortKey(key); setSortDir("desc"); }
+    startTransition(() => {
+      if (sortKey === key) setSortDir(d => d === "desc" ? "asc" : "desc");
+      else { setSortKey(key); setSortDir("desc"); }
+    });
   };
 
   // Label helpers
@@ -107,8 +109,7 @@ export default function MetricsCustomersPage() {
   const fmtSAR = (n: number) =>
     `SAR ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  // Top spenders for distribution chart 
-  // Show top 5 customers by spend in range, sorted descending
+  // Top spenders for distribution chart — already period-scoped, unaffected by the bugs above
   const topSpenders = useMemo(() => {
     if (!stats) return [];
     return [...stats.customers]
@@ -131,17 +132,7 @@ export default function MetricsCustomersPage() {
             <p className="text-sm text-slate-500">Acquisition, retention, frequency &amp; lifetime value</p>
           </div>
           <div className="flex items-center gap-3">
-
-            {/* Date picker */}
-            
           <DateRangePicker defaultPreset="30d" onRangeChange={handleRangeChange} />
-
-            {/* <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-slate-50">
-              <FileText size={16} className="text-blue-500" /> Export PDF
-            </button>
-            <button className="flex items-center gap-2 bg-cyan-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-cyan-600 transition">
-              <Download size={16} /> Export CSV
-            </button> */}
           </div>
         </section>
 
@@ -151,13 +142,12 @@ export default function MetricsCustomersPage() {
           </div>
         ) : stats && (
           <>
-            {/* Stat Cards */}
-           
-            <section className="grid grid-cols-2 lg:grid-cols-5 gap-4 px-8 mb-6">
+            {/* Stat Cards — 6 now: 5 original + Avg Spend/Active Customer (genuinely period-scoped) */}
+            <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 px-8 mb-6">
               <StatCard
                 label="TOTAL CUSTOMERS"
                 value={stats.totalCustomers.toLocaleString()}
-                sub={`${stats.newInRange} joined in range`}
+                sub={`${stats.newInRange} joined in range · all-time total`}
                 icon={<Users size={16} className="text-purple-600" />}
                 iconBg="bg-purple-50"
                 trend={`+${stats.newInRange} new`}
@@ -183,16 +173,25 @@ export default function MetricsCustomersPage() {
               <StatCard
                 label="AVG ORDER FREQ."
                 value={stats.avgOrderFrequency.toFixed(1)}
-                sub="Orders per active customer"
+                sub="Orders per active customer, in range"
                 icon={<ShoppingBag size={16} className="text-cyan-600" />}
                 iconBg="bg-cyan-50"
                 trend="In range"
                 trendColor="text-cyan-500"
               />
               <StatCard
+                label="AVG SPEND / CUSTOMER"
+                value={fmtSAR(stats.avgSpendPerActiveCustomer)}
+                sub="Realized spend, active customers in range"
+                icon={<Wallet size={16} className="text-indigo-600" />}
+                iconBg="bg-indigo-50"
+                trend="Revenue/customer"
+                trendColor="text-indigo-500"
+              />
+              <StatCard
                 label="AVG LTV"
                 value={`SAR ${Math.round(stats.avgLTV).toLocaleString()}`}
-                sub="Avg all-time spend"
+                sub="Avg all-time spend — lifetime, not range"
                 icon={<TrendingUp size={16} className="text-amber-600" />}
                 iconBg="bg-amber-50"
                 trend="Lifetime value"
@@ -245,13 +244,12 @@ export default function MetricsCustomersPage() {
                 {TABS.map(tab => (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => handleTabChange(tab)}
                     className={`pb-3 text-sm font-semibold transition-all relative whitespace-nowrap ${
                       activeTab === tab ? "text-indigo-600" : "text-slate-400 hover:text-slate-600"
                     }`}
                   >
                     {tab}
-                   
                     <span className={`ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                       activeTab === tab ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400"
                     }`}>
@@ -286,12 +284,16 @@ export default function MetricsCustomersPage() {
             </section>
 
             {/* Table */}
-            
             <section>
               <div className="bg-white border-y border-slate-200 overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-[550px] overflow-y-auto custom-scrollbar relative">
+                  {isPending && (
+                    <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-start justify-center pt-16 z-20">
+                      <Loader2 className="h-6 w-6 animate-spin text-indigo-400" />
+                    </div>
+                  )}
                   <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-slate-50 border-b border-slate-100">
+                    <thead className="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
                       <tr>
                         <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">#</th>
                         <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Name</th>
@@ -301,8 +303,8 @@ export default function MetricsCustomersPage() {
                         <SortableTh label="Orders (Range)" sortKey="ordersInRange"    current={sortKey} dir={sortDir} onSort={toggleSort} />
                         <SortableTh label="Spend (Range)"  sortKey="spendInRange"     current={sortKey} dir={sortDir} onSort={toggleSort} />
                         <SortableTh label="LTV (All Time)" sortKey="ltv"              current={sortKey} dir={sortDir} onSort={toggleSort} />
-                        <SortableTh label="Total Orders"   sortKey="totalOrdersAllTime" current={sortKey} dir={sortDir} onSort={toggleSort} />
-                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Last Order</th>
+                        <SortableTh label="Total Orders (All Time)" sortKey="totalOrdersAllTime" current={sortKey} dir={sortDir} onSort={toggleSort} />
+                        <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Last Order (All Time)</th>
                         <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Type</th>
                       </tr>
                     </thead>
@@ -314,23 +316,19 @@ export default function MetricsCustomersPage() {
                           <td className="px-6 py-4 text-slate-500">{c.email}</td>
                           <td className="px-6 py-4 text-slate-500">{c.phone || "—"}</td>
                           <td className="px-6 py-4 text-slate-500">{fmtDate(c.signupDate)}</td>
-                          {/* Orders in range — highlights activity in the selected period */}
                           <td className="px-6 py-4">
                             <span className={`font-bold ${c.ordersInRange > 0 ? "text-indigo-600" : "text-slate-300"}`}>
                               {c.ordersInRange}
                             </span>
                           </td>
-                          {/* Spend in range */}
                           <td className="px-6 py-4 font-bold text-slate-700">
                             {c.spendInRange > 0 ? fmtSAR(c.spendInRange) : <span className="text-slate-300">—</span>}
                           </td>
-                          {/* LTV — all-time spend regardless of range */}
                           <td className="px-6 py-4 font-bold text-purple-600">
                             {c.ltv > 0 ? fmtSAR(c.ltv) : <span className="text-slate-300">—</span>}
                           </td>
                           <td className="px-6 py-4 text-slate-500">{c.totalOrdersAllTime}</td>
                           <td className="px-6 py-4 text-slate-500">{fmtDate(c.lastOrderAt)}</td>
-                          {/* Customer type badge */}
                           <td className="px-6 py-4">
                             <CustomerTypeBadge customer={c} />
                           </td>
@@ -373,7 +371,6 @@ function StatCard({ label, value, sub, icon, iconBg, trend, trendColor = "text-e
   );
 }
 
-// Sortable column header — shows direction arrow when active
 function SortableTh({ label, sortKey, current, dir, onSort }: {
   label: string;
   sortKey: keyof CustomerMetric;
@@ -397,7 +394,6 @@ function SortableTh({ label, sortKey, current, dir, onSort }: {
   );
 }
 
-// Derives a visual badge from the customer's computed metrics
 function CustomerTypeBadge({ customer: c }: { customer: CustomerMetric }) {
   if (c.isDeleted)
     return <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-500 text-[10px] font-bold">Deleted</span>;

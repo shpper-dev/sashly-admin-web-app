@@ -207,7 +207,7 @@ export default function MetricsTopSellingPage() {
 
             {/* Detailed Table */}
             <div className="px-6">
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <h3 className="font-bold text-slate-800">Detailed Breakdown</h3>
                   <div className="flex bg-slate-100 p-1 rounded-lg">
@@ -258,73 +258,75 @@ export default function MetricsTopSellingPage() {
                   </div>
                 </div>
 
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-400 font-medium uppercase text-[11px] tracking-widest border-b border-slate-100">
-                    <tr>
-                      <th className="px-6 py-4 w-8">#</th>
-                      {activeMode === "items" ? (
-                        <>
-                          <th className="px-6 py-4">Product</th>
-                          <th className="px-6 py-4">Arabic</th>
-                          <th className="px-6 py-4">Units</th>
-                          <th className="px-6 py-4">Orders</th>
-                          <th className="px-6 py-4">Revenue</th>
-                          {showAvgPrice && <th className="px-6 py-4">Avg / Piece</th>}
-                        </>
-                      ) : (
-                        <>
-                          <th className="px-6 py-4">Service Name</th>
-                          <th className="px-6 py-4">Line Items</th>
-                          <th className="px-6 py-4">Pieces</th>
-                          <th className="px-6 py-4">Orders</th>
-                          <th className="px-6 py-4">Revenue</th>
-                          {showAvgPrice && <th className="px-6 py-4">Avg / Piece</th>}
-                        </>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {activeMode === "items"
-                      ? filteredProducts.map((item, i) => (
-                          <tr key={item.name} className="hover:bg-slate-50 transition-colors">
-                            <td className="px-6 py-4 text-slate-300 font-bold text-xs">{String(i + 1).padStart(2, "0")}</td>
-                            <td className="px-6 py-4 font-semibold text-slate-700">{item.name}</td>
-                            <td className="px-6 py-4 text-slate-400">{item.arabicName}</td>
-                            <td className="px-6 py-4 text-slate-500">{item.totalQuantity.toLocaleString()}</td>
-                            <td className="px-6 py-4 text-slate-500">{item.totalOrders.toLocaleString()}</td>
-                            <td className="px-6 py-4 font-bold text-purple-600">
-                              SAR {item.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                            </td>
-                            {showAvgPrice && (
-                              <td className="px-6 py-4 text-slate-400 font-medium">
-                                SAR {item.totalQuantity > 0 ? (item.totalRevenue / item.totalQuantity).toFixed(2) : "0.00"}
+                <div className="max-h-[550px] overflow-y-auto custom-scrollbar">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 text-slate-400 font-medium uppercase text-[11px] tracking-widest border-b border-slate-100 sticky top-0 z-10">
+                      <tr>
+                        <th className="px-6 py-4 w-8 bg-slate-50">#</th>
+                        {activeMode === "items" ? (
+                          <>
+                            <th className="px-6 py-4 bg-slate-50">Product</th>
+                            <th className="px-6 py-4 bg-slate-50">Arabic</th>
+                            <th className="px-6 py-4 bg-slate-50">Units</th>
+                            <th className="px-6 py-4 bg-slate-50">Orders</th>
+                            <th className="px-6 py-4 bg-slate-50">Revenue</th>
+                            {showAvgPrice && <th className="px-6 py-4 bg-slate-50">Avg / Piece</th>}
+                          </>
+                        ) : (
+                          <>
+                            <th className="px-6 py-4 bg-slate-50">Service Name</th>
+                            <th className="px-6 py-4 bg-slate-50">Line Items</th>
+                            <th className="px-6 py-4 bg-slate-50">Pieces</th>
+                            <th className="px-6 py-4 bg-slate-50">Orders</th>
+                            <th className="px-6 py-4 bg-slate-50">Revenue</th>
+                            {showAvgPrice && <th className="px-6 py-4 bg-slate-50">Avg / Piece</th>}
+                          </>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {activeMode === "items"
+                        ? filteredProducts.map((item, i) => (
+                            <tr key={item.name} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-6 py-4 text-slate-300 font-bold text-xs">{String(i + 1).padStart(2, "0")}</td>
+                              <td className="px-6 py-4 font-semibold text-slate-700">{item.name}</td>
+                              <td className="px-6 py-4 text-slate-400">{item.arabicName}</td>
+                              <td className="px-6 py-4 text-slate-500">{item.totalQuantity.toLocaleString()}</td>
+                              <td className="px-6 py-4 text-slate-500">{item.totalOrders.toLocaleString()}</td>
+                              <td className="px-6 py-4 font-bold text-purple-600">
+                                SAR {item.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                               </td>
-                            )}
-                          </tr>
-                        ))
-                      : filteredServices.map((svc, i) => (
-                          <tr key={svc.serviceName} className="hover:bg-slate-50 transition-colors">
-                            <td className="px-6 py-4 text-slate-300 font-bold text-xs">{String(i + 1).padStart(2, "0")}</td>
-                            <td className="px-6 py-4 font-semibold text-slate-700">{svc.serviceName}</td>
-                            <td className="px-6 py-4 text-slate-500">{svc.totalQuantity.toLocaleString()}</td>
-                            <td className="px-6 py-4 text-slate-500">{svc.totalPieces.toLocaleString()}</td>
-                            <td className="px-6 py-4 text-slate-500">{svc.totalOrders.toLocaleString()}</td>
-                            <td className="px-6 py-4 font-bold text-purple-600">
-                              SAR {svc.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                            </td>
-                            {showAvgPrice && (
-                              <td className="px-6 py-4 text-slate-400 font-medium">
-                                SAR {svc.totalPieces > 0 ? (svc.totalRevenue / svc.totalPieces).toFixed(2) : "0.00"}
+                              {showAvgPrice && (
+                                <td className="px-6 py-4 text-slate-400 font-medium">
+                                  SAR {item.totalQuantity > 0 ? (item.totalRevenue / item.totalQuantity).toFixed(2) : "0.00"}
+                                </td>
+                              )}
+                            </tr>
+                          ))
+                        : filteredServices.map((svc, i) => (
+                            <tr key={svc.serviceName} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-6 py-4 text-slate-300 font-bold text-xs">{String(i + 1).padStart(2, "0")}</td>
+                              <td className="px-6 py-4 font-semibold text-slate-700">{svc.serviceName}</td>
+                              <td className="px-6 py-4 text-slate-500">{svc.totalQuantity.toLocaleString()}</td>
+                              <td className="px-6 py-4 text-slate-500">{svc.totalPieces.toLocaleString()}</td>
+                              <td className="px-6 py-4 text-slate-500">{svc.totalOrders.toLocaleString()}</td>
+                              <td className="px-6 py-4 font-bold text-purple-600">
+                                SAR {svc.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                               </td>
-                            )}
-                          </tr>
-                        ))}
-                  </tbody>
-                </table>
+                              {showAvgPrice && (
+                                <td className="px-6 py-4 text-slate-400 font-medium">
+                                  SAR {svc.totalPieces > 0 ? (svc.totalRevenue / svc.totalPieces).toFixed(2) : "0.00"}
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                    </tbody>
+                  </table>
 
-                {(activeMode === "items" ? filteredProducts : filteredServices).length === 0 && (
-                  <div className="text-center py-10 text-slate-400 text-sm">No results found</div>
-                )}
+                  {(activeMode === "items" ? filteredProducts : filteredServices).length === 0 && (
+                    <div className="text-center py-10 text-slate-400 text-sm">No results found</div>
+                  )}
+                </div>
               </div>
             </div>
           </>
@@ -334,7 +336,7 @@ export default function MetricsTopSellingPage() {
   );
 }
 
-// ─── Sub-components ────────────────────────────────────────────────────────────
+// helpers
 
 function StatCard({ title, value, subValue, trend, icon, iconBg }: {
   title: string; value: string; subValue: string; trend: string;

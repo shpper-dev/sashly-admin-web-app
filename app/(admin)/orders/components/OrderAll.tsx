@@ -1,7 +1,6 @@
 "use client";
-import { FileText, PencilLine, Search } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { Order, OrderStatuses } from "@/lib/models/order.model";
+import { Order} from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
 import { OrderTabProps } from "./OrdersPageClient";
 import FilterButton from "@/components/buttons/FilterDropdown";

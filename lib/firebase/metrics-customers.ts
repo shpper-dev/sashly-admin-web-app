@@ -1,27 +1,9 @@
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "./config";
 import { User } from "../models/user.model";
-import { Order } from "../models/order.model";
 import { mapUser } from "../mappers/user.mapper";
-import { mapOrder } from "../mappers/order.mapper";
+import { getAllOrdersCached, invalidateOrdersMetricsCache, MappedOrder } from "./metrics-orders";
 
-
-// export interface CustomerMetric {
-//   userId: string;
-//   name: string;
-//   email: string;
-//   phone: string;
-//   signupDate: number;           // ms — from user.createdAt
-//   isNew: boolean;               // signed up within the selected range
-//   isReturning: boolean;         // had orders BEFORE the range start
-//   ordersInRange: number;        // order count within the selected date range
-//   totalOrdersAllTime: number;   // all-time order count
-//   spendInRange: number;         // SAR spent within range
-//   ltv: number;                  // total SAR spent all time (Lifetime Value)
-//   lastOrderAt: number | null;   // ms of most recent order
-//   isDeleted: boolean;
-//   hasOrdersInRange: boolean;    // placed at least one order in range
-// }
 export interface CustomerMetric {
   userId: string;
   name: string;
@@ -30,58 +12,104 @@ export interface CustomerMetric {
 
   signupDate: number;
 
-  isNew: boolean;
-  isReturning: boolean;
+  isNew: boolean;       // PERIOD — signed up within the selected range
+  isReturning: boolean; // PERIOD — had orders before the range AND ordered within it
 
-  ordersInRange: number;
-  totalOrdersAllTime: number;
+  ordersInRange: number;        // PERIOD — non-cancelled orders placed within the range
+  totalOrdersAllTime: number;   // LIFETIME — non-cancelled orders, ever
 
-  spendInRange: number;
+  spendInRange: number; // PERIOD  — realized (paid, non-cancelled) revenue within the range
+  ltv: number;          // LIFETIME — realized (paid, non-cancelled) revenue, all time
 
-  // Actual lifetime revenue from this customer
-  ltv: number;
-
-  // NEW
+  // LIFETIME — do NOT change with the selected date range
   firstOrderAt: number | null;
   lastOrderAt: number | null;
 
-  customerLifespanMonths: number;
-  purchaseFrequency: number; // orders/month
-  avgOrderValue: number;
+  // PERIOD — DO change with the selected date range; null if no orders fell within it
+  firstOrderInRangeAt: number | null;
+  lastOrderInRangeAt: number | null;
+
+  customerLifespanMonths: number; // LIFETIME — months between first & last order ever
+  purchaseFrequency: number;      // LIFETIME — orders per month, observed over their whole history
+  avgOrderValue: number;          // LIFETIME — ltv / paid order count
 
   isDeleted: boolean;
   hasOrdersInRange: boolean;
 }
 
 export interface CustomerPageStats {
-  totalCustomers: number;       // all non-deleted users (all time)
-  newInRange: number;           // signed up within range
-  returningInRange: number;     // had prior orders, placed new ones in range
-  activeInRange: number;        // placed at least one order in range
-  avgOrderFrequency: number;    // avg orders per active customer in range
-  avgLTV: number;               // avg lifetime spend across all customers with orders
+  totalCustomers: number;             // LIFETIME — all non-deleted registered users, regardless of range
+  newInRange: number;                 // PERIOD — signed up within range, excludes deleted
+  returningInRange: number;           // PERIOD — repeat activity within range, excludes deleted
+  activeInRange: number;              // PERIOD — placed >=1 non-cancelled order in range
+  avgOrderFrequency: number;          // PERIOD — avg orders per active customer in range
+  avgSpendPerActiveCustomer: number;  // PERIOD — realized spend in range / active customers in range
+  avgLTV: number;                     // LIFETIME — avg realized lifetime spend, customers with >=1 paid order ever
   customers: CustomerMetric[];
 }
 
+//  Cancellation helper 
+// Mirrors the "cancelled orders don't represent real revenue or engagement"
+// standard already applied in metrics-revenue.ts, applied here so customer-
+// level counts and spend aren't inflated by orders that never actually happened.
+function isCancelledOrder(o: MappedOrder): boolean {
+  return o.isCancelled || o.latestStatus?.status === "cancelled";
+}
+
+//  USERS CACHE 
+// Same short-TTL, module-level caching pattern as getAllOrdersCached in
+// metrics-orders.ts, applied here so this module doesn't refetch the entire
+// users collection on every date-range change.
+
+type MappedUser = ReturnType<typeof mapUser>;
+
+let usersCache: { data: MappedUser[]; timestamp: number } | null = null;
+const USERS_CACHE_TTL_MS = 60_000;
+
+async function getAllUsersCached(forceRefresh = false): Promise<MappedUser[]> {
+  const now = Date.now();
+  if (!forceRefresh && usersCache && now - usersCache.timestamp < USERS_CACHE_TTL_MS) {
+    return usersCache.data;
+  }
+  const snap = await getDocs(collection(db, "users"));
+  const allUsers = snap.docs.map(mapUser);
+  usersCache = { data: allUsers, timestamp: now };
+  return allUsers;
+}
+
+export function invalidateUsersMetricsCache(): void {
+  usersCache = null;
+}
+
+// Invalidates both the users cache and the shared orders cache (from
+// metrics-orders.ts) — call after any write that should be reflected
+// immediately on the Customer Reports page.
+export function invalidateCustomerMetricsCache(): void {
+  invalidateUsersMetricsCache();
+  invalidateOrdersMetricsCache();
+}
+
+//  CORE ANALYTICS IMPLEMENTATION 
 
 export async function getCustomerMetrics(
   startMs: number,
-  endMs: number
+  endMs: number,
+  forceRefresh = false
 ): Promise<CustomerPageStats> {
 
-  // Fetch users and ALL orders in parallel — two independent collections
-  const [usersSnap, ordersSnap] = await Promise.all([
-    getDocs(collection(db, "users")),
-    getDocs(collection(db, "orders")),
+  // Users and orders fetched (and cached) independently — same pattern used
+  // throughout the rest of the metrics system.
+  const [users, allOrdersRaw] = await Promise.all([
+    getAllUsersCached(forceRefresh),
+    getAllOrdersCached(forceRefresh),
   ]);
 
-  const users  = usersSnap.docs.map(mapUser);
-  const orders = ordersSnap.docs.map(mapOrder);
+  // Cancelled orders are excluded up front — they never represent real
+  // customer engagement or revenue, and previously inflated every count.
+  const validOrders = allOrdersRaw.filter((o) => !isCancelledOrder(o));
 
-  // Build a map: userId → all their orders (sorted oldest first)
-  // This lets us compute per-user metrics in O(1) lookups
-  const ordersByUser = new Map<string, Order[]>();
-  for (const order of orders) {
+  const ordersByUser = new Map<string, MappedOrder[]>();
+  for (const order of validOrders) {
     if (!ordersByUser.has(order.userId)) ordersByUser.set(order.userId, []);
     ordersByUser.get(order.userId)!.push(order);
   }
@@ -89,58 +117,41 @@ export async function getCustomerMetrics(
   const customers: CustomerMetric[] = [];
 
   for (const user of users) {
-    const allOrders = ordersByUser.get(user.userId) ?? [];
+    const allOrders = ordersByUser.get(user.userId) ?? []; // lifetime, non-cancelled
 
     // Orders within the selected date range
-    const inRange = allOrders.filter(
-      o => o.createdAt >= startMs && o.createdAt <= endMs
-    );
+    const inRange = allOrders.filter((o) => o.createdAt >= startMs && o.createdAt <= endMs);
 
     // Orders strictly BEFORE the range start — used to detect returning customers
-    const beforeRange = allOrders.filter(o => o.createdAt < startMs);
+    const beforeRange = allOrders.filter((o) => o.createdAt < startMs);
 
-    const spendInRange = inRange.reduce((sum, o) => sum + o.totalPrice, 0);
-    const ltv          = allOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+    // Revenue figures only count orders that were actually PAID — an
+    // unpaid/pending order isn't realized revenue yet.
+    const paidOrders = allOrders.filter((o) => o.isPaid);
+    const paidInRange = inRange.filter((o) => o.isPaid);
 
-    const lastOrderAt = allOrders.length > 0
-      ? Math.max(...allOrders.map(o => o.createdAt))
-      : null;
-    // const spendInRange = inRange.reduce((sum, o) => sum + o.totalPrice, 0);
+    const spendInRange = paidInRange.reduce((sum, o) => sum + o.totalPrice, 0);
+    const ltv = paidOrders.reduce((sum, o) => sum + o.totalPrice, 0);
 
-// Historical revenue (actual customer value)
-// const ltv = allOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+    // LIFETIME first/last order — intentionally independent of the selected range
+    const firstOrderAt = allOrders.length > 0 ? Math.min(...allOrders.map((o) => o.createdAt)) : null;
+    const lastOrderAt = allOrders.length > 0 ? Math.max(...allOrders.map((o) => o.createdAt)) : null;
 
-const firstOrderAt =
-  allOrders.length > 0
-    ? Math.min(...allOrders.map(o => o.createdAt))
-    : null;
+    // PERIOD first/last order — genuinely scoped to the selected range
+    const firstOrderInRangeAt = inRange.length > 0 ? Math.min(...inRange.map((o) => o.createdAt)) : null;
+    const lastOrderInRangeAt = inRange.length > 0 ? Math.max(...inRange.map((o) => o.createdAt)) : null;
 
-// const lastOrderAt =
-//   allOrders.length > 0
-//     ? Math.max(...allOrders.map(o => o.createdAt))
-//     : null;
+    // Lifetime span in months, observed between first and last order ever
+    let customerLifespanMonths = 0;
+    if (firstOrderAt && lastOrderAt) {
+      customerLifespanMonths = Math.max(
+        1,
+        (lastOrderAt - firstOrderAt) / (1000 * 60 * 60 * 24 * 30.44)
+      );
+    }
 
-// Lifetime in months
-let customerLifespanMonths = 0;
-
-if (firstOrderAt && lastOrderAt) {
-  customerLifespanMonths = Math.max(
-    1,
-    (lastOrderAt - firstOrderAt) / (1000 * 60 * 60 * 24 * 30.44)
-  );
-}
-
-// Orders per month
-const purchaseFrequency =
-  customerLifespanMonths > 0
-    ? allOrders.length / customerLifespanMonths
-    : 0;
-
-// Average order value for this customer
-const avgOrderValue =
-  allOrders.length > 0
-    ? ltv / allOrders.length
-    : 0;
+    const purchaseFrequency = customerLifespanMonths > 0 ? allOrders.length / customerLifespanMonths : 0;
+    const avgOrderValue = paidOrders.length > 0 ? ltv / paidOrders.length : 0;
 
     // A customer is "new" if their account was created within the range
     const isNew = user.createdAt >= startMs && user.createdAt <= endMs;
@@ -148,165 +159,117 @@ const avgOrderValue =
     // A customer is "returning" if they had orders before the range AND placed orders in range
     const isReturning = beforeRange.length > 0 && inRange.length > 0;
 
-    // customers.push({
-    //   userId:            user.userId,
-    //   name:              user.name ?? "Unknown",
-    //   email:             user.email ?? "",
-    //   phone:             user.phone ?? user.phoneCode ?? "",
-    //   signupDate:        user.createdAt,
-    //   isNew,
-    //   isReturning,
-    //   ordersInRange:     inRange.length,
-    //   totalOrdersAllTime: allOrders.length,
-    //   spendInRange,
-    //   ltv,
-    //   lastOrderAt,
-    //   isDeleted:         user.isDeleted ?? false,
-    //   hasOrdersInRange:  inRange.length > 0,
-    // });
     customers.push({
-  userId: user.userId,
-  name: user.name ?? "Unknown",
-  email: user.email ?? "",
-  phone: user.phone ?? user.phoneCode ?? "",
+      userId: user.userId,
+      name: user.name ?? "Unknown",
+      email: user.email ?? "",
+      phone: user.phone ?? user.phoneCode ?? "",
 
-  signupDate: user.createdAt,
+      signupDate: user.createdAt,
 
-  isNew,
-  isReturning,
+      isNew,
+      isReturning,
 
-  ordersInRange: inRange.length,
-  totalOrdersAllTime: allOrders.length,
+      ordersInRange: inRange.length,
+      totalOrdersAllTime: allOrders.length,
 
-  spendInRange,
-  ltv,
+      spendInRange,
+      ltv,
 
-  firstOrderAt,
-  lastOrderAt,
+      firstOrderAt,
+      lastOrderAt,
+      firstOrderInRangeAt,
+      lastOrderInRangeAt,
 
-  customerLifespanMonths,
-  purchaseFrequency,
-  avgOrderValue,
+      customerLifespanMonths,
+      purchaseFrequency,
+      avgOrderValue,
 
-  isDeleted: user.isDeleted ?? false,
-  hasOrdersInRange: inRange.length > 0,
-});
+      isDeleted: user.isDeleted ?? false,
+      hasOrdersInRange: inRange.length > 0,
+    });
   }
 
-  //Aggregate stats
-  const activeCustomers = customers.filter(c => c.hasOrdersInRange);
+  // Aggregate stats — deleted customers excluded consistently everywhere,
+  // so these numbers always match what each tab actually shows.
+  const nonDeleted = customers.filter((c) => !c.isDeleted);
+  const activeCustomers = nonDeleted.filter((c) => c.hasOrdersInRange);
 
   const avgOrderFrequency = activeCustomers.length > 0
     ? activeCustomers.reduce((sum, c) => sum + c.ordersInRange, 0) / activeCustomers.length
     : 0;
 
-  // const customersWithOrders = customers.filter(c => c.totalOrdersAllTime > 0);
-  // const avgLTV = customersWithOrders.length > 0
-  //   ? customersWithOrders.reduce((sum, c) => sum + c.ltv, 0) / customersWithOrders.length
-  //   : 0;
-
-  // const activeCustomers = customers.filter(c => c.hasOrdersInRange);
-
-const customersWithOrders = customers.filter(
-  c => c.totalOrdersAllTime > 0
-);
-
-// Average purchase frequency (orders/month)
-const avgPurchaseFrequency =
-  customersWithOrders.length > 0
-    ? customersWithOrders.reduce(
-        (sum, c) => sum + c.purchaseFrequency,
-        0
-      ) / customersWithOrders.length
+  // PERIOD — genuine "revenue per customer" for the selected range
+  const totalSpendInRange = activeCustomers.reduce((sum, c) => sum + c.spendInRange, 0);
+  const avgSpendPerActiveCustomer = activeCustomers.length > 0
+    ? totalSpendInRange / activeCustomers.length
     : 0;
 
-// Average order value across all orders
-const totalRevenue = customersWithOrders.reduce(
-  (sum, c) => sum + c.ltv,
-  0
-);
-
-const totalOrders = customersWithOrders.reduce(
-  (sum, c) => sum + c.totalOrdersAllTime,
-  0
-);
-
-const averageOrderValue =
-  totalOrders > 0
-    ? totalRevenue / totalOrders
+  // LIFETIME — simple, mathematically valid average of each customer's real
+  // lifetime spend. Replaces the old (AOV × frequency × lifespan) formula,
+  // which multiplied together three separately-averaged quantities — a
+  // statistically invalid operation that produced a number with no real
+  // meaning and, incidentally, never moved with the date range either.
+  const customersWithLifetimeSpend = nonDeleted.filter((c) => c.ltv > 0);
+  const avgLTV = customersWithLifetimeSpend.length > 0
+    ? customersWithLifetimeSpend.reduce((sum, c) => sum + c.ltv, 0) / customersWithLifetimeSpend.length
     : 0;
-
-// Average customer lifespan
-const averageCustomerLifespan =
-  customersWithOrders.length > 0
-    ? customersWithOrders.reduce(
-        (sum, c) => sum + c.customerLifespanMonths,
-        0
-      ) / customersWithOrders.length
-    : 0;
-
-// Marketing LTV estimate
-const avgLTV =
-  averageOrderValue *
-  avgPurchaseFrequency *
-  averageCustomerLifespan;
 
   return {
-    totalCustomers:   customers.filter(c => !c.isDeleted).length,
-    newInRange:       customers.filter(c => c.isNew).length,
-    returningInRange: customers.filter(c => c.isReturning).length,
-    activeInRange:    activeCustomers.length,
+    totalCustomers: nonDeleted.length,
+    newInRange: customers.filter((c) => c.isNew && !c.isDeleted).length,
+    returningInRange: customers.filter((c) => c.isReturning && !c.isDeleted).length,
+    activeInRange: activeCustomers.length,
     avgOrderFrequency,
+    avgSpendPerActiveCustomer,
     avgLTV,
     customers,
   };
 }
 
-// for customer reports
+//  Customer report rows 
 
 export interface CustomerReportRow {
-  name:              string;
-  email:             string;
-  phone:             string;
-  signupDate:        string;
-  completedOrders:   number;
-  firstOrderDate:    string;
-  lastOrderDate:     string;
-  spendInRange:      number;
-  ltv:               number;
-  avgOrderValue:     number;
-  type:              string;
+  name: string;
+  email: string;
+  phone: string;
+  signupDate: string;
+  totalOrdersAllTime: number; // renamed from "completedOrders" — it was never filtered to completed status
+  firstOrderDate: string;     // LIFETIME
+  lastOrderDate: string;      // LIFETIME
+  spendInRange: number;       // PERIOD
+  ltv: number;                // LIFETIME
+  avgOrderValue: number;      // LIFETIME
+  type: string;
 }
 
-export function buildCustomerReportRows(
-  customers: CustomerMetric[]
-): CustomerReportRow[] {
+export function buildCustomerReportRows(customers: CustomerMetric[]): CustomerReportRow[] {
   return customers
-    .filter(c => !c.isDeleted)
-    .map(c => ({
-      name:            c.name,
-      email:           c.email,
-      phone:           c.phone ?? "",
-      signupDate:      c.signupDate
+    .filter((c) => !c.isDeleted)
+    .map((c) => ({
+      name: c.name,
+      email: c.email,
+      phone: c.phone ?? "",
+      signupDate: c.signupDate
         ? new Date(c.signupDate).toLocaleDateString("en-GB")
         : "—",
-      completedOrders: c.totalOrdersAllTime,
-      firstOrderDate:  c.lastOrderAt
+      totalOrdersAllTime: c.totalOrdersAllTime,
+      // FIXED: was reading c.lastOrderAt for both fields — first and last
+      // order dates now correctly reference their own (lifetime) source field.
+      firstOrderDate: c.firstOrderAt
+        ? new Date(c.firstOrderAt).toLocaleDateString("en-GB")
+        : "—",
+      lastOrderDate: c.lastOrderAt
         ? new Date(c.lastOrderAt).toLocaleDateString("en-GB")
         : "—",
-      lastOrderDate:   c.lastOrderAt
-        ? new Date(c.lastOrderAt).toLocaleDateString("en-GB")
-        : "—",
-      spendInRange:    c.spendInRange,
-      ltv:             c.ltv,
-      avgOrderValue:   c.totalOrdersAllTime > 0
-        ? c.ltv / c.totalOrdersAllTime
-        : 0,
+      spendInRange: c.spendInRange,
+      ltv: c.ltv,
+      avgOrderValue: c.avgOrderValue, // reuse the already-computed lifetime AOV rather than recomputing it
       type: c.isDeleted        ? "Deleted"
           : c.isNew            ? "New"
           : c.isReturning      ? "Returning"
           : c.ordersInRange > 0 ? "Active"
           : "Inactive",
     }))
-    .sort((a, b) => b.completedOrders - a.completedOrders);
+    .sort((a, b) => b.totalOrdersAllTime - a.totalOrdersAllTime);
 }

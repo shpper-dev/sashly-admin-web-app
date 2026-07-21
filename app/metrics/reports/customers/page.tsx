@@ -9,10 +9,6 @@ import {
   CalendarDays, ChevronDown, Download, FileText,
   Loader2, Search, ArrowLeft,
 } from "lucide-react";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { exportToCsv } from "@/lib/utils";
 import { fmtSAR } from "../page";
@@ -25,10 +21,8 @@ export default function CustomerReportPage() {
   const [search,      setSearch]      = useState("");
   const [rangeLabel, setRangeLabel] = useState("Last 30 days");
 
-  
   const fetchData = useCallback(async (startMs: number, endMs: number) => {
     setLoading(true);
-    
     try {
       const stats = await getCustomerMetrics(startMs, endMs);
       setRows(buildCustomerReportRows(stats.customers));
@@ -62,37 +56,23 @@ export default function CustomerReportPage() {
         Email:              r.email,
         Phone:              `="${r.phone || ""}"`,
         "Signed Up":        r.signupDate,
-        "Completed Orders": r.completedOrders,
-        "First Order":      r.firstOrderDate,
-        "Last Order":       r.lastOrderDate,
+        "Total Orders (All Time)": r.totalOrdersAllTime,
+        "First Order (All Time)":  r.firstOrderDate,
+        "Last Order (All Time)":   r.lastOrderDate,
         "Spend in Range":   r.spendInRange.toFixed(2),
-        "LTV (SAR)":        r.ltv.toFixed(2),
-        "Avg Order Value":  r.avgOrderValue.toFixed(2),
+        "LTV (All Time)":   r.ltv.toFixed(2),
+        "Avg Order Value (All Time)": r.avgOrderValue.toFixed(2),
         Type:               r.type,
       })),
       `customer-report-${rangeLabel}.csv`
     );
   };
 
-//   const handlePdf = () => {
-//     exportToPdf(
-//       `Customer Report — ${currentLabel}`,
-//       ["Name", "Email", "Completed Orders", "First Order", "Last Order", "LTV (SAR)", "AOV (SAR)", "Type"],
-//       filtered.map(r => [
-//         r.name, r.email, r.completedOrders,
-//         r.firstOrderDate, r.lastOrderDate,
-//         r.ltv.toFixed(2), r.avgOrderValue.toFixed(2), r.type,
-//       ]),
-//       `customer-report-${preset}.pdf`
-//     );
-//   };
-
   return (
     <div className="min-h-screen bg-white">
       <Header />
       <main className="pt-16 pl-60 pb-12 flex flex-col gap-0">
 
-        {/* Header */}
         <section className="flex items-center justify-between px-8 py-5 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <Link href="/metrics/reports" className="p-2 rounded-lg hover:bg-slate-100 transition text-slate-400">
@@ -107,13 +87,7 @@ export default function CustomerReportPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Date picker — same component as MetricsCustomersPage */}
            <DateRangePicker defaultPreset="30d" onRangeChange={handleRangeChange} />
-{/* 
-            <button onClick={handlePdf}
-              className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-slate-50 transition">
-              <FileText size={15} className="text-blue-500" /> Export PDF
-            </button> */}
             <button onClick={handleCsv}
               className="flex items-center gap-2 bg-cyan-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-cyan-600 transition">
               <Download size={15} /> Export CSV
@@ -121,7 +95,6 @@ export default function CustomerReportPage() {
           </div>
         </section>
 
-        {/* Search */}
         <section className="px-8 py-4 border-b border-slate-100 flex items-center justify-between">
           <p className="text-xs text-slate-400">{filtered.length} rows</p>
           <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-lg shadow-sm w-72">
@@ -132,17 +105,16 @@ export default function CustomerReportPage() {
           </div>
         </section>
 
-        {/* Table */}
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
           </div>
         ) : (
-          <section className="overflow-x-auto">
+          <section className="overflow-x-auto overflow-y-auto max-h-[70vh]">
             <table className="w-full text-xs border-collapse">
               <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
                 <tr>
-                  {["#","Name","Email","Phone","Signed Up","Completed Orders","First Order","Last Order","Spend (Range)","LTV","AOV","Type"].map(h => (
+                  {["#","Name","Email","Phone","Signed Up","Total Orders (All Time)","First Order (All Time)","Last Order (All Time)","Spend (Range)","LTV (All Time)","AOV (All Time)","Type"].map(h => (
                     <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
                       {h}
                     </th>
@@ -161,7 +133,7 @@ export default function CustomerReportPage() {
                     <td className="px-5 py-3 text-slate-500">{r.email}</td>
                     <td className="px-5 py-3 text-slate-500">{r.phone || "—"}</td>
                     <td className="px-5 py-3 text-slate-500">{r.signupDate}</td>
-                    <td className="px-5 py-3 font-bold text-indigo-600 text-center">{r.completedOrders}</td>
+                    <td className="px-5 py-3 font-bold text-indigo-600 text-center">{r.totalOrdersAllTime}</td>
                     <td className="px-5 py-3 text-slate-500">{r.firstOrderDate}</td>
                     <td className="px-5 py-3 text-slate-500">{r.lastOrderDate}</td>
                     <td className="px-5 py-3 font-semibold text-slate-700">{fmtSAR(r.spendInRange)}</td>
