@@ -20,8 +20,7 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps) 
   const [reason, setReason]       = useState("");
   const { showToast } = useToast();
 
-  // Live subtotal from the CURRENT items array — always accurate, even
-  // after post-checkout item edits.
+  // Live subtotal from the CURRENT items array 
   const itemsSubtotal = useMemo(
     () => order.items.reduce((sum, item) => sum + item.servicePrice * item.count, 0),
     [order.items]
@@ -31,20 +30,9 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps) 
   const walletUsed = order.walletAmountUsed ?? 0;
   const couponCode = order.appliedCoupon?.code;
 
-  // preDiscountTotal is the checkout-time subtotal. If it differs from the
-  // live item subtotal, items were edited after checkout — and since
-  // addItemToOrder/updateOrderItem/deleteOrderItem all recompute totalPrice
-  // directly from the current items array WITHOUT re-subtracting
-  // discountAmount/walletAmountUsed, any discount/credit originally applied
-  // has effectively been dropped from totalPrice already. Surfacing this
-  // explicitly rather than hiding it.
   const itemsEditedSinceCheckout =
     order.preDiscountTotal != null && Math.abs(order.preDiscountTotal - itemsSubtotal) > 0.001;
 
-  // Basis for detecting a genuine manual override is the LIVE subtotal —
-  // this is what's actually true right now, and it's the only way the
-  // "discount silently dropped by an item edit" case above shows up
-  // honestly instead of being mislabeled as an unrelated adjustment.
   const expectedTotal = itemsSubtotal - discount - walletUsed;
   const manualAdjustment = order.totalPrice - expectedTotal;
   const hasManualAdjustment = Math.abs(manualAdjustment) > 0.001;
@@ -56,12 +44,6 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps) 
   }, [manualAdjustment, adjusting]);
 
   const previewTotal = expectedTotal + adjustmentInput;
-
-  // remainingAmountToPay is set at order placement for the COD / pay-after-
-  // pickup flow — no write path (confirmOrderPayment included) ever clears
-  // or updates it afterward. Once isPaid is true the stored value can't be
-  // trusted as a current balance, so it's intentionally hidden rather than
-  // shown as if it were live.
   const showRemainingBalance = !order.isPaid && order.remainingAmountToPay != null;
 
   const handleSave = async () => {

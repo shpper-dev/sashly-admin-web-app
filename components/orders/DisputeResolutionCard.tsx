@@ -82,8 +82,6 @@ export default function DisputeResolutionCard({ disputeId, orderTotalPrice }: Pr
     getAdminById(resolvedBy)
       .then((admin) => {
         if (cancelled) return;
-        // ASSUMPTION: admin record exposes `name`; adjust if the real field
-        // differs (e.g. displayName).
         setResolvedByName(`${admin?.firstName} ${admin?.lastName}`);
       })
       .catch((err) => {

@@ -70,8 +70,6 @@ export default function EditPickupWindowDialog({
 
   const timeOptions = Array.from({ length: 24 }).map((_, i) => formatTo12h(i));
 
-  // Same floor as ConfirmDeliveryDialog — can't schedule a pickup before
-  // the order itself was placed.
   const minDate = useMemo(() => startOfDay(new Date(orderCreatedAt)), [orderCreatedAt]);
 
   useEffect(() => {
@@ -92,9 +90,6 @@ export default function EditPickupWindowDialog({
     const startHour = parseHour(fromTime);
     const endHour = parseHour(toTime);
 
-    // Unlike the delivery window (which tolerates an overnight wrap via
-    // endHour === 0), pickup windows are assumed same-day — a stricter
-    // check here is intentional, not an oversight.
     if (endHour <= startHour) {
       showToast("End time should be after start time", "error");
       return;

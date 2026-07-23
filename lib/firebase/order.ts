@@ -963,9 +963,6 @@ async function computeUnpaidTotal(
   return agg.data().totalUnpaid ?? 0;
 }
 
-// Server-side count/sum — no order documents are downloaded, so cost and
-// latency don't scale with collection size. Reuses buildWhereConstraints so
-// this can't silently diverge from the row-level query for the same tab.
 export async function getOrderTabStats(filters: OrderFilters): Promise<OrderTabStats> {
   const whereConstraints = buildWhereConstraints(filters);
   const base = query(collection(db, "orders"), ...whereConstraints);
@@ -986,10 +983,7 @@ export async function getOrderTabStats(filters: OrderFilters): Promise<OrderTabS
   };
 }
 
-// Archive has no single OrderFilters shape (isDelivered OR isCancelled), so
-// it gets its own stats function using Firestore's or() composite filter.
-// Requires a composite index covering (isDelivered, createdAt) and
-// (isCancelled, createdAt).
+
 export async function getArchiveTabStats(): Promise<OrderTabStats> {
   const archiveFilter = or(
     where("isDelivered", "==", true),
@@ -998,9 +992,7 @@ export async function getArchiveTabStats(): Promise<OrderTabStats> {
 
   const base = query(collection(db, "orders"), archiveFilter);
 
-  // and() wraps the archive scope together with the unpaid conditions into
-  // a single composite filter, since a composite filter (or()) can't be
-  // mixed positionally with plain where() calls in the same query() call.
+  
   const unpaidQuery = query(
     collection(db, "orders"),
     and(

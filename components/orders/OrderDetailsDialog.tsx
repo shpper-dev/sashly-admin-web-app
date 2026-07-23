@@ -343,9 +343,7 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
             <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6 border-r border-slate-100">
 
               {/* Timeline — every scheduling/timestamp field on the order,
-                  consolidated in one place so admins don't need to piece it
-                  together from the header, address cards, and status
-                  history separately. */}
+                  consolidated in one place */}
               <Section title="Timeline">
                 <div className="flex flex-col gap-2">
                   <TimelineRow

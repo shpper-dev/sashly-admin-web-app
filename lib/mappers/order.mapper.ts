@@ -89,7 +89,6 @@ export function mapOrder(doc: QueryDocumentSnapshot<DocumentData>): Order {
     driverPhone: data.driverPhone ?? null,
     driverProfileImageUrl: data.driverProfileImageUrl ?? null,
 
-    // FIX: same Timestamp-vs-number issue as deliveryStartTime above.
     driverAssignedAt: data.driverAssignedAt?.toMillis?.() ?? data.driverAssignedAt ?? null,
     driverAcceptedAt: data.driverAcceptedAt?.toMillis?.() ?? data.driverAcceptedAt ?? null,
 
