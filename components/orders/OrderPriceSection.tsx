@@ -1,62 +1,101 @@
 "use client";
 import { updateOrderPrice } from "@/lib/firebase/order";
+import { createMessage } from "@/lib/firebase/message";
+import { getCurrentUser } from "@/lib/firebase/admin.auth";
 import { Order } from "@/lib/models/order.model";
 import { useToast } from "@/lib/providers/ToastProvider";
-import { Check, ChevronDown, ChevronUp, Pencil } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronDown, ChevronUp, Pencil, Tag, Wallet } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
-interface OrderPriceSectionProps{ 
-    order: Order,
-    onSuccess?: () => void;
- }
+interface OrderPriceSectionProps {
+  order: Order;
+  onSuccess?: () => void;
+}
 
-export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps ) {
-  const [expanded, setExpanded] = useState(false);
+export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps) {
+  const [expanded, setExpanded]   = useState(false);
   const [adjusting, setAdjusting] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const [saved, setSaved]         = useState(false);
+  const [reason, setReason]       = useState("");
+  const { showToast } = useToast();
 
-  const [subtotal, setSubtotal] = useState(order.totalPrice || 0);
-  //there is no tax or express fee in the model as of now
-  const [tax, setTax] = useState(0);
-  // no express fee as of now
-  const [expressFee, setExpressFee] = useState(order.serviceType === "express" ? 0: 0 || 0);
-  const [reason, setReason] = useState("");
+  // Live subtotal from the CURRENT items array — always accurate, even
+  // after post-checkout item edits.
+  const itemsSubtotal = useMemo(
+    () => order.items.reduce((sum, item) => sum + item.servicePrice * item.count, 0),
+    [order.items]
+  );
+
+  const discount = order.discountAmount ?? 0;
+  const walletUsed = order.walletAmountUsed ?? 0;
+  const couponCode = order.appliedCoupon?.code;
+
+  // preDiscountTotal is the checkout-time subtotal. If it differs from the
+  // live item subtotal, items were edited after checkout — and since
+  // addItemToOrder/updateOrderItem/deleteOrderItem all recompute totalPrice
+  // directly from the current items array WITHOUT re-subtracting
+  // discountAmount/walletAmountUsed, any discount/credit originally applied
+  // has effectively been dropped from totalPrice already. Surfacing this
+  // explicitly rather than hiding it.
+  const itemsEditedSinceCheckout =
+    order.preDiscountTotal != null && Math.abs(order.preDiscountTotal - itemsSubtotal) > 0.001;
+
+  // Basis for detecting a genuine manual override is the LIVE subtotal —
+  // this is what's actually true right now, and it's the only way the
+  // "discount silently dropped by an item edit" case above shows up
+  // honestly instead of being mislabeled as an unrelated adjustment.
+  const expectedTotal = itemsSubtotal - discount - walletUsed;
+  const manualAdjustment = order.totalPrice - expectedTotal;
+  const hasManualAdjustment = Math.abs(manualAdjustment) > 0.001;
+
+  const [adjustmentInput, setAdjustmentInput] = useState(manualAdjustment);
 
   useEffect(() => {
-    // When the order items change and total price is recalculated in the parent,
-    // update local state to match the new source of truth.
-    if (!adjusting) {
-      setSubtotal(order.totalPrice || 0);
-      setExpressFee(order.serviceType === "express" ? 0 : 0);
-    }
-  }, [order.totalPrice, order.serviceType, adjusting]);
+    if (!adjusting) setAdjustmentInput(manualAdjustment);
+  }, [manualAdjustment, adjusting]);
 
-  const {showToast} = useToast();
+  const previewTotal = expectedTotal + adjustmentInput;
 
-  const currentTotal = subtotal + tax + expressFee;
-  const originalTotal = order.totalPrice;
-  const diff = currentTotal - originalTotal;
-  const hasDiff = Math.abs(diff) > 0.001;
+  // remainingAmountToPay is set at order placement for the COD / pay-after-
+  // pickup flow — no write path (confirmOrderPayment included) ever clears
+  // or updates it afterward. Once isPaid is true the stored value can't be
+  // trusted as a current balance, so it's intentionally hidden rather than
+  // shown as if it were live.
+  const showRemainingBalance = !order.isPaid && order.remainingAmountToPay != null;
 
   const handleSave = async () => {
-    // await updateOrderPrice(order.id, { subtotal, tax, expressFee, total: currentTotal, reason });
-    try{
-        await updateOrderPrice(order.id, currentTotal);
-        onSuccess?.();
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2500);
-    }catch(err){
-        setSaved(false);
-        showToast(`Error adjusting price for ${order.id.slice(-6)}`,"error")
-    }finally{
-        setAdjusting(false);
+    setSaving(true);
+    try {
+      await updateOrderPrice(order.id, previewTotal);
+
+      if (reason.trim()) {
+        const admin = await getCurrentUser();
+        await createMessage({
+          orderId: order.id,
+          text: `Price adjusted from SAR ${order.totalPrice.toFixed(2)} to SAR ${previewTotal.toFixed(2)}. Reason: ${reason.trim()}`,
+          role: "system",
+          senderId: admin?.uid,
+          photoUrl: null,
+          readByAdmin: true,
+          readByUser: false,
+        });
+      }
+
+      onSuccess?.();
+      setSaved(true);
+      setReason("");
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      showToast(`Error adjusting price for ${order.id.slice(-6)}`, "error");
+    } finally {
+      setAdjusting(false);
+      setSaving(false);
     }
   };
 
   const handleCancel = () => {
-    setSubtotal(order.totalPrice || 0);
-    setTax(0);
-    setExpressFee(order.serviceType === "express" ? 0: 0 || 0);
+    setAdjustmentInput(manualAdjustment);
     setReason("");
     setAdjusting(false);
   };
@@ -66,14 +105,12 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps )
       {/* Summary Row */}
       <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
         <div className="flex flex-col">
-          <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Current Total</span>
+          <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Final Amount</span>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-800">SAR {currentTotal.toFixed(2)}</span>
-            {hasDiff && (
-               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${diff > 0 ? "bg-red-50 text-red-500" : "bg-green-50 text-green-600"}`}>
-                {diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2)}
-              </span>
-            )}
+            <span className="text-sm font-bold text-slate-800">SAR {order.totalPrice.toFixed(2)}</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${order.isPaid ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
+              {order.isPaid ? "PAID" : "UNPAID"}
+            </span>
           </div>
         </div>
         <button
@@ -85,42 +122,107 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps )
         </button>
       </div>
 
-      {/* Breakdown Section */}
       {expanded && (
         <div className="p-4 bg-white space-y-3 border-b border-slate-100">
           {!adjusting ? (
             /* READ ONLY VIEW */
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-slate-600">
-                <span>Subtotal</span>
-                <span className="font-medium">SAR {subtotal.toFixed(2)}</span>
+                <span>Items Subtotal ({order.items.length} item{order.items.length !== 1 ? "s" : ""})</span>
+                <span className="font-medium">SAR {itemsSubtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-xs text-slate-600">
-                <span>Tax (VAT)</span>
-                <span className="font-medium">SAR {tax.toFixed(2)}</span>
+
+              {itemsEditedSinceCheckout && (
+                <p className="text-[10px] text-amber-600 italic pl-1">
+                  Subtotal at original checkout was SAR {order.preDiscountTotal!.toFixed(2)} — items
+                  have been modified since, so any discount/credit below may no longer be
+                  reflected in the current total.
+                </p>
+              )}
+
+              {discount > 0 && (
+                <div className="flex justify-between text-xs text-emerald-600">
+                  <span className="flex items-center gap-1">
+                    <Tag size={11} /> Discount{couponCode ? ` (${couponCode})` : ""}
+                  </span>
+                  <span className="font-medium">− SAR {discount.toFixed(2)}</span>
+                </div>
+              )}
+
+              {walletUsed > 0 && (
+                <div className="flex justify-between text-xs text-cyan-600">
+                  <span className="flex items-center gap-1">
+                    <Wallet size={11} /> Wallet Credit Used (at Checkout)
+                  </span>
+                  <span className="font-medium">− SAR {walletUsed.toFixed(2)}</span>
+                </div>
+              )}
+
+              {hasManualAdjustment && (
+                <div className={`flex justify-between text-xs ${manualAdjustment > 0 ? "text-slate-600" : "text-emerald-600"}`}>
+                  <span>Manual Adjustment</span>
+                  <span className="font-medium">
+                    {manualAdjustment > 0 ? "+ " : "− "}SAR {Math.abs(manualAdjustment).toFixed(2)}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex justify-between text-xs text-slate-800 font-bold pt-2 border-t border-slate-100">
+                <span>Final Total</span>
+                <span>SAR {order.totalPrice.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-xs text-slate-600">
-                <span>Express Fee</span>
-                <span className="font-medium">SAR {expressFee.toFixed(2)}</span>
-              </div>
+
+              {showRemainingBalance && (
+                <div className="flex justify-between text-xs text-amber-600 pt-1">
+                  <span>Balance Due (Cash/Card on Delivery)</span>
+                  <span className="font-medium">SAR {order.remainingAmountToPay!.toFixed(2)}</span>
+                </div>
+              )}
+
               {/* only for unpaid orders : change in the future as needed */}
               {!order.isPaid && (
-                <button 
-                onClick={() => setAdjusting(true)}
-                className="w-full mt-2 py-1.5 border border-dashed border-slate-200 rounded-lg text-[10px] font-bold text-[#02d0ff] hover:bg-cyan-50 transition-colors flex items-center justify-center gap-1"
-              >
-                <Pencil size={10} /> EDIT INDIVIDUAL FEES
-              </button>
+                <button
+                  onClick={() => setAdjusting(true)}
+                  className="w-full mt-2 py-1.5 border border-dashed border-slate-200 rounded-lg text-[10px] font-bold text-[#02d0ff] hover:bg-cyan-50 transition-colors flex items-center justify-center gap-1"
+                >
+                  <Pencil size={10} /> ADJUST TOTAL
+                </button>
               )}
             </div>
           ) : (
             /* EDITABLE VIEW */
             <div className="flex flex-col gap-3">
-              <PriceInput label="Subtotal" value={subtotal} onChange={setSubtotal} />
-              <PriceInput label="Tax" value={tax} onChange={setTax} />
-              <PriceInput label="Express Fee" value={expressFee} onChange={setExpressFee} />
+              <div className="flex justify-between text-xs text-slate-500">
+                <span>Items Subtotal</span>
+                <span>SAR {itemsSubtotal.toFixed(2)}</span>
+              </div>
 
-              <div className="flex flex-col gap-1 mt-2">
+              {discount > 0 && (
+                <div className="flex justify-between text-xs text-emerald-600">
+                  <span>Discount{couponCode ? ` (${couponCode})` : ""}</span>
+                  <span>− SAR {discount.toFixed(2)}</span>
+                </div>
+              )}
+
+              {walletUsed > 0 && (
+                <div className="flex justify-between text-xs text-cyan-600">
+                  <span>Wallet Credit Used</span>
+                  <span>− SAR {walletUsed.toFixed(2)}</span>
+                </div>
+              )}
+
+              <PriceInput
+                label="Manual Adjustment (+/-)"
+                value={adjustmentInput}
+                onChange={setAdjustmentInput}
+              />
+
+              <div className="flex justify-between text-xs font-bold text-slate-800 pt-2 border-t border-slate-100">
+                <span>New Total</span>
+                <span>SAR {previewTotal.toFixed(2)}</span>
+              </div>
+
+              <div className="flex flex-col gap-1 mt-1">
                 <label className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Reason for adjustment *</label>
                 <textarea
                   rows={2}
@@ -135,12 +237,12 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps )
                 <button onClick={handleCancel} className="flex-1 h-8 rounded-lg border border-slate-200 text-xs font-semibold text-slate-500">
                   Cancel
                 </button>
-                <button 
-                  onClick={handleSave} 
-                  disabled={!reason.trim()}
+                <button
+                  onClick={handleSave}
+                  disabled={!reason.trim() || saving}
                   className="flex-1 h-8 rounded-lg bg-[#02d0ff] text-white text-xs font-semibold disabled:opacity-40"
                 >
-                  Save Changes
+                  {saving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </div>
@@ -159,7 +261,7 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps )
 }
 
 // helpers
-function PriceInput({ label, value, onChange }: { label: string, value: number, onChange: (v: number) => void }) {
+function PriceInput({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div className="flex flex-col gap-1">
       <label className="text-[9px] uppercase tracking-widest text-slate-400 font-bold">{label}</label>

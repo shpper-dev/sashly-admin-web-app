@@ -69,6 +69,15 @@ export interface Order {
 
     businessAccountId?: string | null;
 
+    // operational flags
+    needsManualAssignment?: boolean | null;
+    needsSorting?: boolean | null;
+
+    // financial breakdown, recorded at checkout time
+    preDiscountTotal?: number | null;
+    walletAmountUsed?: number | null;    
+    remainingAmountToPay?: number | null; 
+
     ratingByUser ?: OrderRating | null;
     createdAt : number;
     updatedAt: number;

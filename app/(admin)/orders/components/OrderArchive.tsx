@@ -1,16 +1,17 @@
 "use client";
-import { PencilLine } from "lucide-react";
-import React, { useState } from "react";
+import { PencilLine, Download } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Order } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { OrderTable } from "@/components/orders/OrderTable";
 import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog";
-import { OrderTabProps } from "./OrdersPageClient";
 import CustomerCell from "@/components/orders/CustomerCell";
+import FilterButton from "@/components/buttons/FilterDropdown";
 import { useOrderSearch } from "@/hooks/useOrderSearch";
-import { refresh } from "next/cache";
+import { getOrderById } from "@/lib/firebase/order";
+import { exportToCsv } from "@/lib/utils";
 
 const archiveHeadings: TableHeading[] = [
   { id: "id",       title: "ID"      },
@@ -21,45 +22,86 @@ const archiveHeadings: TableHeading[] = [
   { id: "actions",  title: ""        },
 ];
 
-// Status badge colours for terminal states
 const ARCHIVE_STATUS_STYLE: Record<string, string> = {
   delivered: "bg-green-50 text-green-600",
   cancelled: "bg-red-50 text-red-600",
 };
 
+// Base archive scope: any order that is either delivered or cancelled.
+const ARCHIVE_BASE_FILTER = "isDelivered = true OR isCancelled = true";
 
-const ARCHIVE_TAB_FILTER = "isDelivered = true OR isCancelled = true";
+const ARCHIVE_PAGE_SIZE = 50;
 
-export default function OrderArchive({
-  orders, loading, onStatusUpdate,
-  currentPage, hasNextPage, onNext, onPrev, pageSize,
-  autoOpenOrderId,
-}: OrderTabProps) {
-  const [autoOrder, setAutoOrder] = useState<Order | null>(null);
-  const [autoDialogOpen, setAutoDialogOpen] = useState(false);
+const ArchiveStatusOptions = [
+  { label: "Delivered", value: "delivered" },
+  { label: "Cancelled", value: "cancelled" },
+];
+
+interface OrderArchiveProps {
+  autoOpenOrderId?: string | null;
+}
+
+export default function OrderArchive({ autoOpenOrderId }: OrderArchiveProps) {
+  const [statusFilter, setStatusFilter] = useState<string>(""); // "" = both
+
+  const extraFilter =
+    statusFilter === "delivered" ? "isDelivered = true" :
+    statusFilter === "cancelled" ? "isCancelled = true" :
+    ARCHIVE_BASE_FILTER;
 
   const {
-    search, setSearch, isSearchActive, searchLoading,
-    searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,refresh
-  } = useOrderSearch({ filter: ARCHIVE_TAB_FILTER, pageSize });
+    search, setSearch, searchLoading,
+    searchResults, searchPage, searchHasNextPage,
+    onSearchNext, onSearchPrev, refresh,
+  } = useOrderSearch({
+    extraFilter,
+    pageSize: ARCHIVE_PAGE_SIZE,
+  });
 
-  const filtered = isSearchActive ? searchResults : orders;
+  
+  const rows = [...searchResults].sort((a, b) => b.createdAt - a.createdAt);
 
-  const effectiveLoading = isSearchActive ? searchLoading : loading;
-  const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
-  const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
-  const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
-  const effectiveOnPrev = isSearchActive ? onSearchPrev : onPrev;
+  const [autoOrder, setAutoOrder] = useState<Order | null>(null);
+  useEffect(() => {
+    if (!autoOpenOrderId) return;
+    const found = rows.find((o) => o.id === autoOpenOrderId);
+    if (found) {
+      setAutoOrder(found);
+    } else {
+      getOrderById(autoOpenOrderId).then(setAutoOrder).catch(console.error);
+    }
+  }, [autoOpenOrderId, rows]);
+
+  const handleCsv = () => {
+    exportToCsv(
+      rows.map((o) => ({
+        ID: o.id,
+        UserName: o.userName,
+        Email: o.userEmail,
+        Phone: `'${o.userPhone}`,
+        TotalPrice: o.totalPrice,
+        Status: o.latestStatus?.status ?? "-",
+        Items: o.items?.map((i) => `${i.name} x${i.count}`).join(" | ") ?? "-",
+        Paid: o.isPaid ? "Yes" : "No",
+        Delivered: o.isDelivered ? "Yes" : "No",
+        Cancelled: o.isCancelled ? "Yes" : "No",
+        ServiceType: o.serviceType,
+        CreatedAt: new Date(o.createdAt).toLocaleString(),
+      })),
+      `archive-page${searchPage}-orders.csv`
+    );
+  };
 
   const renderCell = (heading: TableHeading, row: Order): React.ReactNode => {
     switch (heading.id) {
-      // case "id":
-      //   return <span className="text-xs text-slate-500">#{row?.orderNumber ?? row.id.slice(6,13)}</span>;
       case "id":
-              return (
-              <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
-                  <span className="text-xs text-slate-500 hover:text-purple-600 cursor-pointer">#{row?.orderNumber ?? row.id.slice(6,13)}</span>
-              </OrderDetailsDialog>);
+        return (
+          <OrderDetailsDialog order={row} onStatusUpdate={refresh}>
+            <span className="text-xs text-slate-500 hover:text-purple-600 cursor-pointer">
+              #{row?.orderNumber ?? row.id.slice(6, 13)}
+            </span>
+          </OrderDetailsDialog>
+        );
 
       case "placed":
         return (
@@ -74,21 +116,13 @@ export default function OrderArchive({
         );
 
       case "customer":
-        return (
-           <CustomerCell
-           userId={row.userId}
-           userName={row.userName}
-           userPhone={row.userPhone}
-         
-         />
-           
-         );
+        return <CustomerCell userId={row.userId} userName={row.userName} userPhone={row.userPhone} />;
 
       case "status": {
         const style = ARCHIVE_STATUS_STYLE[row.latestStatus.status] ?? "bg-slate-100 text-slate-500";
         return (
           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${style}`}>
-            {row.latestStatus.status === "disputeResolved" ? "Dispute Resolved" : row.latestStatus.status }
+            {row.latestStatus.status === "disputeResolved" ? "Dispute Resolved" : row.latestStatus.status}
           </span>
         );
       }
@@ -120,37 +154,49 @@ export default function OrderArchive({
 
   return (
     <div>
-      {/* Auto-open dialog triggered by notification link */}
       {autoOrder && (
         <OrderDetailsDialog
           order={autoOrder}
-          open={autoDialogOpen}
-          onOpenChange={(val) => { setAutoDialogOpen(val); if (!val) setAutoOrder(null); }}
+          open={true}
+          onOpenChange={(open) => { if (!open) setAutoOrder(null); }}
           onStatusUpdate={refresh}
         >
           <span />
         </OrderDetailsDialog>
       )}
 
-      {/* Search bar */}
-      <div className="flex justify-end items-center mb-4 px-8">
-        <OrderSearchInput value={search} onChange={setSearch} />
+      <div className="flex justify-between items-center mb-4 px-8">
+        <FilterButton
+          label="Status"
+          options={ArchiveStatusOptions}
+          defaultValue={statusFilter || undefined}
+          onChange={setStatusFilter}
+        />
+        <div className="flex items-center gap-3">
+          <OrderSearchInput value={search} onChange={setSearch} />
+          <button
+            onClick={handleCsv}
+            className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm cursor-pointer hover:bg-slate-50"
+          >
+            <Download className="h-3.5 w-3.5" /> Export CSV
+          </button>
+        </div>
       </div>
 
-      {effectiveLoading && filtered.length === 0 ? (
+      {searchLoading && rows.length === 0 ? (
         <TableSkeleton tableHeadings={archiveHeadings} />
       ) : (
-        <div className={effectiveLoading ? "opacity-50 pointer-events-none" : ""}>
+        <div className={searchLoading ? "opacity-50 pointer-events-none" : ""}>
           <OrderTable
             headings={archiveHeadings}
-            rows={filtered}
+            rows={rows}
             renderCell={renderCell}
-            currentPage={effectiveCurrentPage}
-            hasNextPage={effectiveHasNextPage}
-            onNext={effectiveOnNext}
-            onPrev={effectiveOnPrev}
-            pageSize={pageSize}
-            loading={effectiveLoading}
+            currentPage={searchPage}
+            hasNextPage={searchHasNextPage}
+            onNext={onSearchNext}
+            onPrev={onSearchPrev}
+            pageSize={ARCHIVE_PAGE_SIZE}
+            loading={searchLoading}
           />
         </div>
       )}
