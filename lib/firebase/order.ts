@@ -11,7 +11,7 @@ import {
   count,
   or,
   sum,
-  and
+  and,
 } from "firebase/firestore";
 import { Order, OrderStatuses, OrderStatus, OrderItem, ServiceType } from "@/lib/models/order.model";
 import { mapOrder } from "../mappers/order.mapper";
@@ -142,7 +142,7 @@ export async function advanceOrderStatus(
 
 
   await updateDoc(doc(db, "orders", orderId), updates);
-  await syncOrderToMeiliTemp(orderId);
+  // await syncOrderToMeiliTemp(orderId);
 }
 
 export async function confirmOrderPayment(
@@ -153,15 +153,14 @@ export async function confirmOrderPayment(
 
   // seperating status from payment
   await updateDoc(doc(db, "orders", orderId), {
-  isPaid: true,
-  paidBy,
-  paymentInfo: paymentInfo ?? null,
-  paymentDate: Date.now(), //new
-  updatedAt: Date.now(),
-});
-await syncOrderToMeiliTemp(orderId);
-}
+    isPaid: true,
+    paidBy,
+    paymentInfo: paymentInfo ?? null,
+    paymentDate: Date.now(), //new
+    updatedAt: Date.now(),
+  });
 
+}
 // delivery
 export async function markDeliveryStarted(orderId: string): Promise<void> {
   const statusEntry: OrderStatus = {
@@ -290,7 +289,7 @@ export async function addItemToOrder(orderId: string, newItem: OrderItem) {
     totalPrice: total,
     updatedAt: Date.now()
   });
-  await syncOrderToMeiliTemp(orderId);
+  // await syncOrderToMeiliTemp(orderId);
 }
 
 // multiple items added together
@@ -322,7 +321,7 @@ export async function addItemsToOrder(orderId: string, newItems: OrderItem[]) {
     totalPrice: total,
     updatedAt: Date.now(),
   });
-  await syncOrderToMeiliTemp(orderId);
+  // await syncOrderToMeiliTemp(orderId);
 }
 
 
@@ -361,7 +360,7 @@ export async function updateOrderItem(orderId: string, itemIndex: number, update
     totalPrice: total,
     updatedAt: Date.now(),
   });
-  await syncOrderToMeiliTemp(orderId);
+  // await syncOrderToMeiliTemp(orderId);
 }
 
 // delete orderItem from an existing order
@@ -389,7 +388,7 @@ export async function deleteOrderItem(orderId: string, itemIndex: number) {
     totalPrice: total,
     updatedAt: Date.now(),
   });
-  await syncOrderToMeiliTemp(orderId);
+  // await syncOrderToMeiliTemp(orderId);
 
   
 }
@@ -870,7 +869,6 @@ export async function generateUniqueOrderNumber(): Promise<string> {
   for (let attempt = 0; attempt < 50; attempt++) {
     const candidate = generateOrderNumberCandidate();
     
-    // Adapted to standard web Firebase JS v9+ Modular syntax
     const ordersRef = collection(db, "orders");
     const q = query(ordersRef, where("orderNumber", "==", candidate), limit(1));
     const querySnapshot = await getDocs(q);

@@ -3,6 +3,8 @@
 import { SearchFilters } from "@/app/(admin)/search/page"
 import { Order } from "@/lib/models/order.model"
 import { Printer, Pencil, TextSearch, Pencil as PencilIcon, X, SquarePen, ChevronLeft, ChevronRight } from "lucide-react"
+import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog"
+import OrderInvoiceDialog from "@/components/orders/OrderInvoiceDialog"
 
 const filterLabels: Record<keyof SearchFilters, string> = {
   name: "Name",
@@ -46,6 +48,8 @@ interface SearchResultsProps {
   activeFilters: SearchFilters
   onEditSearch: () => void
   onRemoveFilter: (field: keyof SearchFilters) => void
+  
+  onStatusUpdate: () => void
 
   currentPage: number
   hasNext: boolean
@@ -64,7 +68,7 @@ const columns: { key: string; label: string }[] = [
   { key: "payment", label: "Payment" },
 ]
 
-function renderCellContent(col: string, order: Order) {
+function renderCellContent(col: string, order: Order, onStatusUpdate: () => void) {
   switch (col) {
     case "id":
       return <span className="font-semibold text-slate-800">#{order.id.slice(-13)}</span>
@@ -128,12 +132,29 @@ function renderCellContent(col: string, order: Order) {
           <span className="font-semibold text-slate-800">SAR {order.totalPrice}</span>
           <span className="text-[11px] text-slate-500">{order.isPaid ? "Paid" : "Unpaid"}</span>
           <div className="flex gap-2">
-            <button className="p-1 rounded bg-slate-100 hover:bg-slate-200 transition-colors">
-              <Printer size={14} />
-            </button>
-            <button className="p-1 rounded bg-slate-100 hover:bg-slate-200 transition-colors">
-              <Pencil size={14} />
-            </button>
+            {/* Print invoice — reuses the same OrderInvoiceDialog the full
+                order details view uses in its footer, so the printed
+                receipt is identical either way it's triggered. */}
+            <OrderInvoiceDialog order={order}>
+              <button
+                className="p-1 rounded bg-slate-100 hover:bg-slate-200 transition-colors"
+                aria-label={`Print invoice for order ${order.orderNumber ?? order.id}`}
+              >
+                <Printer size={14} />
+              </button>
+            </OrderInvoiceDialog>
+
+            {/* Edit — opens the full order details dialog, same as clicking
+                an order's ID from any of the tab tables. onStatusUpdate
+                re-fetches this page of search results after a change. */}
+            <OrderDetailsDialog order={order} onStatusUpdate={onStatusUpdate}>
+              <button
+                className="p-1 rounded bg-slate-100 hover:bg-slate-200 transition-colors"
+                aria-label={`Edit order ${order.orderNumber ?? order.id}`}
+              >
+                <Pencil size={14} />
+              </button>
+            </OrderDetailsDialog>
           </div>
         </div>
       )
@@ -143,7 +164,7 @@ function renderCellContent(col: string, order: Order) {
   }
 }
 
-export default function SearchResults({ orders, activeFilters, onEditSearch, onRemoveFilter, currentPage, hasNext, onPageChange }: SearchResultsProps) {
+export default function SearchResults({ orders, activeFilters, onEditSearch, onRemoveFilter, onStatusUpdate, currentPage, hasNext, onPageChange }: SearchResultsProps) {
   const paginatedOrders = orders;
   
   const activePills = (Object.entries(activeFilters) as [keyof SearchFilters, string][]).filter(
@@ -223,7 +244,7 @@ export default function SearchResults({ orders, activeFilters, onEditSearch, onR
                 <tr key={order.id} className="border-b last:border-b-0 align-top">
                   {columns.map(col => (
                     <td key={col.key} className="px-6 py-4">
-                      {renderCellContent(col.key, order)}
+                      {renderCellContent(col.key, order, onStatusUpdate)}
                     </td>
                   ))}
                 </tr>
@@ -234,15 +255,6 @@ export default function SearchResults({ orders, activeFilters, onEditSearch, onR
               <tr>
                 <td colSpan={columns.length}>
                   <div className="flex flex-row justify-end items-center px-4 border-t border-slate-200 bg-white h-16.25">
-
-                    {/* Left: row count */}
-                    {/* <span className="text-[11px] text-slate-500 shrink-0">
-                      Showing{' '}
-                      <span className="font-semibold text-slate-700">{}–{}</span>
-                      {' '}of{' '}
-                      <span className="font-semibold text-slate-700">{}</span>
-                      {' '}results
-                    </span> */}
 
                     {/* Right: pagination */}
                     <div className="flex items-center  gap-1">
