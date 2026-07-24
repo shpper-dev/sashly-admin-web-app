@@ -274,8 +274,9 @@ export default function MetricsOrdersPage() {
                   <p className="text-xs text-slate-400">Detailed list of newly acquired customer orders converted within this period</p>
                 </div>
                 <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-white">
+                  <div className="max-h-[550px] overflow-y-auto custom-scrollbar">
                   <table className="w-full text-xs">
-                    <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider sticky top-0 z-10">
                       <tr>
                         <th className="px-6 py-4 text-left">Order Reference</th>
                         <th className="px-6 py-4 text-left">Customer Profile</th>
@@ -309,6 +310,7 @@ export default function MetricsOrdersPage() {
                       )}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </div>
 

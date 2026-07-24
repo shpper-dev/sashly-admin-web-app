@@ -6,10 +6,6 @@ import {
   CalendarDays, ChevronDown, Download, FileText,
   Loader2, MapPin, ArrowLeft,
 } from "lucide-react";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { exportToCsv } from "@/lib/utils";
 import { fmtSAR } from "../page";
@@ -61,6 +57,7 @@ export default function GeographyReportPage() {
     exportToCsv(
       stats.map(a => ({
         Area:                    a.area,
+        City:                    a.city,
         "Registered Customers":  a.registeredCustomers,
         "Active Customers":      a.activeCustomers,
         "Total Orders":          a.totalOrders,
@@ -146,11 +143,11 @@ export default function GeographyReportPage() {
             </section>
 
             {/* Table */}
-            <section className="overflow-x-auto">
+            <section className="overflow-x-auto overflow-y-auto max-h-[80vh]">
               <table className="w-full text-xs border-collapse">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
                   <tr>
-                    {["#","Area","Registered","Active Customers","Total Orders","First Order","Last Order","Express","Ordinary","Revenue","AOV"].map(h => (
+                    {["#","Area","City","Registered","Active Customers","Total Orders","First Order","Last Order","Express","Ordinary","Revenue","AOV"].map(h => (
                       <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
                         {h}
                       </th>
@@ -160,15 +157,16 @@ export default function GeographyReportPage() {
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {stats.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="px-5 py-12 text-center text-slate-400">No data for this period.</td>
+                      <td colSpan={12} className="px-5 py-12 text-center text-slate-400">No data for this period.</td>
                     </tr>
                   ) : stats.map((row, i) => (
-                    <tr key={row.area} className="hover:bg-slate-50 transition-colors">
+                    <tr key={`${row.city}::${row.area}`} className="hover:bg-slate-50 transition-colors">
                       <td className="px-5 py-3 text-slate-300 font-bold">{String(i + 1).padStart(2, "0")}</td>
                       <td className="px-5 py-3 font-semibold text-slate-800 whitespace-nowrap flex items-center gap-2">
                         <MapPin size={12} className="text-cyan-500 shrink-0" />
                         {row.area}
                       </td>
+                      <td className="px-5 py-3 text-slate-500 whitespace-nowrap">{row.city}</td>
                       <td className="px-5 py-3 text-slate-600 text-center">{row.registeredCustomers}</td>
                       <td className="px-5 py-3 text-indigo-600 font-semibold text-center">{row.activeCustomers}</td>
                       <td className="px-5 py-3 font-bold text-slate-800 text-center">{row.totalOrders}</td>

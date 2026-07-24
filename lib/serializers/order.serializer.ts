@@ -98,6 +98,15 @@ export function serializeOrder(order: Partial<Order>) {
 
     businessAccountId: order.businessAccountId ?? null,
 
+    // operational flags
+    needsManualAssignment: order.needsManualAssignment ?? null,
+    needsSorting: order.needsSorting ?? null,
+
+    // financial breakdown recorded at checkout
+    preDiscountTotal: order.preDiscountTotal ?? null,
+    walletAmountUsed: order.walletAmountUsed ?? null,
+    remainingAmountToPay: order.remainingAmountToPay ?? null,
+
 
     ratingByUser: order.ratingByUser
       ? {

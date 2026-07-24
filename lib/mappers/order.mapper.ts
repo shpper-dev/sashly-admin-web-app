@@ -71,8 +71,9 @@ export function mapOrder(doc: QueryDocumentSnapshot<DocumentData>): Order {
     deliveryAddress: data.deliveryAddress ?? null,
 
     expectedDeliveryTime: data.expectedDeliveryTime ?? null,
-    deliveryStartTime: data.deliveryStartTime ?? null,
-    deliveryEndTime: data.deliveryEndTime ?? null,
+
+    deliveryStartTime: data.deliveryStartTime?.toMillis?.() ?? data.deliveryStartTime ?? null,
+    deliveryEndTime: data.deliveryEndTime?.toMillis?.() ?? data.deliveryEndTime ?? null,
 
     paidBy: data.paidBy ?? null,
     paymentInfo: data.paymentInfo ?? null,
@@ -88,8 +89,8 @@ export function mapOrder(doc: QueryDocumentSnapshot<DocumentData>): Order {
     driverPhone: data.driverPhone ?? null,
     driverProfileImageUrl: data.driverProfileImageUrl ?? null,
 
-    driverAssignedAt: data.driverAssignedAt ?? null,
-    driverAcceptedAt: data.driverAcceptedAt ?? null,
+    driverAssignedAt: data.driverAssignedAt?.toMillis?.() ?? data.driverAssignedAt ?? null,
+    driverAcceptedAt: data.driverAcceptedAt?.toMillis?.() ?? data.driverAcceptedAt ?? null,
 
     driverEarnings: data.driverEarnings ?? null,
     platformFee: data.platformFee ?? null,
@@ -115,10 +116,18 @@ export function mapOrder(doc: QueryDocumentSnapshot<DocumentData>): Order {
 
     businessAccountId: data.businessAccountId ?? null,
 
+    // operational flags
+    needsManualAssignment: data.needsManualAssignment ?? null,
+    needsSorting: data.needsSorting ?? null,
+
+    // financial breakdown recorded at checkout — see Order model comments
+    preDiscountTotal: data.preDiscountTotal ?? null,
+    walletAmountUsed: data.walletAmountUsed ?? null,
+    remainingAmountToPay: data.remainingAmountToPay ?? null,
+
     ratingByUser: data.ratingByUser ? mapRating(data.ratingByUser) : null,
 
     createdAt: data.createdAt?.toMillis?.() ?? data.createdAt ?? 0,
     updatedAt: data.updatedAt?.toMillis?.() ?? data.updatedAt ?? 0,
   };
 }
-

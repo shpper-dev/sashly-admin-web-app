@@ -258,9 +258,9 @@ export default function Overview() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <button className="flex items-center gap-2 px-4 py-2.5 bg-[#7F50F4] hover:bg-[#6B3FD4] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">
+              {/* <button className="flex items-center gap-2 px-4 py-2.5 bg-[#7F50F4] hover:bg-[#6B3FD4] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">
                 <FileText size={14} /> Export PDF
-              </button>
+              </button> */}
             </div>
           </div>
 
@@ -482,7 +482,7 @@ export default function Overview() {
                 {/* Fixed header */}
                 <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0">
                   <div>
-                    <h3 className="text-sm font-bold text-[#101828]">Comprehensive Revenue Log</h3>
+                    <h3 className="text-sm font-bold text-[#101828]">Comprehensive Revenue Log (paid only)</h3>
                     <p className="text-xs text-[#90A1B9] mt-0.5">{data.dailyRevenue.length} days in range</p>
                   </div>
                   <div className="flex items-center gap-4">
@@ -494,9 +494,9 @@ export default function Overview() {
                         className="cursor-pointer data-[state=checked]:bg-cyan-600!"
                       />
                     </div>
-                    <button className="flex items-center gap-1.5 text-xs font-semibold border border-slate-200 px-3 py-1.5 rounded-xl text-[#45556C] hover:bg-slate-50 transition-colors">
+                    {/* <button className="flex items-center gap-1.5 text-xs font-semibold border border-slate-200 px-3 py-1.5 rounded-xl text-[#45556C] hover:bg-slate-50 transition-colors">
                       <Download size={13} /> CSV
-                    </button>
+                    </button> */}
                   </div>
                 </div>
 

@@ -6,18 +6,21 @@ import {
   getCountFromServer,
   getDoc,
   onSnapshot,
-  QueryDocumentSnapshot,
-  addDoc,
-  setDoc
+  setDoc,
+  getAggregateFromServer,
+  count,
+  or,
+  sum,
+  and
 } from "firebase/firestore";
 import { Order, OrderStatuses, OrderStatus, OrderItem, ServiceType } from "@/lib/models/order.model";
 import { mapOrder } from "../mappers/order.mapper";
-import { createMessage } from "./message";
+
 import { SearchFilters } from "@/app/(admin)/search/page";
-import { createDispute } from "./dispute";
+
 import { UserAddress } from "../models/user.model";
 import { getCatalog } from "./business";
-import { meili } from "../meili/config";
+
 import { mapOrderData } from "../mappers/order.admin.mapper";
 
 //Filters type
@@ -171,6 +174,20 @@ export async function markDeliveryStarted(orderId: string): Promise<void> {
     deliveryStartTime: Date.now(),
     latestStatus: statusEntry,
     statusHistory: arrayUnion(statusEntry),
+    updatedAt: Date.now(),
+  });
+}
+
+// update order pickup window (admin-editable only while order is still "confirmed" —
+
+export async function updatePickupWindow(
+  orderId: string,
+  pickUpStartTime: number,
+  pickUpEndTime: number
+): Promise<void> {
+  await updateDoc(doc(db, "orders", orderId), {
+    pickUpStartTime,
+    pickUpEndTime,
     updatedAt: Date.now(),
   });
 }
@@ -882,4 +899,121 @@ export function subscribeToAllOrdersByBusinessId(
   });
 
   return unsubscribe;
+}
+
+
+
+// Filter-only constraints (no orderBy/limit) — exported so stats queries
+// reuse the exact same filter semantics as the row queries, instead of
+// maintaining a second, driftable copy.
+export function buildWhereConstraints(filters: OrderFilters): QueryConstraint[] {
+  const constraints: QueryConstraint[] = [];
+
+  if (filters.status)
+    constraints.push(where("latestStatus.status", "==", filters.status));
+  if (filters.statuses?.length)
+    constraints.push(where("latestStatus.status", "in", filters.statuses));
+  if (filters.isPaid !== undefined)
+    constraints.push(where("isPaid", "==", filters.isPaid));
+  if (filters.isCancelled !== undefined)
+    constraints.push(where("isCancelled", "==", filters.isCancelled));
+  if (filters.isDelivered !== undefined)
+    constraints.push(where("isDelivered", "==", filters.isDelivered));
+  if (filters.hasDriver)
+    constraints.push(where("assignedDriverId", "!=", null));
+  if (filters.serviceType)
+    constraints.push(where("serviceType", "==", filters.serviceType));
+
+  return constraints;
+}
+
+function buildOrderConstraintsForTabs(filters: OrderFilters, pageSize: number): QueryConstraint[] {
+  const constraints = buildWhereConstraints(filters);
+  constraints.push(orderBy("createdAt", "desc"), limit(pageSize));
+  return constraints;
+}
+
+export interface OrderTabStats {
+  count:        number;
+  // totalPieces intentionally omitted from live aggregation for now.
+  // Firestore's sum() aggregate can only reduce a top-level numeric field —
+  // it can't reach into items[] and sum item.count server-side. Doing that
+  // reduction would require either (a) fetching every matching order
+  // document client-side (the exact cost this aggregate approach exists to
+  // avoid), or (b) a denormalized totalItemCount field written at every
+  // mutation site, which we're deferring for now. Revisit once that's in.
+  totalPieces?: number;
+  totalRevenue: number;
+  totalUnpaid:  number;
+}
+
+async function computeUnpaidTotal(
+  baseConstraints: QueryConstraint[],
+  filters: OrderFilters
+): Promise<number> {
+  if (filters.isPaid === true) return 0;
+  if (filters.isCancelled === true) return 0;
+
+  const extra: QueryConstraint[] = [];
+  if (filters.isPaid === undefined) extra.push(where("isPaid", "==", false));
+  if (filters.isCancelled === undefined) extra.push(where("isCancelled", "==", false));
+
+  const q = query(collection(db, "orders"), ...baseConstraints, ...extra);
+  const agg = await getAggregateFromServer(q, { totalUnpaid: sum("totalPrice") });
+  return agg.data().totalUnpaid ?? 0;
+}
+
+export async function getOrderTabStats(filters: OrderFilters): Promise<OrderTabStats> {
+  const whereConstraints = buildWhereConstraints(filters);
+  const base = query(collection(db, "orders"), ...whereConstraints);
+
+  const [mainAgg, totalUnpaid] = await Promise.all([
+    getAggregateFromServer(base, {
+      count:        count(),
+      totalRevenue: sum("totalPrice"),
+      // totalPieces: sum("totalItemCount"), // re-enable once the field exists
+    }),
+    computeUnpaidTotal(whereConstraints, filters),
+  ]);
+
+  return {
+    count:        mainAgg.data().count,
+    totalRevenue: mainAgg.data().totalRevenue ?? 0,
+    totalUnpaid,
+  };
+}
+
+
+export async function getArchiveTabStats(): Promise<OrderTabStats> {
+  const archiveFilter = or(
+    where("isDelivered", "==", true),
+    where("isCancelled", "==", true),
+  );
+
+  const base = query(collection(db, "orders"), archiveFilter);
+
+  
+  const unpaidQuery = query(
+    collection(db, "orders"),
+    and(
+      archiveFilter,
+      where("isPaid", "==", false),
+      where("isCancelled", "==", false),
+    ),
+  );
+
+  const [mainAgg, unpaidAgg] = await Promise.all([
+    getAggregateFromServer(base, {
+      count:        count(),
+      totalRevenue: sum("totalPrice"),
+      // totalPieces: sum("totalItemCount"), // re-enable once the field exists
+    }),
+    getAggregateFromServer(unpaidQuery, { totalUnpaid: sum("totalPrice") }),
+  ]);
+
+  return {
+    count:        mainAgg.data().count,
+    totalRevenue: mainAgg.data().totalRevenue ?? 0,
+    totalUnpaid:  unpaidAgg.data().totalUnpaid ?? 0,
+  };
 }

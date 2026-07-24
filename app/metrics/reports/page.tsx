@@ -39,7 +39,7 @@ export default function ReportsPage() {
             <h1 className="text-2xl font-bold text-slate-800">Reports</h1>
           </div>
           <p className="text-sm text-slate-500 ml-8">
-            Exportable data reports — download as CSV or PDF
+            Exportable data reports — download as CSV 
           </p>
         </section>
 

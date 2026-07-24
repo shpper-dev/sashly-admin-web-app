@@ -7,7 +7,7 @@ import {
 import {
   NotebookTabs, X, 
   CreditCard, Star, Package, Truck, CheckCircle2,
-  Circle, Shirt,
+  Circle, Shirt, Clock,
   Plus,
   Pencil,
 } from "lucide-react";
@@ -19,11 +19,13 @@ import OrderPaymentDialog from "./OrderPaymentDialog";
 import OrderInvoiceDialog from "./OrderInvoiceDialog";
 import OrderChat from "./OrderChat";
 import OrderItemDialog from "./OrderItemDialog";
-import ConfirmActionDialog from "../ConfirmActionDialog";
 import {  deleteOrderItem } from "@/lib/firebase/order";
 import { useToast } from "@/lib/providers/ToastProvider";
 import ConfirmDeliveryDialog from "./ConfirmDeliveryDialog";
+
 import {  useOrderServiceDowngrade } from "@/hooks/useOrderServiceDowngrade";
+import EditPickupWindowDialog from "./EditPickupWindowDialog";
+import DisputeResolutionCard from "./DisputeResolutionCard";
 
 
 interface Props {
@@ -71,10 +73,9 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
     }
   };
   const cfg = STATUS_CONFIG[order.latestStatus.status] ?? { label: order.latestStatus.status, color: "text-slate-600", dot: "bg-slate-400" };
-  // const [showNotifs, setShowNotifs] = useState(true);
 
+  const canEditPickupWindow = order.latestStatus.status === "confirmed" && !order.isCancelled;
 
-  
   const {showToast} = useToast();
   
   return (
@@ -265,6 +266,16 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
                 <OrderPriceSection order={order} onSuccess={onStatusUpdate} />
               </Section>
 
+               {/* Dispute & Resolution — separate from Price Breakdown above
+                   by design: the pricing section always shows the original
+                   as-charged breakdown untouched; this shows dispute
+                   lifecycle + any refund/credit issued afterward. */}
+               {order.disputeId && (
+                 <Section title="Dispute & Resolution">
+                   <DisputeResolutionCard disputeId={order.disputeId} orderTotalPrice={order.totalPrice} />
+                 </Section>
+               )}
+
               {/* Payment detail */}
               {(order.paidBy || order.paymentInfo) && (
                 <Section title="Payment Details">
@@ -281,7 +292,9 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
                 </Section>
               )}
 
-              {/* Pickup & Delivery */}
+              {/* Pickup & Delivery — addresses only; timing now lives in the
+                  Timeline section (middle column) to avoid showing the same
+                  timestamps twice in two different formats. */}
               <Section title="Pickup & Delivery">
                 <div className="flex flex-col gap-3">
                   <AddressCard
@@ -289,21 +302,12 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
                     iconBg="bg-purple-100"
                     label="Pickup Address"
                     address={order.pickUpAddress?.formattedAddress ?? "—"}
-                    timeLabel={`${fmt(order.pickUpStartTime)} · ${fmtTime(order.pickUpStartTime)} – ${fmtTime(order.pickUpEndTime)}`}
                   />
                   <AddressCard
                     icon={<Truck className="h-3.5 w-3.5 text-[#02D0FF]" />}
                     iconBg="bg-[#02D0FF]/10"
                     label="Delivery Address"
                     address={order.deliveryAddress?.formattedAddress ?? "—"}
-                    timeLabel={
-                      order.deliveryEndTime
-                        ? `Delivered: ${fmt(order.deliveryEndTime)} ${fmtTime(order.deliveryEndTime)}`
-                        : order.deliveryStartTime
-                        ? `Started: ${fmt(order.deliveryStartTime)} ${fmtTime(order.deliveryStartTime)}`
-                        : undefined
-                    }
-                    timeLabelClass={order.deliveryEndTime ? "text-green-500 font-semibold" : "text-slate-400"}
                   />
                 </div>
               </Section>
@@ -337,7 +341,104 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
             {/* MIDDLE column */}
             
             <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6 border-r border-slate-100">
-               
+
+              {/* Timeline — every scheduling/timestamp field on the order,
+                  consolidated in one place */}
+              <Section title="Timeline">
+                <div className="flex flex-col gap-2">
+                  <TimelineRow
+                    icon={<NotebookTabs className="h-3.5 w-3.5 text-slate-400" />}
+                    label="Order Placed"
+                    value={`${fmt(order.createdAt)} · ${fmtTime(order.createdAt)}`}
+                  />
+
+                  <TimelineRow
+                    icon={<Package className="h-3.5 w-3.5 text-purple-500" />}
+                    label="Pickup Window"
+                    value={`${fmt(order.pickUpStartTime)} · ${fmtTime(order.pickUpStartTime)} – ${fmtTime(order.pickUpEndTime)}`}
+                    editable={canEditPickupWindow}
+                  >
+                    <EditPickupWindowDialog
+                      orderId={order.id}
+                      existingPickUpStartTime={order.pickUpStartTime}
+                      existingPickUpEndTime={order.pickUpEndTime}
+                      orderCreatedAt={order.createdAt}
+                      onSuccess={onStatusUpdate}
+                    >
+                      <p className="text-xs font-semibold text-slate-700 cursor-pointer hover:text-[#02d0ff]">
+                        {fmt(order.pickUpStartTime)} · {fmtTime(order.pickUpStartTime)} – {fmtTime(order.pickUpEndTime)}
+                      </p>
+                    </EditPickupWindowDialog>
+                  </TimelineRow>
+
+                  {order.assignedDriverId && order.driverAssignedAt && (
+                    <TimelineRow
+                      icon={<Truck className="h-3.5 w-3.5 text-indigo-500" />}
+                      label="Driver Assigned"
+                      value={`${fmt(order.driverAssignedAt)} · ${fmtTime(order.driverAssignedAt)}`}
+                    />
+                  )}
+
+                  {order.driverAcceptedAt && (
+                    <TimelineRow
+                      icon={<CheckCircle2 className="h-3.5 w-3.5 text-indigo-500" />}
+                      label="Driver Accepted"
+                      value={`${fmt(order.driverAcceptedAt)} · ${fmtTime(order.driverAcceptedAt)}`}
+                    />
+                  )}
+
+                  {order.estimatedPickupTime && (
+                    <TimelineRow
+                      icon={<Clock className="h-3.5 w-3.5 text-slate-400" />}
+                      label="Estimated Pickup"
+                      value={`${fmt(order.estimatedPickupTime)} · ${fmtTime(order.estimatedPickupTime)}`}
+                    />
+                  )}
+
+                  <TimelineRow
+                    icon={<Truck className="h-3.5 w-3.5 text-[#02D0FF]" />}
+                    label="Ready By / Expected Delivery"
+                    value={fmt(order.expectedDeliveryTime)}
+                    editable={!order.isDelivered && !order.isCancelled}
+                  >
+                    <ConfirmDeliveryDialog
+                      orderId={order.id}
+                      orderCreatedAt={order.createdAt}
+                      existingExpectedDelivery={order.expectedDeliveryTime}
+                      onSuccess={onStatusUpdate}
+                    >
+                      <p className="text-xs font-semibold text-slate-700 cursor-pointer hover:text-[#02d0ff]">
+                        {fmt(order.expectedDeliveryTime)}
+                      </p>
+                    </ConfirmDeliveryDialog>
+                  </TimelineRow>
+
+                  {order.estimatedDeliveryTime && (
+                    <TimelineRow
+                      icon={<Clock className="h-3.5 w-3.5 text-slate-400" />}
+                      label="Estimated Delivery"
+                      value={`${fmt(order.estimatedDeliveryTime)} · ${fmtTime(order.estimatedDeliveryTime)}`}
+                    />
+                  )}
+
+                  {/* {order.deliveryStartTime && (
+                    <TimelineRow
+                      icon={<Truck className="h-3.5 w-3.5 text-amber-500" />}
+                      label="Delivery Started"
+                      value={`${fmt(order.deliveryStartTime)} · ${fmtTime(order.deliveryStartTime)}`}
+                    />
+                  )} */}
+
+                  {order.deliveryEndTime && (
+                    <TimelineRow
+                      icon={<CheckCircle2 className="h-3.5 w-3.5 text-green-500" />}
+                      label="Actual Delivery"
+                      value={`${fmt(order.deliveryEndTime)} · ${fmtTime(order.deliveryEndTime)}`}
+                    />
+                  )}
+                </div>
+              </Section>
+
                 {/* Status history */}
               <Section title="Status History">
                 <div className="flex flex-col gap-2">
@@ -435,9 +536,8 @@ function InfoRow({ icon, label, value, valueClass, className }: {
   );
 }
 
-function AddressCard({ icon, iconBg, label, address, timeLabel, timeLabelClass }: {
-  icon: React.ReactNode; iconBg: string; label: string;
-  address: string; timeLabel?: string; timeLabelClass?: string;
+function AddressCard({ icon, iconBg, label, address }: {
+  icon: React.ReactNode; iconBg: string; label: string; address: string;
 }) {
   return (
     <div className="flex gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
@@ -447,8 +547,31 @@ function AddressCard({ icon, iconBg, label, address, timeLabel, timeLabelClass }
       <div className="flex flex-col gap-0.5">
         <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{label}</p>
         <p className="text-xs text-slate-700 font-medium">{address}</p>
-        {timeLabel && (
-          <p className={`text-[10px] ${timeLabelClass ?? "text-slate-400"}`}>{timeLabel}</p>
+      </div>
+    </div>
+  );
+}
+
+// Row used in the Timeline section. When `editable` is true and children
+// are provided, the value itself becomes the click target for the
+// corresponding edit dialog — same "click the value to edit it" pattern
+// already used for Ready By in the status banner.
+function TimelineRow({ icon, label, value, editable, children }: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  editable?: boolean;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+      <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0 mt-0.5">
+        {icon}
+      </div>
+      <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+        <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{label}</p>
+        {editable && children ? children : (
+          <p className="text-xs font-semibold text-slate-700">{value}</p>
         )}
       </div>
     </div>
