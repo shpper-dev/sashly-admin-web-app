@@ -3,6 +3,7 @@
 import { SearchFilters } from "@/app/(admin)/search/page"
 import { Order } from "@/lib/models/order.model"
 import { Printer, Pencil, TextSearch, Pencil as PencilIcon, X, SquarePen, ChevronLeft, ChevronRight } from "lucide-react"
+import { useState } from "react"
 import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog"
 import OrderInvoiceDialog from "@/components/orders/OrderInvoiceDialog"
 
@@ -48,7 +49,7 @@ interface SearchResultsProps {
   activeFilters: SearchFilters
   onEditSearch: () => void
   onRemoveFilter: (field: keyof SearchFilters) => void
-  
+ 
   onStatusUpdate: () => void
 
   currentPage: number
@@ -68,7 +69,13 @@ const columns: { key: string; label: string }[] = [
   { key: "payment", label: "Payment" },
 ]
 
-function renderCellContent(col: string, order: Order, onStatusUpdate: () => void) {
+function renderCellContent(
+  col: string,
+  order: Order,
+  onStatusUpdate: () => void,
+  isItemsExpanded: boolean,
+  onToggleItems: () => void,
+) {
   switch (col) {
     case "id":
       return <span className="font-semibold text-slate-800">#{order.id.slice(-13)}</span>
@@ -91,22 +98,38 @@ function renderCellContent(col: string, order: Order, onStatusUpdate: () => void
         </div>
       )
 
-    case "items":
+    case "items": {
+      const visibleCount = 3;
+      const itemsToShow = isItemsExpanded ? order.items : order.items.slice(0, visibleCount);
+      const hiddenCount = order.items.length - visibleCount;
+
       return (
         <div className="flex flex-col gap-1 px-3 bg-slate-50 py-1 rounded-md border border-slate-200">
-          {order.items.slice(0, 3).map((item, i) => (
+          {itemsToShow.map((item, i) => (
             <div key={i} className="flex justify-between">
               <span>{item.name}</span>
               <span>x{item.count}</span>
             </div>
           ))}
-          {order.items.length > 3 && (
-            <span className="text-blue-500 text-[11px] cursor-pointer hover:underline">
+          {!isItemsExpanded && hiddenCount > 0 && (
+            <button
+              onClick={onToggleItems}
+              className="text-blue-500 text-[11px] cursor-pointer hover:underline text-left"
+            >
               View All {order.items.length} Items
-            </span>
+            </button>
+          )}
+          {isItemsExpanded && order.items.length > visibleCount && (
+            <button
+              onClick={onToggleItems}
+              className="text-slate-500 text-[11px] cursor-pointer hover:underline text-left"
+            >
+              Show less
+            </button>
           )}
         </div>
       )
+    }
 
     case "staff":
       return (
@@ -166,7 +189,14 @@ function renderCellContent(col: string, order: Order, onStatusUpdate: () => void
 
 export default function SearchResults({ orders, activeFilters, onEditSearch, onRemoveFilter, onStatusUpdate, currentPage, hasNext, onPageChange }: SearchResultsProps) {
   const paginatedOrders = orders;
-  
+
+  // Keyed by order id — same pattern as the order tab components — so
+  // expanding one row's item list doesn't affect any other row's.
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+  const toggleItems = (id: string) => {
+    setExpandedItems((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
   const activePills = (Object.entries(activeFilters) as [keyof SearchFilters, string][]).filter(
     ([_, value]) => value !== ''
   );
@@ -244,7 +274,13 @@ export default function SearchResults({ orders, activeFilters, onEditSearch, onR
                 <tr key={order.id} className="border-b last:border-b-0 align-top">
                   {columns.map(col => (
                     <td key={col.key} className="px-6 py-4">
-                      {renderCellContent(col.key, order, onStatusUpdate)}
+                      {renderCellContent(
+                        col.key,
+                        order,
+                        onStatusUpdate,
+                        !!expandedItems[order.id],
+                        () => toggleItems(order.id),
+                      )}
                     </td>
                   ))}
                 </tr>
