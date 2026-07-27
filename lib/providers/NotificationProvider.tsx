@@ -54,6 +54,7 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
           body:     data.body     ?? "",
           type:     data.type     ?? "broadcast",
           deepLink: data.deepLink ?? null,
+          entityId: data.entityId ?? null,
           priority: data.priority ?? "normal",
           isRead:   data.isRead   ?? false,
           readAt:   data.readAt   ?? null,

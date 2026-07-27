@@ -345,6 +345,7 @@ export default function SearchPage() {
             activeFilters={activeFilters}
             onEditSearch={handleEditSearch}
             onRemoveFilter={handleRemoveFilter}
+            onStatusUpdate={() => runSearch(activeFilters, currentPage, orderStatus, orderType)}
             currentPage={currentPage}
             hasNext={hasNext}
             onPageChange={handlePageChange}

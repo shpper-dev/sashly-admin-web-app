@@ -4,7 +4,7 @@ import {
   Truck, Building2, CheckCheck, Check,
 } from "lucide-react";
 import Link from "next/link";
-import { DeepLinkType,NotificationType } from "@/lib/models/notification.model";
+import { DeepLinkType, Notification, NotificationType } from "@/lib/models/notification.model";
 import { useAdminNotifications } from "@/hooks/useAdminNotification";
 import {
   DropdownMenu,
@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const DEEP_LINK_ROUTES: Record<DeepLinkType, string> = {
-  "orders":            "/orders",
-  "business-accounts": "/business-accounts",
+  "orders":            `/orders`,
+  "business-accounts": `/business-accounts`,
   "none":              "#",
 };
 
@@ -35,8 +35,14 @@ function timeAgo(ms: number): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-const route = (deepLink?: DeepLinkType | null) =>
-  DEEP_LINK_ROUTES[deepLink ?? "none"];
+
+function getNotificationHref(alert: Notification): string {
+  const base = DEEP_LINK_ROUTES[alert.deepLink ?? "none"];
+  if (base === "/orders" && alert.entityId) {
+    return `/orders?orderId=${alert.entityId}`;
+  }
+  return base;
+}
 
 export default function NotificationBell() {
   const { alerts, unreadCount, markAsRead, clearAll } = useAdminNotifications();
@@ -94,7 +100,7 @@ export default function NotificationBell() {
           ) : (
             unread.map((alert) => {
               const cfg      = TYPE_CONFIG[alert.type] ?? TYPE_CONFIG.broadcast;
-              const href     = route(alert.deepLink);
+              const href     = getNotificationHref(alert);
               const isUrgent = alert.priority === "urgent";
 
               return (
@@ -115,6 +121,7 @@ export default function NotificationBell() {
                       {href !== "#" ? (
                         <Link
                           href={href}
+                          onClick={() => markAsRead(alert.id)}
                           className="text-xs font-semibold text-slate-800 hover:underline truncate"
                         >
                           {alert.title}

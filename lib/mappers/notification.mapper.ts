@@ -15,6 +15,7 @@ export function mapNotification(doc: QueryDocumentSnapshot<DocumentData>) : Noti
     priority:  data.priority ?? "normal",
     type: data.type ?? "",
     deepLink: data.deepLink ??  null,
+    entityId: data.entityId ?? null,
     isRead: data.isRead ?? false,
     readAt: data.readAt ?? null,
     createdAt: (data.createdAt as Timestamp)?.toMillis() ?? Date.now(),

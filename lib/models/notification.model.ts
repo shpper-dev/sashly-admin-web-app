@@ -6,7 +6,10 @@ export interface Notification {
     title: string;
     body: string;
     type: NotificationType;
+
     deepLink?: DeepLinkType | null;
+    entityId?: string | null;
+
     priority: "urgent" | "normal";
     isRead: boolean;
     readAt?: number | null;
