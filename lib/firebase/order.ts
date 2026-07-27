@@ -100,22 +100,6 @@ export function getAllowedNextStatuses(current: OrderStatuses): OrderStatuses[] 
   return STATUS_TRANSITIONS[current] ?? [];
 }
 
-async function syncOrderToMeiliTemp(orderId: string): Promise<void> {
-  try {
-    const snap = await getDoc(doc(db, "orders", orderId));
-    if (!snap.exists()) return;
- 
-    const order = mapOrderData(orderId, snap.data());
- 
-    await fetch("/api/orders/sync-to-meili", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order }),
-    });
-  } catch (err) {
-    console.error(`Meili test-sync failed for order ${orderId} (non-fatal):`, err);
-  }
-}
 
 export async function advanceOrderStatus(
   orderId: string,
