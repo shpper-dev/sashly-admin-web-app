@@ -3,6 +3,7 @@ import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import InReviewAndAdminDialog from "@/components/disputes/InReviewAndAdminDialog";
 import StatusBadge from "@/components/disputes/StatusBadge";
 import OrderChat from "@/components/orders/OrderChat";
+import { SectionLabel } from "@/components/SectionLabel";
 import { useAdminName } from "@/hooks/useAdminName";
 import { getCurrentUser } from "@/lib/firebase/admin.auth";
 import { applyDriverPenaltyFn, rejectDisputeFn, resolveDisputeFn, subscribeToDispute } from "@/lib/firebase/dispute";
@@ -10,7 +11,8 @@ import { getOrderById } from "@/lib/firebase/order";
 import { Admin } from "@/lib/models/admin.model";
 import { Dispute, DriverAction, ResolveAction } from "@/lib/models/dispute.model";
 import { Order } from "@/lib/models/order.model";
-import { ArrowLeft, Bell, Check, CheckCircle2, CircleAlert, Clock, Loader2, MapPin, NotepadText, Search, ShieldAlert, ShoppingCart, TriangleAlert, Undo2, User, UserCheck, UserCog, Wallet, X,
+import { formatDateTime } from "@/lib/utils";
+import { ArrowLeft, Check, CheckCircle2, CircleAlert, Clock, Loader2, MapPin, NotepadText, Search, ShieldAlert, ShoppingCart, TriangleAlert, Undo2, User, UserCheck, UserCog, Wallet, X,
 } from "lucide-react";
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
@@ -19,15 +21,6 @@ import { use, useEffect, useState } from "react";
 type DisputeWithDriverActions = Dispute & { driverActions?: DriverAction[] };
 
 // Utilities
-function formatTimestamp(ts: number) {
-  return new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "short",
-  }).format(new Date(ts));
-}
-
 function getErrorMessage(err: any): string {
   return err?.message ?? "Something went wrong. Please try again.";
 }
@@ -268,7 +261,7 @@ export default function DisputesResolutionDetails({
                   </span>
                   <span className="text-[10px] text-slate-400 flex items-center gap-1">
                     <Clock className="w-2.5 h-2.5" />
-                    {formatTimestamp(dispute.createdAt)}
+                    {formatDateTime(dispute.createdAt)}
                   </span>
                 </div>
 
@@ -295,7 +288,7 @@ export default function DisputesResolutionDetails({
                     </span>
                     <span className="text-[10px] text-slate-400 flex items-center gap-1">
                       <Clock className="w-2.5 h-2.5" />
-                      {formatTimestamp(action.at)}
+                      {formatDateTime(action.at)}
                     </span>
                   </div>
                 ))}
@@ -307,7 +300,7 @@ export default function DisputesResolutionDetails({
                     </span>
                     <span className="text-[10px] text-slate-400 flex items-center gap-1">
                       <Clock className="w-2.5 h-2.5" />
-                      {formatTimestamp(dispute.resolution.resolvedAt)}
+                      {formatDateTime(dispute.resolution.resolvedAt)}
                     </span>
                   </div>
                 )}
@@ -663,7 +656,7 @@ export default function DisputesResolutionDetails({
                       <div className="flex justify-between items-center">
                         <span className="text-[10px] text-slate-400 font-medium">Date</span>
                         <span className="text-[10px] font-bold text-slate-700">
-                          {formatTimestamp(dispute.resolution?.resolvedAt || 0)}
+                          {formatDateTime(dispute.resolution?.resolvedAt || 0)}
                         </span>
                       </div>
                     </div>
@@ -693,7 +686,7 @@ export default function DisputesResolutionDetails({
                                 {action.type}
                               </span>
                               <span className="text-[10px] text-slate-400">
-                                {formatTimestamp(action.at)}
+                                {formatDateTime(action.at)}
                               </span>
                             </div>
                             {action.amount != null && (
@@ -736,12 +729,12 @@ export default function DisputesResolutionDetails({
 }
 
 // helpers
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-      {children}
-    </span>
-  );
-}
+// function SectionLabel({ children }: { children: React.ReactNode }) {
+//   return (
+//     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+//       {children}
+//     </span>
+//   );
+// }
 
 

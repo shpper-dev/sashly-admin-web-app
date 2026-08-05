@@ -1,6 +1,5 @@
 "use client";
 import Header from "@/components/Header";
-import AddItemDialog from "@/components/products/AddItemDialog";
 import ProductCard from "@/components/products/ProductCard";
 import { Search, Loader2 } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";

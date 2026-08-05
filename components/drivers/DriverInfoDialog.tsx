@@ -8,6 +8,7 @@ import { DesignatedArea, Driver } from '@/lib/models/driver.model';
 import DriversRoutes from './DriversRoutes';
 import { Order } from '@/lib/models/order.model';
 import {  subscribeToAllOrdersByDriverId } from '@/lib/firebase/driver';
+import { fmtTimestamp } from '@/lib/utils';
 
 type TabName = "orders" | "stats" | "edit profile" | "routes" | "payouts" | "messages" | "photos";
 
@@ -22,13 +23,6 @@ const HEADER_TABS: HeaderTabDef[] = [
   { name: "Edit Profile", key: "edit profile", icon: PencilLine },
   { name: "Routes", key: "routes", icon: Route },
 ];
-
-function fmt(ts?: { seconds: number } | null) {
-  if (!ts) return "—";
-  return new Date(ts.seconds * 1000).toLocaleDateString("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
-  });
-}
 
 interface DriverInfoDialogProps {
   children: React.ReactNode;
@@ -125,7 +119,7 @@ export default function DriverInfoDialog({ children, driver, onDelete, onSuccess
                 <div className="flex flex-col gap-4">
                   <ContactItem icon={Mail} label="Email" value={driver.email ?? ""} />
                   <ContactItem icon={Phone} label="Phone" value={driver.phoneNumber} />
-                  <ContactItem icon={Calendar} label="Joined" value={fmt(driver.createdAt)} />
+                  <ContactItem icon={Calendar} label="Joined" value={fmtTimestamp(driver.createdAt)} />
                 </div>
                 <div className="h-px bg-slate-200" />
                 

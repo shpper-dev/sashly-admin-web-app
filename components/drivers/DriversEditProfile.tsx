@@ -6,20 +6,13 @@ import {
   PackagePlus
 } from 'lucide-react';
 import { Driver } from '@/lib/models/driver.model';
-import { deleteImage, uploadImage } from '@/lib/utils';
+import { deleteImage, fmtTimestamp, uploadImage } from '@/lib/utils';
 import { updateDriver } from '@/lib/firebase/driver';
 import { Switch } from '../ui/switch';
 
 interface DriversEditProfileProps {
   driver: Driver;
   onSuccess?: () => void;
-}
-
-function fmt(ts?: { seconds: number } | null) {
-  if (!ts) return "—";
-  return new Date(ts.seconds * 1000).toLocaleDateString("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
-  });
 }
 
 export default function DriversEditProfile({ driver, onSuccess }: DriversEditProfileProps) {
@@ -239,7 +232,7 @@ export default function DriversEditProfile({ driver, onSuccess }: DriversEditPro
           </FormField>
           <FormField label="Updated At">
             <div className="flex items-center h-11 rounded-xl border border-slate-100 bg-slate-50 px-4 text-xs font-mono text-slate-400">
-              {fmt(driver.updatedAt)}
+              {fmtTimestamp(driver.updatedAt)}
             </div>
           </FormField>
           <FormField label="Designated Area (Read Only)">

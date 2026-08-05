@@ -10,8 +10,8 @@ import { TableHeading } from "@/lib/types";
 import { Banknote, ChevronRight, Flag, HelpCircle, Radio } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ISSUE_TYPE_CONFIG } from "./disputes/page";
 import WaitTimeBadge from "@/components/disputes/WaitTimeBadge";
+import { ISSUE_TYPE_CONFIG } from "@/constants/configs";
 
 
 export default function Dashboard() {

@@ -7,6 +7,7 @@ import { getAdminById } from "@/lib/firebase/admin.auth";
 import {  getBroadcasts, sendBroadcast } from "@/lib/firebase/broadcast";
 import { Broadcast, BroadcastPriority, BroadcastTarget } from "@/lib/models/broadcast.model";
 import { TableHeading } from "@/lib/types";
+import { fmtDate } from "@/lib/utils";
 import {
   ChevronLeft, ChevronRight, Eye,
   Loader2, Send,
@@ -26,21 +27,8 @@ const PRIORITY_CONFIG: Record<BroadcastPriority, { label: string; className: str
   urgent: { label: "Urgent", className: "bg-red-50    text-red-600"   },
 };
 
-//  Time formatter 
 
-function formatTimeAgo(ms: number): string {
-  const diff = Date.now() - ms;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60)  return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs  < 24)  return `${hrs}h`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d`;
-}
-
-const PAGE_SIZE = 8;
-
-
+const PAGE_SIZE = 50;
 
 interface BroadcastClientProps {
   initialTarget?: string;
@@ -73,14 +61,10 @@ export default function BroadcastClient({ initialTarget }: BroadcastClientProps)
 
   useEffect(() => { loadHistory(); }, []);
 
-
-
   const totalPages  = Math.max(1, Math.ceil(history.length / PAGE_SIZE));
   const pageStart   = (page - 1) * PAGE_SIZE;
   const pageEnd     = Math.min(pageStart + PAGE_SIZE, history.length);
   const visibleRows = history.slice(pageStart, pageEnd);
-
-  
 
   const handleSend = async () => {
     if (!heading.trim() || !body.trim()) {
@@ -113,9 +97,7 @@ export default function BroadcastClient({ initialTarget }: BroadcastClientProps)
               #{row.id.slice(0, 6).toUpperCase()}
             </span>
             <span className="text-[11px] text-slate-400">
-              {new Date(row.createdAt).toLocaleDateString("en-GB", {
-                day: "2-digit", month: "short", year: "numeric",
-              })}
+              {fmtDate(row.createdAt)}
             </span>
           </div>
         );

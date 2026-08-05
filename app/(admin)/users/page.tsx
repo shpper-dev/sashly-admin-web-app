@@ -9,15 +9,8 @@ import FilterButtonWithBadge from '@/components/buttons/FilterButtonWithBadges';
 import { getUsers, getUsersNextPage, UserFilters, getUsersCount, searchUsers } from '@/lib/firebase/user';
 import { User } from '@/lib/models/user.model';
 import { useToast } from '@/lib/providers/ToastProvider';
+import { userHeadings } from '@/constants/headings';
 const PAGE_SIZE = 50;
-
-const userHeadings: TableHeading[] = [
-  { id: "name",         title: "NAME"          },
-  { id: "email",        title: "EMAIL"         },
-  { id: "language",     title: "LANGUAGE"      },
-  { id: "registeredAt", title: "REGISTERED AT" },
-  { id: "status",       title: "STATUS"        },
-];
 
 // Server-side filter
 const SERVER_FILTERS: { label: string; filters: UserFilters }[] = [

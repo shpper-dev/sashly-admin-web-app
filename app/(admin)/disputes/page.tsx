@@ -3,13 +3,14 @@ import StatusBadge from "@/components/disputes/StatusBadge";
 import WaitTimeBadge from "@/components/disputes/WaitTimeBadge";
 import Header from "@/components/Header";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
+import { ISSUE_TYPE_CONFIG } from "@/constants/configs";
+import { QUEUE_HEADINGS, RESOLVED_HEADINGS } from "@/constants/headings";
 import { useAdminName } from "@/hooks/useAdminName";
 import { getDisputes } from "@/lib/firebase/dispute";
 import { Dispute } from "@/lib/models/dispute.model";
 import { TableHeading } from "@/lib/types";
-
-import { AlertTriangle, ChevronLeft, ChevronRight, Download, HelpCircle, ListFilter, PackageX, RefreshCcw, Shirt, UserX,
-} from "lucide-react";
+import { fmtSAR, formatDateTime } from "@/lib/utils";
+import { ChevronLeft, ChevronRight, Download, HelpCircle, ListFilter, } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -18,44 +19,6 @@ import { useEffect, useState } from "react";
 const QUEUE_PAGE_SIZE = 10;
 const RESOLVED_PAGE_SIZE = 10;
 
-// issue Category Config 
-
-export const ISSUE_TYPE_CONFIG: Record<
-  string,
-  { label: string; icon: React.ReactNode; className: string }
-> = {
-  missing_item: {
-    label: "Missing Item",
-    icon: <PackageX className="h-3.5 w-3.5" />,
-    className: "bg-orange-50 text-orange-600",
-  },
-  damaged: {
-    label: "Damaged",
-    icon: <Shirt className="h-3.5 w-3.5" />,
-    className: "bg-red-50 text-red-600",
-  },
-  wrong_service: {
-    label: "Wrong Service",
-    icon: <RefreshCcw className="h-3.5 w-3.5" />,
-    className: "bg-blue-50 text-blue-600",
-  },
-  driver_behavious: {
-    label: "Driver Behavior",
-    icon: <UserX className="h-3.5 w-3.5" />,
-    className: "bg-yellow-50 text-yellow-700",
-  },
-  delivery_problem: {
-    label: "Delivery Problem",
-    icon: <AlertTriangle className="h-3.5 w-3.5" />,
-    className: "bg-amber-50 text-amber-600",
-  },
-  other: {
-    label: "Other",
-    icon: <HelpCircle className="h-3.5 w-3.5" />,
-    className: "bg-slate-100 text-slate-500",
-  },
-};
-
 const RESOLUTION_LABELS: Record<string, string> = {
   full_refund: "Full Refund",
   partial_refund: "Partial Refund",
@@ -63,42 +26,7 @@ const RESOLUTION_LABELS: Record<string, string> = {
   reattempt: "Reattempt",
   no_action: "No Action",
 };
-
-const QUEUE_HEADINGS: TableHeading[] = [
-  { id: "orderId",    title: "Order ID"    },
-  { id: "issueType",  title: "Category"   },
-  { id: "createdAt",  title: "Wait Time"  },
-  { id: "priority",   title: "Priority"   },
-  { id: "status",     title: "Status"     },
-  { id: "assignedTo", title: "Assigned To"},
-  { id: "actions",    title: "Actions"    },
-];
-
-const RESOLVED_HEADINGS: TableHeading[] = [
-  { id: "orderId",               title: "Order ID"    },
-  { id: "issueType",             title: "Category"    },
-  { id: "resolution_action",     title: "Resolution"  },
-  { id: "resolution_resolvedBy", title: "Resolved By" },
-  { id: "resolution_resolvedAt", title: "Resolved At" },
-  { id: "status",                title: "Status"      },
-  { id: "actions",               title: "Actions"    },
-];
-
 //  utilities
-
-
-function formatDateTime(ts: number): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  }).format(new Date(ts));
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-AE", {
-    style: "currency", currency: "AED", minimumFractionDigits: 2,
-  }).format(amount);
-}
 
 const Dash = () => <span className="text-slate-400">—</span>;
 
@@ -150,7 +78,7 @@ function renderCellContent(heading: TableHeading, dispute: Dispute): React.React
     case "resolution_amount":
       return dispute.resolution?.amount != null ? (
         <span className="font-medium text-slate-800">
-          {formatCurrency(dispute.resolution.amount)}
+          {fmtSAR(dispute.resolution.amount)}
         </span>
       ) : (
         <Dash />

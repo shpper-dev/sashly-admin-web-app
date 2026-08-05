@@ -1,6 +1,4 @@
 "use client";
-
-import Header from "@/components/Header";
 import ViewAdminsDialog from "@/components/settings/ViewAdminsDialog";
 import { Users, ChevronRight } from "lucide-react";
 
