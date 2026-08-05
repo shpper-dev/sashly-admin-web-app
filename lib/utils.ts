@@ -200,3 +200,26 @@ export function exportToCsv(data:any[], filename: string){
 
 //   doc.save(filename);
 // }
+
+// time conversions
+// timestamp to dd- mon  - yyyy
+export function fmtTimestamp(ts: { seconds: number } | null | undefined) {
+  if (!ts) return "—";
+  return new Date(ts.seconds * 1000).toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  });
+}
+
+// number to date and time
+export function formatDateTime(ts: number): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  }).format(new Date(ts));
+}
+
+
+// currency conversion
+export function fmtSAR(n: number): string {
+  return `SAR ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
