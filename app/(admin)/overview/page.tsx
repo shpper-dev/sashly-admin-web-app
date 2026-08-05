@@ -4,39 +4,12 @@ import Header from "@/components/Header";
 import FinancialTrendChart from "@/components/overview/FinancialTrendChart";
 import { Switch } from "@/components/ui/switch";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertCircle, CalendarDays, ChevronDown, ChevronRight,
-  Download, FileText, Loader2,
+  AlertCircle, ChevronRight,Loader2,
 } from "lucide-react";
 import { getOverviewData, OverviewData, ServiceHealthOrder } from "@/lib/firebase/overview";
-
-//Date presets 
-
-type Preset = "7d" | "30d" | "90d" | "365d" | "custom";
-
-const PRESETS: { key: Preset; label: string }[] = [
-  { key: "7d",     label: "Last 7 days"  },
-  { key: "30d",    label: "Last 30 days" },
-  { key: "90d",    label: "Last 90 days" },
-  { key: "365d",   label: "Last year"    },
-  { key: "custom", label: "Custom range" },
-];
-
-function presetToRange(preset: Preset): { startMs: number; endMs: number } {
-  const now = Date.now();
-  if (preset === "custom") return { startMs: now - 30 * 86400000, endMs: now };
-  const days = parseInt(preset);
-  return { startMs: now - days * 86400000, endMs: now };
-}
-
-function msToDateInput(ms: number): string {
-  return new Date(ms).toISOString().split("T")[0];
-}
+import { fmtSAR, fmtTimestamp, formatDateTime } from "@/lib/utils";
+import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
+import { presetToRange } from "@/lib/date-presets";
 
 // Status helpers 
 
@@ -90,47 +63,16 @@ const SECTION_COLORS = [
   "bg-[#7F50F4]", "bg-[#02D0FF]", "bg-blue-300", "bg-emerald-400", "bg-amber-400",
 ];
 
-
-const fmtSAR = (n: number) =>
-  `SAR ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-
-const fmtDelivery = (ms: number | null) =>
-  ms ? new Date(ms).toLocaleDateString("en-GB", {
-    day: "2-digit", month: "2-digit", year: "2-digit",
-    hour: "2-digit", minute: "2-digit",
-  }) : "—";
-
-
-
 export default function Overview() {
-  const [preset,       setPreset]       = useState<Preset>("30d");
   const [data,         setData]         = useState<OverviewData | null>(null);
   const [loading,      setLoading]      = useState(true);
   const [showSubtotal, setShowSubtotal] = useState(false);
-  const [showCustom,   setShowCustom]   = useState(false);
+  const [rangeLabel,   setRangeLabel]   = useState("Last 30 days");
 
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
 
-  const [customStart, setCustomStart] = useState<string>(() => msToDateInput(Date.now() - 30 * 86400000));
-  const [customEnd,   setCustomEnd]   = useState<string>(() => msToDateInput(Date.now()));
-
- 
-
-  const fetchData = useCallback(async (p: Preset, cStart?: string, cEnd?: string) => {
+  const fetchData = useCallback(async (startMs: number, endMs: number) => {
     setLoading(true);
-    let startMs: number;
-    let endMs: number;
-
-    if (p === "custom" && cStart && cEnd) {
-      startMs = new Date(cStart).getTime();
-      endMs   = new Date(cEnd).getTime() + 86399999;
-    } else {
-      ({ startMs, endMs } = presetToRange(p));
-    }
-
     try {
       const result = await getOverviewData(startMs, endMs);
       setData(result);
@@ -140,21 +82,14 @@ export default function Overview() {
     }
   }, []);
 
-  useEffect(() => { fetchData(preset); }, []);
+  useEffect(() => {
+    const { startMs, endMs } = presetToRange("30d"); 
+    fetchData(startMs, endMs);
+  }, []);
 
-  const handlePreset = (p: Preset) => {
-    setPreset(p);
-    if (p === "custom") {
-      setShowCustom(true);
-    } else {
-      setShowCustom(false);
-      fetchData(p);
-    }
-  };
-
-  const handleCustomApply = () => {
-    if (!customStart || !customEnd) return;
-    fetchData("custom", customStart, customEnd);
+  const handleRangeChange = ({ startMs, endMs, label }: DateRangeChangePayload) => {
+    setRangeLabel(label);
+    fetchData(startMs, endMs);
   };
 
   const toggleCustomer = (name: string) => {
@@ -164,12 +99,6 @@ export default function Overview() {
       return next;
     });
   };
-
-  const currentLabel = preset === "custom"
-    ? `${customStart} → ${customEnd}`
-    : PRESETS.find(p => p.key === preset)?.label ?? "";
-
- 
 
   const STATS = data ? [
     { label: "Orders",        value: data.stats.orderCount,               color: "text-[#101828]"  },
@@ -199,64 +128,7 @@ export default function Overview() {
               <p className="text-sm text-[#90A1B9]">Advanced business intelligence for Sashly Admin</p>
             </div>
             <div className="flex items-center gap-3">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-[#45556C] shadow-sm hover:border-slate-300 transition-colors outline-none">
-                    <CalendarDays size={13} className="text-slate-400" />
-                    {currentLabel}
-                    <ChevronDown size={13} className="text-slate-400" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[200px] rounded-xl p-1">
-                  {PRESETS.map(p => (
-                    <DropdownMenuItem
-                      key={p.key}
-                      onSelect={() => handlePreset(p.key)}
-                      className={`rounded-lg px-3 py-2 text-sm font-medium cursor-pointer ${
-                        preset === p.key
-                          ? "text-[#7F50F4] bg-purple-50 focus:bg-purple-50 focus:text-[#7F50F4]"
-                          : "text-slate-600"
-                      }`}
-                    >
-                      {p.label}
-                    </DropdownMenuItem>
-                  ))}
-                  {showCustom && (
-                    <div
-                      className="px-3 pt-2 pb-3 border-t border-slate-100 mt-1 flex flex-col gap-2"
-                      onPointerDown={(e) => e.stopPropagation()}
-                    >
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">From</label>
-                        <input
-                          type="date"
-                          value={customStart}
-                          max={customEnd}
-                          onChange={(e) => setCustomStart(e.target.value)}
-                          className="w-full text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 outline-none focus:border-purple-400"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">To</label>
-                        <input
-                          type="date"
-                          value={customEnd}
-                          min={customStart}
-                          max={msToDateInput(Date.now())}
-                          onChange={(e) => setCustomEnd(e.target.value)}
-                          className="w-full text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 outline-none focus:border-purple-400"
-                        />
-                      </div>
-                      <button
-                        onClick={handleCustomApply}
-                        className="mt-1 w-full px-3 py-2 bg-[#7F50F4] hover:bg-[#6B3FD4] text-white rounded-lg text-xs font-bold transition-colors"
-                      >
-                        Apply
-                      </button>
-                    </div>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <DateRangePicker defaultPreset="30d" onRangeChange={handleRangeChange} accentClass="purple" />
 
               {/* <button className="flex items-center gap-2 px-4 py-2.5 bg-[#7F50F4] hover:bg-[#6B3FD4] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">
                 <FileText size={14} /> Export PDF
@@ -286,7 +158,7 @@ export default function Overview() {
                 <div className="col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col gap-5">
                   <div className="flex flex-col gap-0.5">
                     <h3 className="text-sm font-bold text-[#101828]">Financial Performance Trends</h3>
-                    <p className="text-xs text-[#90A1B9]">Daily revenue vs period average · {currentLabel}</p>
+                    <p className="text-xs text-[#90A1B9]">Daily revenue vs period average · {rangeLabel}</p>
                   </div>
                   <FinancialTrendChart data={data.dailyRevenue} />
                   <div className="grid grid-cols-3 gap-4 border-t border-slate-100 pt-5">
@@ -298,7 +170,7 @@ export default function Overview() {
                     <div className="border-l-2 border-green-600 pl-4 flex flex-col gap-1">
                       <span className="text-[10px] text-[#90A1B9] font-bold uppercase tracking-wide">Avg Order Value</span>
                       <span className="text-lg font-bold text-[#101828]">{fmtSAR(data.avgOrderValue)}</span>
-                      <span className="text-[10px] text-slate-400 font-semibold">{currentLabel}</span>
+                      <span className="text-[10px] text-slate-400 font-semibold">{rangeLabel}</span>
                     </div>
                     <div className="border-l-2 border-purple-600 pl-4 flex flex-col gap-1">
                       <span className="text-[10px] text-[#90A1B9] font-bold uppercase tracking-wide">New Acquisitions</span>
@@ -423,7 +295,7 @@ export default function Overview() {
                                       {order.orderNumber}
                                     </td>
                                     <td className="px-3 py-2.5 text-[11px] text-[#90A1B9] font-medium">
-                                      {fmtDelivery(order.expectedDeliveryTime)}
+                                      {formatDateTime(order.expectedDeliveryTime ?? 0)}
                                     </td>
                                     <td className="px-3 py-2.5 text-[11px] font-semibold text-[#101828]">
                                       {fmtSAR(order.totalPrice)}
@@ -504,16 +376,28 @@ export default function Overview() {
                   <div className="px-6 py-12 text-center text-sm text-slate-400">
                     No paid orders in this period
                   </div>
-                ) : (
+                ) : (() => {
+                  const revenueColumns = [
+                    "Date", "Orders", "Revenue", "Cash", "Card", "Bank",
+                    ...(showSubtotal ? ["Discounts", "Credits"] : []),
+                  ];
+                  const colWidth = `${100 / revenueColumns.length}%`;
+                  const SharedColGroup = () => (
+                    <colgroup>
+                      {revenueColumns.map((h) => (
+                        <col key={h} style={{ width: colWidth }} />
+                      ))}
+                    </colgroup>
+                  );
+
+                  return (
                   <>
                     {/* Sticky column headers */}
-                    <table className="w-full">
+                    <table className="w-full table-fixed">
+                      <SharedColGroup />
                       <thead className="bg-slate-50 border-b border-slate-100">
                         <tr>
-                          {[
-                            "Date", "Orders", "Revenue", "Cash", "Card", "Bank",
-                            ...(showSubtotal ? ["Discounts", "Credits"] : []),
-                          ].map(h => (
+                          {revenueColumns.map(h => (
                             <th key={h} className="px-6 py-3.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                               {h}
                             </th>
@@ -524,11 +408,12 @@ export default function Overview() {
 
                     {/* Scrollable rows */}
                     <div className="overflow-y-auto" style={{ height: "320px" }}>
-                      <table className="w-full">
+                      <table className="w-full table-fixed">
+                        <SharedColGroup />
                         <tbody className="divide-y divide-slate-50">
                           {data.dailyRevenue.map((row, i) => (
                             <tr key={i} className="hover:bg-slate-50 transition-colors">
-                              <td className="px-6 py-4 text-xs text-[#6A7282] font-semibold">{fmtDate(row.date)}</td>
+                              <td className="px-6 py-4 text-xs text-[#6A7282] font-semibold">{fmtTimestamp(row.date as any)}</td>
                               <td className="px-6 py-4 text-xs font-bold text-[#101828]">{row.orderCount}</td>
                               <td className="px-6 py-4 text-xs font-bold text-[#101828]">{fmtSAR(row.revenue)}</td>
                               <td className="px-6 py-4 text-xs text-[#90A1B9] font-semibold">{fmtSAR(row.cash)}</td>
@@ -547,10 +432,11 @@ export default function Overview() {
                     </div>
 
                     {/* Totals footer — always visible below scroll area */}
-                    <table className="w-full border-t border-slate-200">
+                    <table className="w-full table-fixed border-t border-slate-200">
+                      <SharedColGroup />
                       <tfoot className="bg-slate-50">
                         <tr>
-                          <td className="px-6 py-3.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total</td>
+                          <td className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-widest">Total</td>
                           <td className="px-6 py-3.5 text-xs font-bold text-[#101828]">
                             {data.dailyRevenue.reduce((s, r) => s + r.orderCount, 0)}
                           </td>
@@ -580,7 +466,8 @@ export default function Overview() {
                       </tfoot>
                     </table>
                   </>
-                )}
+                  );
+                })()}
               </div>
             </>
           )}
