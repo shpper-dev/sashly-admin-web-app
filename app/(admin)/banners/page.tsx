@@ -5,29 +5,13 @@ import { Switch } from "@/components/ui/switch";
 import { Pencil, Trash2, GripVertical } from "lucide-react";
 import { Banner } from "@/lib/models/banner.model";
 import { deleteBanner, getBanners, updateBanner } from "@/lib/firebase/banner";
-import { deleteImage } from "@/lib/utils";
+import { deleteImage, fmtTimestamp } from "@/lib/utils";
 import { useToast } from "@/lib/providers/ToastProvider";
 import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import BannerDialog from "@/components/banners/BannerDialog";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { TableHeading } from "@/lib/types";
-
-const bannerHeadings: TableHeading[] = [
-  { id: "order",   title: "ORDER"   },
-  { id: "image",   title: "IMAGE"   },
-  { id: "title",   title: "TITLE"   },
-  { id: "action",  title: "ACTION"  },
-  { id: "dates",   title: "DATES"   },
-  { id: "active",  title: "ACTIVE"  },
-  { id: "actions", title: "ACTIONS" },
-];
-
-function fmtTimestamp(ts: { seconds: number } | null | undefined) {
-  if (!ts) return "—";
-  return new Date(ts.seconds * 1000).toLocaleDateString("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
-  });
-}
+import { bannerHeadings } from "@/constants/headings";
 
 export default function Banners() {
   const [banners,    setBanners]    = useState<Banner[]>([]);

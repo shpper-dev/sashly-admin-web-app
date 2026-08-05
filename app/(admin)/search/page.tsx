@@ -14,6 +14,7 @@ import {
 import SearchResults from '@/components/search/SearchResults';
 import { Order } from '@/lib/models/order.model';
 import { searchOrders } from '@/lib/firebase/order';
+import { ORDER_STATUS_OPTIONS } from '@/constants/options_and_filters';
 
 export interface SearchFilters {
   name: string;
@@ -53,26 +54,10 @@ const defaultFilters: SearchFilters = {
   cleanedBefore: '',
 };
 
-
-const ORDER_STATUS_OPTIONS = [
-  { label: "Confirmed",         value: "confirmed"        },
-  { label: "Picked Up",         value: "pickedUp"         },
-  { label: "Sorting",           value: "sorting"          },
-  { label: "Detailing",         value: "detailing"        },
-  { label: "Cleaning",          value: "cleaning"         },
-  { label: "Ready To Deliver",  value: "readyToDeliver"   },
-  { label: "Delivered",         value: "delivered"        },
-  { label: "Disputed",          value: "disputed"         },
-  { label: "Dispute Resolved",  value: "disputeResolved"  },
-  { label: "Cancelled",         value: "cancelled"        },
-];
-
 const ORDER_TYPE_OPTIONS = [
   { label: "Ordinary", value: "ordinary" },
   { label: "Express",  value: "express"  },
 ];
-
-
 
 export default function SearchPage() {
   const [filters, setFilters] = useState<SearchFilters>(defaultFilters);

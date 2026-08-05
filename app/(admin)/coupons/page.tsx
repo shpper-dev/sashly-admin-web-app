@@ -5,25 +5,14 @@ import {
   ChevronLeft, ChevronRight, Plus, Tag, BarChart3, Percent, Search, SlidersHorizontal,
 } from "lucide-react";
 import { Coupon } from "@/lib/models/coupon.model";
-import { getCoupons, deactivateCoupon, deleteCoupon } from "@/lib/firebase/coupon";
+import { getCoupons, deleteCoupon } from "@/lib/firebase/coupon";
 import { TableHeading } from "@/lib/types";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
-import CreateCouponDialog from "@/components/coupons/CreateCouponDialog";
-import EditCouponDialog from "@/components/coupons/EditCouponDialog";
 import { PencilLine, Trash2 } from "lucide-react";
 import DeleteCouponDialog from "@/components/coupons/DeleteCouponDialog";
 import { useToast } from "@/lib/providers/ToastProvider";
 import CouponDialog from "@/components/coupons/CouponDialog";
-
-const couponHeadings: TableHeading[] = [
-  { id: "code",     title: "COUPON CODE"    },
-  { id: "discount", title: "DISCOUNT"       },
-  { id: "usage",    title: "USAGE"          },
-  { id: "dates",    title: "EXPIRY DATE"    },
-  { id: "status",   title: "STATUS"         },
-  { id: "in_app",   title: "IN APP"         },
-  { id: "actions",  title: ""               },
-];
+import { couponHeadings } from "@/constants/headings";
 
 export default function CouponsPage() {
   const [loading, setLoading]           = useState(false);

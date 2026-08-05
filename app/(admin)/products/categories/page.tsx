@@ -10,17 +10,7 @@ import { Category } from '@/lib/models/product.model';
 import ConfirmActionDialog from '@/components/ConfirmActionDialog';
 import { useToast } from '@/lib/providers/ToastProvider';
 import { deleteImage } from '@/lib/utils';
-
-
-
-const categoryHeadings : TableHeading[]= [
-   {  id: "name", title: "NAME" },
-   {  id: "photo", title: "PHOTO" },
-   {  id: "searchTerms", title: "SEARCH TERMS" },
-   {  id: "createdat", title: "CREATED AT" },
-   {  id:"actions",title:"ACTIONS" }
-]
-
+import { categoryHeadings } from '@/constants/headings';
 
 export default function Categories() {
   const [loading , setLoading] = useState<boolean>(false);

@@ -11,35 +11,11 @@ import { BarChart, Bar, XAxis, CartesianGrid } from "recharts";
 import { getOperationalOrderMetrics, OperationalOrderMetrics, ServiceTypeBreakdown } from "@/lib/firebase/metrics-orders";
 import { presetToRange } from "@/lib/date-presets";
 import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
+import PurpleTopBar from "@/components/metrics/PurpleTopBar";
 
 type ActiveChartMetric = "orders" | "completed" | "cancelled" | "firstOrders";
 
-function PurpleTopBar(props: any) {
-  const { x, y, width, height } = props;
-  if (!width || !height) return null;
-  const radius = 6;
-  const color = "#7F50F4";
-  return (
-    <g>
-      <path d={`M ${x},${y + height} L ${x},${y + radius} Q ${x},${y} ${x + radius},${y} L ${x + width - radius},${y} Q ${x + width},${y} ${x + width},${y + radius} L ${x + width},${y + height} Z`} fill="rgba(127,80,244,0.12)" />
-      <path d={`M ${x},${y + radius} Q ${x},${y} ${x + radius},${y} L ${x + width - radius},${y} Q ${x + width},${y} ${x + width},${y + radius}`} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </g>
-  );
-}
 
-// Small inline fulfillment-outcome breakdown, e.g. "62% delivered · 12% cancelled · 26% pending"
-function BreakdownLine({ breakdown }: { breakdown: ServiceTypeBreakdown }) {
-  if (breakdown.total === 0) return null;
-  return (
-    <p className="text-[9px] text-slate-400 font-semibold mt-1 leading-tight">
-      <span className="text-emerald-500">{breakdown.completedPct.toFixed(0)}% delivered</span>
-      {" · "}
-      <span className="text-rose-400">{breakdown.cancelledPct.toFixed(0)}% cancelled</span>
-      {" · "}
-      <span className="text-slate-400">{breakdown.pendingPct.toFixed(0)}% pending</span>
-    </p>
-  );
-}
 
 export default function MetricsOrdersPage() {
   const [loading, setLoading] = useState(true);
@@ -319,5 +295,20 @@ export default function MetricsOrdersPage() {
         </div>
       </div>
     </div>
+  );
+}
+// helpers
+
+// Small inline fulfillment-outcome breakdown, e.g. "62% delivered · 12% cancelled · 26% pending"
+function BreakdownLine({ breakdown }: { breakdown: ServiceTypeBreakdown }) {
+  if (breakdown.total === 0) return null;
+  return (
+    <p className="text-[9px] text-slate-400 font-semibold mt-1 leading-tight">
+      <span className="text-emerald-500">{breakdown.completedPct.toFixed(0)}% delivered</span>
+      {" · "}
+      <span className="text-rose-400">{breakdown.cancelledPct.toFixed(0)}% cancelled</span>
+      {" · "}
+      <span className="text-slate-400">{breakdown.pendingPct.toFixed(0)}% pending</span>
+    </p>
   );
 }

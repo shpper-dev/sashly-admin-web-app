@@ -6,12 +6,10 @@ import {
   CustomerMetric, CustomerReportRow,
 } from "@/lib/firebase/metrics-customers";
 import {
-  CalendarDays, ChevronDown, Download, FileText,
-  Loader2, Search, ArrowLeft,
+  Download, Loader2, Search, ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
-import { exportToCsv } from "@/lib/utils";
-import { fmtSAR } from "../page";
+import { exportToCsv, fmtSAR } from "@/lib/utils";
 import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
 import { presetToRange } from "@/lib/date-presets";
 

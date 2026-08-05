@@ -7,6 +7,7 @@ import { User, NotificationPref } from '@/lib/models/user.model';
 import { restoreUser, softDeleteUser, updateUser } from '@/lib/firebase/user';
 import { allCountries } from 'country-telephone-data';
 import { deleteImage, uploadImage } from '@/lib/utils';
+import { SectionLabel } from '../SectionLabel';
 interface UsersEditCustomerProps {
   user: User;
   onDelete?: () => void;
@@ -338,12 +339,6 @@ function VerifiedBadge({ verified, label }: { verified: boolean; label: string }
         ? <span className='text-[8px] text-green-600 flex items-center'><Check className="h-3 w-3 " />{label} verified</span>
         : <span className='tetx-[8px] text-red-600 flex items-center'><X className="h-3 w-3 " />{label} not verified</span>}
     </div>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-3">{children}</p>
   );
 }
 

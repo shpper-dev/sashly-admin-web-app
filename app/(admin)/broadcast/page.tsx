@@ -1,4 +1,4 @@
-import BroadcastClient from "@/components/broadcast/BroadcastClient"
+import BroadcastClient from "@/app/(admin)/broadcast/components/BroadcastClient"
 
 export default async function BroadcastPage({
   searchParams,

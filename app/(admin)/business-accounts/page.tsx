@@ -14,17 +14,9 @@ import { Business } from "@/lib/models/business.model";
 import { deleteBusiness, duplicateBusiness, getBusinesses, regenerateBusinessJoinCode } from "@/lib/firebase/business";
 import { useToast } from "@/lib/providers/ToastProvider";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
+import { businessHeadings } from "@/constants/headings";
 
-const PAGE_SIZE = 10;
-
-const businessHeadings: TableHeading[] = [
-  { id: "name",      title: "BUSINESS"  },
-  { id: "join_code", title: "JOIN CODE" },
-  { id: "contact",   title: "CONTACT"   },
-  { id: "members",   title: "MEMBERS"   },
-  { id: "status",    title: "STATUS"    },
-  { id: "actions",   title: "ACTIONS"   },
-];
+const PAGE_SIZE = 50;
 
 const STATUS_FILTERS = ["All", "Active", "Inactive"] as const;
 

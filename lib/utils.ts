@@ -210,6 +210,17 @@ export function fmtTimestamp(ts: { seconds: number } | null | undefined) {
   });
 }
 
+// 
+export function fmtDate(ms?: number | null) {
+  if (!ms) return "—";
+
+  return new Date(ms).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 // number to date and time
 export function formatDateTime(ts: number): string {
   return new Intl.DateTimeFormat("en-GB", {

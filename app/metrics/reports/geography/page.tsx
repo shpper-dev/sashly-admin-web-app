@@ -7,14 +7,10 @@ import {
   Loader2, MapPin, ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
-import { exportToCsv } from "@/lib/utils";
-import { fmtSAR } from "../page";
+import { exportToCsv, fmtSAR, fmtTimestamp } from "@/lib/utils";
 import { presetToRange } from "@/lib/date-presets";
 import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
 
-
-const fmtDate = (ms: number | null) =>
-  ms ? new Date(ms).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
 export default function GeographyReportPage() {
   const [stats,       setStats]       = useState<AreaStats[]>([]);
@@ -61,8 +57,8 @@ export default function GeographyReportPage() {
         "Registered Customers":  a.registeredCustomers,
         "Active Customers":      a.activeCustomers,
         "Total Orders":          a.totalOrders,
-        "First Order":           fmtDate(a.firstOrderDate),
-        "Last Order":            fmtDate(a.lastOrderDate),
+        "First Order":           fmtTimestamp(a.firstOrderDate as any),
+        "Last Order":            fmtTimestamp(a.lastOrderDate as any),
         "Express Orders":        a.expressOrders,
         "Ordinary Orders":       a.ordinaryOrders,
         "Total Revenue (SAR)":   a.totalRevenue.toFixed(2),
@@ -170,8 +166,8 @@ export default function GeographyReportPage() {
                       <td className="px-5 py-3 text-slate-600 text-center">{row.registeredCustomers}</td>
                       <td className="px-5 py-3 text-indigo-600 font-semibold text-center">{row.activeCustomers}</td>
                       <td className="px-5 py-3 font-bold text-slate-800 text-center">{row.totalOrders}</td>
-                      <td className="px-5 py-3 text-slate-500">{fmtDate(row.firstOrderDate)}</td>
-                      <td className="px-5 py-3 text-slate-500">{fmtDate(row.lastOrderDate)}</td>
+                      <td className="px-5 py-3 text-slate-500">{fmtTimestamp(row.firstOrderDate as any)}</td>
+                      <td className="px-5 py-3 text-slate-500">{fmtTimestamp(row.lastOrderDate as any)}</td>
                       <td className="px-5 py-3 text-purple-600 font-semibold text-center">{row.expressOrders}</td>
                       <td className="px-5 py-3 text-slate-600 text-center">{row.ordinaryOrders}</td>
                       <td className="px-5 py-3 font-bold text-slate-800">{fmtSAR(row.totalRevenue)}</td>

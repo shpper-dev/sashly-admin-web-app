@@ -3,10 +3,6 @@ import Header from "@/components/Header";
 import Link from "next/link";
 import { Users, MapPin, ArrowRight, BarChart2 } from "lucide-react";
 
-// helpers
-export const fmtSAR = (n: number) =>
-  `SAR ${n.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
-
 const REPORTS = [
   {
     href:        "/metrics/reports/customers",

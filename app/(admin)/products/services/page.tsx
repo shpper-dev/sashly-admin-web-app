@@ -9,14 +9,7 @@ import { deleteService, getServices } from "@/lib/firebase/product";
 import { Service } from "@/lib/models/product.model";
 import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import { useToast } from "@/lib/providers/ToastProvider";
-
-const serviceHeadings: TableHeading[] = [
-  { id: "name", title: "NAME" },
-  { id: "description", title: "DESCRIPTION" },
-  { id: "price", title: "PRICE" },
-  { id: "searchTerms", title: "SEARCH TERMS" },
-  { id: "actions", title: "ACTIONS" },
-];
+import { serviceHeadings } from "@/constants/headings";
 
 export default function Services() {
   const [loading, setLoading] = useState(false);

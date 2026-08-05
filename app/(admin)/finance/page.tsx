@@ -14,22 +14,7 @@ import {
 import { getUsersDisplayInfo } from '@/lib/firebase/user';
 import { WalletTransaction } from '@/lib/models/wallet.model';
 import { useToast } from '@/lib/providers/ToastProvider';
-
-const payoutHeadings: TableHeading[] = [
-  { id: "user_name",        title: "User Name"         },
-  { id: "contact_details",  title: "Contact Details"   },
-  { id: "requested_amount", title: "Requested Amount"  },
-  { id: "actions",          title: "Actions"           },
-]
-
-const transactionHeadings: TableHeading[] = [
-  { id: "transaction_id",   title: "Transaction ID"    },
-  { id: "name",             title: "Name"              },
-  { id: "type",             title: "Type"              },
-  { id: "date",             title: "Date"              },
-  { id: "requested_amount", title: "Amount"            },
-  { id: "status",           title: "Status"            },
-]
+import { payoutHeadings, transactionHeadings } from '@/constants/headings';
 
 // Collapsed vs. expanded ("View all") heights for the scrollable table bodies
 const TABLE_BODY_HEIGHT_COLLAPSED = "max-h-[380px]";

@@ -12,6 +12,7 @@ import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
 import { getOrderById } from "@/lib/firebase/order";
 import { useOrderSearch } from "@/hooks/useOrderSearch";
+import { ORDER_STATUS_OPTIONS } from "@/constants/options_and_filters";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -38,20 +39,6 @@ const STATUS_CONFIG: Record<string, {label:string, style:string}> = {
   disputeResolved: {label:"Dispute resolved", style:"bg-green-50 text-green-500"},  
   cancelled:       {label:"Cancelled", style:"bg-red-50 text-red-600"},    
 };
-
-
-const OrderStatusOptions = [
-  { label: "Confirmed",         value: "confirmed"        },
-  { label: "Picked Up",         value: "pickedUp"         },
-  { label: "Sorting",           value: "sorting"          },
-  { label: "Detailing",         value: "detailing"        },
-  { label: "Cleaning",          value: "cleaning"         },
-  { label: "Ready To Deliver",  value: "readyToDeliver"   },
-  { label: "Delivered",         value: "delivered"        },
-  { label: "Disputed",          value: "disputed"         },
-  { label: "Dispute Resolved",  value: "disputeResolved"  },
-  { label: "Cancelled",         value: "cancelled"        },
-];
 
 export default function OrderAll({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize, autoOpenOrderId }: OrderTabProps) {
   const [statusFilter, setStatusFilter] = useState<string>(""); // "" = no filter applied
@@ -253,7 +240,7 @@ const {
         <div className="flex gap-3 items-center">
           <FilterButton
             label="Order Status"
-            options={OrderStatusOptions}
+            options={ORDER_STATUS_OPTIONS}
             defaultValue={statusFilter || undefined}
             onChange={setStatusFilter}
           />

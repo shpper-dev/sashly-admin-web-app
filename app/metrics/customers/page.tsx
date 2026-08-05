@@ -8,18 +8,17 @@ import {
 } from "@/lib/firebase/metrics-customers";
 import {
   Users, RefreshCcw, UserPlus, ShoppingBag,
-  TrendingUp, Search, Download, FileText,
-  ChevronDown, CalendarDays, Loader2, ArrowUpRight, Wallet,
+  TrendingUp, Search, Loader2, ArrowUpRight, Wallet,
 } from "lucide-react";
 
 import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
 import { presetToRange } from "@/lib/date-presets";
+import { fmtDate, fmtSAR, fmtTimestamp } from "@/lib/utils";
+import { StatCard } from "@/components/metrics/MetricStatCard";
 
 
 // Tab types 
-
 type TabType =  "New" | "Returning" | "No Recent Orders" | "Deactivated";
-
 const TABS: TabType[] = [ "New", "Returning", "No Recent Orders", "Deactivated"];
 
 
@@ -100,14 +99,6 @@ export default function MetricsCustomersPage() {
       else { setSortKey(key); setSortDir("desc"); }
     });
   };
-
-  // Label helpers
-
-  const fmtDate = (ms: number | null) =>
-    ms ? new Date(ms).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
-
-  const fmtSAR = (n: number) =>
-    `SAR ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   // Top spenders for distribution chart — already period-scoped, unaffected by the bugs above
   const topSpenders = useMemo(() => {
@@ -353,23 +344,6 @@ export default function MetricsCustomersPage() {
 }
 
 // Helpers
-
-function StatCard({ label, value, sub, icon, iconBg, trend, trendColor = "text-emerald-500" }: {
-  label: string; value: string; sub: string; icon: React.ReactNode;
-  iconBg: string; trend: string; trendColor?: string;
-}) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm relative overflow-hidden">
-      <div className={`absolute top-4 right-4 p-2 rounded-lg ${iconBg}`}>{icon}</div>
-      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pr-8">{label}</p>
-      <p className="text-xl font-bold text-slate-800 mt-1">{value}</p>
-      <p className="text-[10px] text-slate-400 mt-0.5">{sub}</p>
-      <p className={`text-[10px] font-semibold mt-1.5 flex items-center gap-1 ${trendColor}`}>
-        <ArrowUpRight size={11} /> {trend}
-      </p>
-    </div>
-  );
-}
 
 function SortableTh({ label, sortKey, current, dir, onSort }: {
   label: string;

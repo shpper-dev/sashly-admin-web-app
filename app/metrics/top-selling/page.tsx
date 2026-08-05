@@ -10,6 +10,7 @@ import {
 } from "@/lib/firebase/metrics-top-selling";
 import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
 import { presetToRange } from "@/lib/date-presets";
+import { StatCard } from "@/components/metrics/MetricStatCard";
 
 export default function MetricsTopSellingPage() {
   const [showAvgPrice, setShowAvgPrice] = useState(false);
@@ -96,25 +97,25 @@ export default function MetricsTopSellingPage() {
             {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-6">
               <StatCard
-                title="TOP ITEM"
+                label="TOP ITEM"
                 value={topItem?.name ?? "—"}
-                subValue={`${topItem?.totalQuantity.toLocaleString() ?? 0} units cleaned`}
+                sub={`${topItem?.totalQuantity.toLocaleString() ?? 0} units cleaned`}
                 trend={`${topItem?.totalOrders ?? 0} orders`}
                 icon={<Shirt className="text-cyan-500" />}
                 iconBg="bg-cyan-50"
               />
               <StatCard
-                title="TOP SERVICE"
+                label="TOP SERVICE"
                 value={topService?.serviceName ?? "—"}
-                subValue={`${topService?.totalPieces.toLocaleString() ?? 0} pieces`}
+                sub={`${topService?.totalPieces.toLocaleString() ?? 0} pieces`}
                 trend={`${services.length} services total`}
                 icon={<Zap className="text-blue-500" />}
                 iconBg="bg-blue-50"
               />
               <StatCard
-                title="TOP REVENUE ITEM"
+                label="TOP REVENUE ITEM"
                 value={topRevItem?.name ?? "—"}
-                subValue={`SAR ${topRevItem?.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 }) ?? "0.00"}`}
+                sub={`SAR ${topRevItem?.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 }) ?? "0.00"}`}
                 trend="highest earnings"
                 icon={<TrendingUp className="text-purple-500" />}
                 iconBg="bg-purple-50"
@@ -337,25 +338,6 @@ export default function MetricsTopSellingPage() {
 }
 
 // helpers
-
-function StatCard({ title, value, subValue, trend, icon, iconBg }: {
-  title: string; value: string; subValue: string; trend: string;
-  icon: React.ReactNode; iconBg: string;
-}) {
-  return (
-    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-      <div className={`absolute top-6 right-6 p-2 rounded-lg ${iconBg}`}>{icon}</div>
-      <p className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">{title}</p>
-      <h2 className="text-2xl font-bold text-slate-800 mt-2 truncate pr-10">{value}</h2>
-      <div className="flex items-center justify-between mt-1">
-        <p className="text-sm text-slate-500">{subValue}</p>
-        <span className="text-emerald-500 text-xs font-bold flex items-center gap-1">
-          <ArrowUpRight size={14} /> {trend}
-        </span>
-      </div>
-    </div>
-  );
-}
 
 function RankingList({ title, items, isCurrency }: {
   title: string;

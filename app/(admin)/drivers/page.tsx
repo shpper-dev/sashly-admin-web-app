@@ -11,18 +11,9 @@ import { Switch } from '@/components/ui/switch';
 import { getDrivers, updateDriver } from '@/lib/firebase/driver';
 import DriverInfoDialog from '@/components/drivers/DriverInfoDialog';
 import AddDriverDialog from '@/components/drivers/AddDriverDialog';
+import { driverHeadings } from '@/constants/headings';
 
-const PAGE_SIZE = 10;
-
-const driverHeadings: TableHeading[] = [
-  { id: "name",    title: "NAME"          },
-  { id: "contact", title: "CONTACT"       },
-  { id: "route",   title: "AREA"          },
-  { id: "active",  title: "ACTIVE"        },
-  { id: "online",  title: "ONLINE"        },
-  { id: "offer" ,  title: "OFFER RESPONSE"},
-  { id: "max_orders", title: "MAX ORDERS"  },
-];
+const PAGE_SIZE = 50;
 
 //  Filter definitions
 
