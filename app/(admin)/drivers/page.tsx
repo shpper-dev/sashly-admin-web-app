@@ -12,6 +12,7 @@ import { getDrivers, updateDriver } from '@/lib/firebase/driver';
 import DriverInfoDialog from '@/components/drivers/DriverInfoDialog';
 import AddDriverDialog from '@/components/drivers/AddDriverDialog';
 import { driverHeadings } from '@/constants/headings';
+import { EmptyState, ErrorState } from '@/components/states';
 
 const PAGE_SIZE = 50;
 
@@ -28,6 +29,7 @@ const CLIENT_FILTERS: { label: string; fn: (d: Driver) => boolean }[] = [
 export default function Drivers() {
   const [loading,      setLoading]      = useState(false);
   const [data,         setData]         = useState<Driver[]>([]);
+  const [fetchError,   setFetchError]   = useState(false);
   const [searchTerm,   setSearchTerm]   = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [activeClients, setActiveClients] = useState<string[]>([]);
@@ -38,12 +40,14 @@ export default function Drivers() {
 
   const fetchDrivers = async (showSkeleton = true) => {
   if (showSkeleton) setLoading(true);
+  setFetchError(false);
   try {
     const drivers = await getDrivers();
     setData(drivers);
   } catch (e) {
     console.error("Failed to fetch drivers:", e);
     showToast("Failed to load drivers.", "error");
+    setFetchError(true);
   } finally {
     if (showSkeleton) setLoading(false);
   }
@@ -310,6 +314,11 @@ useEffect(() => { fetchDrivers(); }, []);
         <section className="px-8 py-6">
           {loading ? (
             <TableSkeleton tableHeadings={driverHeadings} />
+            ) : fetchError ? (
+             <ErrorState
+               description="We couldn't load drivers. Check your connection and try again."
+               onRetry={() => fetchDrivers()}
+             />
           ) : (
             <table className="w-full">
               <thead className="bg-slate-100">
@@ -323,12 +332,18 @@ useEffect(() => { fetchDrivers(); }, []);
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
                 {paginated.length === 0 ? (
-                  <tr>
-                    <td colSpan={driverHeadings.length} className="px-6 py-12 text-center text-sm text-slate-500">
-                      No drivers found
-                    </td>
-                  </tr>
-                ) : (
+                   <tr>
+                     <td colSpan={driverHeadings.length} className="p-0">
+                       <EmptyState
+                         title="No drivers found"
+                         description={searchTerm || statusFilter !== "All" || activeClients.length > 0
+                           ? "Try adjusting your search or filters."
+                           : "Add your first driver to get started."}
+                         className="border-0 rounded-none"
+                       />
+                     </td>
+                   </tr>
+                 ) : (
                   paginated.map((row, index) => (
                     <tr key={row.id ?? index} className="hover:bg-slate-50 transition-colors">
                       {driverHeadings.map((h) => (

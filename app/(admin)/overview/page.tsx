@@ -10,6 +10,7 @@ import { getOverviewData, OverviewData, ServiceHealthOrder } from "@/lib/firebas
 import { fmtSAR, fmtTimestamp, formatDateTime } from "@/lib/utils";
 import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
 import { presetToRange } from "@/lib/date-presets";
+import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 
 // Status helpers 
 const STATUS_STYLES: Record<ServiceHealthOrder["status"], string> = {
@@ -65,17 +66,23 @@ const SECTION_COLORS = [
 export default function Overview() {
   const [data,         setData]         = useState<OverviewData | null>(null);
   const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState<string | null>(null);
   const [showSubtotal, setShowSubtotal] = useState(false);
   const [rangeLabel,   setRangeLabel]   = useState("Last 30 days");
-
+  const [lastRange, setLastRange] = useState<{ startMs: number; endMs: number } | null>(null);
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(async (startMs: number, endMs: number) => {
     setLoading(true);
+    setError(null);
+    setLastRange({ startMs, endMs });
     try {
       const result = await getOverviewData(startMs, endMs);
       setData(result);
       setExpandedCustomers(new Set());
+    } catch (e) {
+      console.error("Failed to load overview data:", e);
+      setError("We couldn't load the analytics for this period.");
     } finally {
       setLoading(false);
     }
@@ -137,10 +144,18 @@ export default function Overview() {
 
           {/*  Loading  */}
           {loading ? (
-            <div className="flex justify-center items-center py-32">
-              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-            </div>
-          ) : !data ? null : (
+             <LoadingState
+                  title="Loading analytics"
+                  description="Pulling together your revenue, orders, and service health…"
+                  className="h-[50vh] border-0 shadow-none bg-transparent"
+                />
+              ) : error ? (
+                <ErrorState
+                  description={error}
+                  onRetry={() => lastRange && fetchData(lastRange.startMs, lastRange.endMs)}
+                  className="h-[50vh]"
+                />
+              ) : !data ? null : (
             <>
               {/*  Stats row  */}
               <div className="grid grid-cols-8 gap-4">
@@ -244,7 +259,7 @@ export default function Overview() {
                   <div className="overflow-y-auto" style={{ height: "320px" }}>
                     {customerGroups.length === 0 ? (
                       <div className="flex items-center justify-center h-full text-sm text-slate-400">
-                        All orders are on track ✓
+                        All orders are on track 
                       </div>
                     ) : (
                       <table className="w-full">
@@ -319,9 +334,11 @@ export default function Overview() {
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col gap-5">
                   <h3 className="text-sm font-bold text-[#101828]">Top Selling Sections</h3>
                   {data.topSections.length === 0 ? (
-                    <div className="flex items-center justify-center py-8 text-sm text-slate-400">
-                      No data for this period
-                    </div>
+                    <EmptyState
+                       title="No sales data"
+                       description="No sections sold anything in this period."
+                       className="h-40 border-0"
+                     />
                   ) : (
                     <div className="flex flex-col gap-5">
                       {data.topSections.map((s, i) => (
@@ -372,10 +389,12 @@ export default function Overview() {
                 </div>
 
                 {data.dailyRevenue.length === 0 ? (
-                  <div className="px-6 py-12 text-center text-sm text-slate-400">
-                    No paid orders in this period
-                  </div>
-                ) : (() => {
+                   <EmptyState
+                     title="No paid orders"
+                     description="No paid orders were recorded in this period."
+                     className="h-52 border-0 rounded-t-none"
+                   />
+                 ) : (() => {
                   const revenueColumns = [
                     "Date", "Orders", "Revenue", "Cash", "Card", "Bank",
                     ...(showSubtotal ? ["Discounts", "Credits"] : []),
