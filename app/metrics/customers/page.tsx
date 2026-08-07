@@ -15,6 +15,7 @@ import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/Da
 import { presetToRange } from "@/lib/date-presets";
 import { fmtDate, fmtSAR, fmtTimestamp } from "@/lib/utils";
 import { StatCard } from "@/components/metrics/MetricStatCard";
+import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 
 
 // Tab types 
@@ -25,18 +26,25 @@ const TABS: TabType[] = [ "New", "Returning", "No Recent Orders", "Deactivated"]
 export default function MetricsCustomersPage() {
   const [stats,       setStats]       = useState<CustomerPageStats | null>(null);
   const [loading,     setLoading]     = useState(true);
+  const [fetchError,  setFetchError]  = useState(false);
   const [activeTab,   setActiveTab]   = useState<TabType>("New");
   const [search,      setSearch]      = useState("");
   const [sortKey,     setSortKey]     = useState<keyof CustomerMetric>("spendInRange");
   const [sortDir,     setSortDir]     = useState<"asc" | "desc">("desc");
   const [rangeLabel, setRangeLabel] = useState("Last 30 days");
+  const [lastRange, setLastRange] = useState(() => presetToRange("30d"));
 
   const [isPending, startTransition] = useTransition();
 
   const fetchStats = useCallback(async (startMs: number, endMs: number) => {
+    setFetchError(false);
+    setLastRange({ startMs, endMs });
     try {
       const data = await getCustomerMetrics(startMs, endMs);
       setStats(data);
+    } catch (e) {
+      console.error("Failed to load customer metrics:", e);
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -128,10 +136,12 @@ export default function MetricsCustomersPage() {
         </section>
 
         {loading ? (
-          <div className="flex justify-center items-center py-32">
-            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-          </div>
-        ) : stats && (
+          <LoadingState title="Loading customer metrics" className="h-[50vh] border-0 shadow-none" />
+         ) : fetchError ? (
+           <div className="px-8 py-10">
+             <ErrorState description="We couldn't load customer metrics." onRetry={() => fetchStats(lastRange.startMs, lastRange.endMs)} />
+           </div>
+         ) : stats && (
           <>
             {/* Stat Cards — 6 now: 5 original + Avg Spend/Active Customer (genuinely period-scoped) */}
             <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 px-8 mb-6">
@@ -199,7 +209,7 @@ export default function MetricsCustomersPage() {
                   <span className="text-[10px] text-slate-300 font-medium">by spend in period</span>
                 </div>
                 {topSpenders.length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-6">No orders in this period</p>
+                   <EmptyState title="No orders in this period" description="No customer spend recorded for this range." className="h-32 border-0" />
                 ) : (
                   <div className="space-y-4">
                     {topSpenders.map((c, i) => (
@@ -326,9 +336,13 @@ export default function MetricsCustomersPage() {
                         </tr>
                       )) : (
                         <tr>
-                          <td colSpan={11} className="px-6 py-12 text-center text-slate-400">
-                            No customers match this filter.
-                          </td>
+                           <td colSpan={11} className="p-0">
+                             <EmptyState
+                               title="No customers match this filter"
+                               description={search ? "Try a different search term." : "Try switching tabs or adjusting the date range."}
+                               className="border-0 rounded-none"
+                             />
+                           </td>
                         </tr>
                       )}
                     </tbody>

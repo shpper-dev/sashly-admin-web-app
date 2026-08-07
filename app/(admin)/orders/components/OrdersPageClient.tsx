@@ -41,6 +41,8 @@ const tabs: { key: TabKey; label: string }[] = [
 export interface OrderTabProps {
   orders: Order[];
   loading: boolean;
+  error?: boolean;
+  onRetry?: () => void;
   onStatusUpdate: () => void;
   currentPage: number;
   hasNextPage: boolean;
@@ -63,6 +65,8 @@ export default function OrdersPage() {
 
   const [tabStats, setTabStats]         = useState<OrderTabStats>(EMPTY_STATS);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const statsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const searchParams = useSearchParams();
@@ -108,6 +112,7 @@ export default function OrdersPage() {
     setLoading(true);
     setOrders([]);
     setTabStats(EMPTY_STATS);
+    setSubscriptionError(false);
 
     unsubscribeRef.current?.();
     cursorStack.current = [undefined];
@@ -128,7 +133,12 @@ export default function OrdersPage() {
         refetchStats(activeTab);
       },
       TAB_FILTERS[activeTab as LiveTabKey],
-      PAGE_SIZE
+      PAGE_SIZE,
+      undefined,
+      (err) => {
+        setLoading(false);
+        setSubscriptionError(true);
+      }
     );
 
     unsubscribeRef.current = unsubscribe;
@@ -136,7 +146,9 @@ export default function OrdersPage() {
       unsubscribe();
       if (statsDebounceRef.current) clearTimeout(statsDebounceRef.current);
     };
-  }, [activeTab, refetchStats]);
+  }, [activeTab, refetchStats, reloadKey]);
+
+  const retrySubscription = () => setReloadKey((k) => k + 1);
 
   const handleNext = async () => {
     if (!hasNextPage || !lastDoc || activeTab === "archive") return;
@@ -217,6 +229,7 @@ export default function OrdersPage() {
   const tabProps: OrderTabProps = {
     orders,
     loading,
+    error: subscriptionError,
     onStatusUpdate: () => {},
     currentPage,
     hasNextPage,
@@ -298,11 +311,11 @@ export default function OrdersPage() {
         </section>
 
         <section>
-          {activeTab === "detail"   && <OrderDetails  {...tabProps} />}
-          {activeTab === "pickups"  && <OrderPickups  {...tabProps} />}
-          {activeTab === "cleaning" && <OrderCleaning {...tabProps} />}
-          {activeTab === "ready"    && <OrderReady    {...tabProps} />}
-          {activeTab === "all"      && <OrderAll      {...tabProps} />}
+          {activeTab === "detail"   && <OrderDetails  {...tabProps} onRetry={retrySubscription} />}
+          {activeTab === "pickups"  && <OrderPickups  {...tabProps} onRetry={retrySubscription} />}
+          {activeTab === "cleaning" && <OrderCleaning {...tabProps} onRetry={retrySubscription} />}
+          {activeTab === "ready"    && <OrderReady    {...tabProps} onRetry={retrySubscription} />}
+          {activeTab === "all"      && <OrderAll      {...tabProps} onRetry={retrySubscription} />}
           {activeTab === "archive"  && <OrderArchive  autoOpenOrderId={autoOpenOrderId ?? null} />}
         </section>
       </main>

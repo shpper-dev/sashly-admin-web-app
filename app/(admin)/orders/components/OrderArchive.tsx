@@ -12,6 +12,7 @@ import FilterButton from "@/components/buttons/FilterDropdown";
 import { useOrderSearch } from "@/hooks/useOrderSearch";
 import { getOrderById } from "@/lib/firebase/order";
 import { exportToCsv } from "@/lib/utils";
+import { ErrorState } from "@/components/states";
 
 const archiveHeadings: TableHeading[] = [
   { id: "id",       title: "ID"      },
@@ -50,7 +51,7 @@ export default function OrderArchive({ autoOpenOrderId }: OrderArchiveProps) {
     ARCHIVE_BASE_FILTER;
 
   const {
-    search, setSearch, searchLoading,
+    search, setSearch, searchLoading,searchError,
     searchResults, searchPage, searchHasNextPage,
     onSearchNext, onSearchPrev, refresh,
   } = useOrderSearch({
@@ -185,6 +186,8 @@ export default function OrderArchive({ autoOpenOrderId }: OrderArchiveProps) {
 
       {searchLoading && rows.length === 0 ? (
         <TableSkeleton tableHeadings={archiveHeadings} />
+        ) : searchError ? (
+         <ErrorState description="Couldn't load the archive." onRetry={refresh} />
       ) : (
         <div className={searchLoading ? "opacity-50 pointer-events-none" : ""}>
           <OrderTable

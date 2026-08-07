@@ -273,7 +273,7 @@ export async function addItemToOrder(orderId: string, newItem: OrderItem) {
     totalPrice: total,
     updatedAt: Date.now()
   });
-  // await syncOrderToMeiliTemp(orderId);
+ 
 }
 
 // multiple items added together
@@ -305,7 +305,6 @@ export async function addItemsToOrder(orderId: string, newItems: OrderItem[]) {
     totalPrice: total,
     updatedAt: Date.now(),
   });
-  // await syncOrderToMeiliTemp(orderId);
 }
 
 
@@ -344,7 +343,7 @@ export async function updateOrderItem(orderId: string, itemIndex: number, update
     totalPrice: total,
     updatedAt: Date.now(),
   });
-  // await syncOrderToMeiliTemp(orderId);
+ 
 }
 
 // delete orderItem from an existing order
@@ -372,132 +371,10 @@ export async function deleteOrderItem(orderId: string, itemIndex: number) {
     totalPrice: total,
     updatedAt: Date.now(),
   });
-  // await syncOrderToMeiliTemp(orderId);
 
   
 }
 
-// // search orders
-// export async function searchOrders({
-//   filters,
-//   pageSize = 10,
-//   lastDoc,
-// }: {
-//   filters: Partial<SearchFilters>;
-//   pageSize?: number;
-//   lastDoc?: QueryDocumentSnapshot | null;
-// }) {
-//   const constraints: any[] = [];
-
-//   // Server-side filters
-//   if (filters.orderId) {
-//     constraints.push(where("id", "==", filters.orderId));
-//   }
-
-//   if (filters.payment === "paid") {
-//     constraints.push(where("isPaid", "==", true));
-//   }
-
-//   if (filters.payment === "unpaid") {
-//     constraints.push(where("isPaid", "==", false));
-//   }
-
-//   if (filters.email) {
-//     constraints.push(
-//       where("userEmail", "==", filters.email.trim().toLowerCase())
-//     );
-//   }
-
-//   if (filters.placedAfter) {
-//     constraints.push(
-//       where("createdAt", ">=", new Date(filters.placedAfter).getTime())
-//     );
-//   }
-
-//   if (filters.placedBefore) {
-//     constraints.push(
-//       where("createdAt", "<=", new Date(filters.placedBefore).getTime())
-//     );
-//   }
-
-//   if (filters.paidAfter) {
-//     constraints.push(
-//       where("paymentDate", ">=", new Date(filters.paidAfter).getTime())
-//     );
-//   }
-
-//   if (filters.paidBefore) {
-//     constraints.push(
-//       where("paymentDate", "<=", new Date(filters.paidBefore).getTime())
-//     );
-//   }
-
-//   const FETCH_SIZE = 50;
-
-//   let cursor = lastDoc;
-//   let hasMore = true;
-
-//   const results: Order[] = [];
-
-//   while (results.length < pageSize && hasMore) {
-//     const batchConstraints = [
-//       ...constraints,
-//       orderBy("createdAt", "desc"),
-//       ...(cursor ? [startAfter(cursor)] : []),
-//       limit(FETCH_SIZE),
-//     ];
-
-//     const q = query(collection(db, "orders"), ...batchConstraints);
-//     const snapshot = await getDocs(q);
-
-//     if (snapshot.empty) {
-//       hasMore = false;
-//       break;
-//     }
-
-//     const fetchedOrders = snapshot.docs.map(mapOrder);
-
-//     const filteredOrders = applyClientFilters(
-//       fetchedOrders,
-//       filters
-//     );
-
-//     results.push(...filteredOrders);
-
-//     cursor = snapshot.docs[snapshot.docs.length - 1];
-
-//     if (snapshot.docs.length < FETCH_SIZE) {
-//       hasMore = false;
-//     }
-//   }
-
-//   return {
-//     orders: results.slice(0, pageSize),
-//     lastDoc: cursor,
-//     hasMore,
-//   };
-// }
-
-// function applyClientFilters(orders: Order[], filters: Partial<SearchFilters>) {
-//   return orders.filter((order) => {
-//     if (filters.name && !order.userName.toLowerCase().includes(filters.name.toLowerCase())) {
-//       return false;
-//     }
-
-//     if (filters.phone && !order.userPhone.includes(filters.phone)) {
-//       return false;
-//     }
-
-//     if (filters.summary) {
-//       const match = order.items.some((item) =>
-//         item.name.toLowerCase().includes(filters.summary!.toLowerCase())
-//       );
-//       if (!match) return false;
-//     }
-
-//     return true;
-//   });
-// }
 
 
 function escapeFilterValue(v: string): string {
@@ -602,7 +479,8 @@ export function subscribeToOrders(
   callback: (orders: Order[], lastDoc: any) => void,
   filters: OrderFilters = {},
   pageSize = 20,
-  cursor?: any
+  cursor?: any,
+  onError?: (error: Error) => void
 ) {
   const constraints = buildOrderConstraints(filters, pageSize);
 
@@ -613,14 +491,17 @@ export function subscribeToOrders(
 
   const q = query(collection(db, "orders"), ...constraints);
 
-  return onSnapshot(q, (snapshot) => {
-    const rows = snapshot.docs.map(mapOrder);
-
-    callback(
-      rows,
-      snapshot.docs[snapshot.docs.length - 1] ?? null
-    );
-  });
+  return onSnapshot(
+   q,
+   (snapshot) => {
+     const rows = snapshot.docs.map(mapOrder);
+     callback(rows, snapshot.docs[snapshot.docs.length - 1] ?? null);
+   },
+   (error) => {
+     console.error("subscribeToOrders failed:", error);
+     onError?.(error);
+   }
+ );
 }
 
 // subscribe to orders by user ud

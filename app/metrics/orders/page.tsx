@@ -12,6 +12,7 @@ import { getOperationalOrderMetrics, OperationalOrderMetrics, ServiceTypeBreakdo
 import { presetToRange } from "@/lib/date-presets";
 import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
 import PurpleTopBar from "@/components/metrics/PurpleTopBar";
+import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 
 type ActiveChartMetric = "orders" | "completed" | "cancelled" | "firstOrders";
 
@@ -19,7 +20,7 @@ type ActiveChartMetric = "orders" | "completed" | "cancelled" | "firstOrders";
 
 export default function MetricsOrdersPage() {
   const [loading, setLoading] = useState(true);
-  
+  const [fetchError, setFetchError] = useState(false);
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const [chartMetric, setChartMetric] = useState<ActiveChartMetric>("orders");
   const [metrics, setMetrics] = useState<OperationalOrderMetrics | null>(null);
@@ -34,11 +35,13 @@ export default function MetricsOrdersPage() {
 
   const fetchData = async (startMs: number, endMs: number, currentPeriod: "daily" | "weekly" | "monthly") => {
     setLoading(true);
+    setFetchError(false);
     try {
       const data = await getOperationalOrderMetrics(startMs, endMs, currentPeriod);
       setMetrics(data);
     } catch (err) {
       console.error(err);
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -94,11 +97,12 @@ export default function MetricsOrdersPage() {
           </section>
 
           {loading ? (
-            <div className="flex flex-col justify-center items-center py-40 gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-              <p className="text-xs text-slate-400 font-medium tracking-wide">Compiling order operational logs...</p>
-            </div>
-          ) : (
+           <LoadingState title="Compiling order operational logs" className="h-[50vh] border-0 shadow-none" />
+           ) : fetchError ? (
+             <div className="px-8 py-10">
+               <ErrorState description="We couldn't load order metrics." onRetry={() => fetchData(currentRange.startMs, currentRange.endMs, period)} />
+             </div>
+           ) : (
             <div ref={printRef} className="flex flex-col gap-8 px-8 py-6 print:p-6 bg-white">
               
               {/* Hidden Print Header Details */}
@@ -222,8 +226,8 @@ export default function MetricsOrdersPage() {
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-slate-700">
                         {!metrics || metrics.reportRows.length === 0 ? (
-                          <tr><td colSpan={6} className="px-6 py-10 text-center text-slate-400 font-medium">No records matching selected criteria.</td></tr>
-                        ) : (
+                           <tr><td colSpan={6} className="p-0"><EmptyState title="No records" description="No records matching the selected criteria." className="border-0 rounded-none" /></td></tr>
+                         ) : (
                           metrics.reportRows.map((r) => (
                             <tr key={r.rawSortKey} className="hover:bg-slate-50/60 transition-colors">
                               <td className="px-6 py-3.5 font-semibold text-slate-600 truncate">{r.date}</td>
@@ -263,8 +267,8 @@ export default function MetricsOrdersPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
                       {!metrics || metrics.firstOrderRows.length === 0 ? (
-                        <tr><td colSpan={5} className="px-6 py-10 text-center text-slate-400 font-medium">No initial client conversion runs located within this execution layer.</td></tr>
-                      ) : (
+                         <tr><td colSpan={5} className="p-0"><EmptyState title="No new customer conversions" description="No first-time orders were placed in this period." className="border-0 rounded-none" /></td></tr>
+                       ) : (
                         metrics.firstOrderRows.map((f) => (
                           <tr key={f.orderId} className="hover:bg-slate-50/60 transition-colors">
                             <td className="px-6 py-3.5 align-middle">

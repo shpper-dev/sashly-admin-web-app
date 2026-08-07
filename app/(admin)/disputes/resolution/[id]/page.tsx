@@ -4,6 +4,7 @@ import InReviewAndAdminDialog from "@/components/disputes/InReviewAndAdminDialog
 import StatusBadge from "@/components/disputes/StatusBadge";
 import OrderChat from "@/components/orders/OrderChat";
 import { SectionLabel } from "@/components/SectionLabel";
+import { EmptyState } from "@/components/states";
 import { useAdminName } from "@/hooks/useAdminName";
 import { getCurrentUser } from "@/lib/firebase/admin.auth";
 import { applyDriverPenaltyFn, rejectDisputeFn, resolveDisputeFn, subscribeToDispute } from "@/lib/firebase/dispute";
@@ -34,6 +35,7 @@ export default function DisputesResolutionDetails({
 
   const [dispute, setDispute]   = useState<DisputeWithDriverActions | null>(null);
   const [order, setOrder]       = useState<Order | null>(null);
+  const [disputeLoaded, setDisputeLoaded] = useState(false);
   const [auditNote, setAuditNote] = useState("");
   const [creditAmount, setCreditAmount]   = useState("");
   const [penaltyAmount, setPenaltyAmount] = useState("");
@@ -46,6 +48,7 @@ export default function DisputesResolutionDetails({
   useEffect(() => {
     const unsubscribe = subscribeToDispute(id, (updated: any) => {
       setDispute(updated);
+      setDisputeLoaded(true);
       if (updated?.orderId && !order) {
         getOrderById(updated.orderId)
           .then(setOrder)
@@ -134,12 +137,24 @@ export default function DisputesResolutionDetails({
   const driverActions  = dispute?.driverActions ?? [];
 
   // Loading state
-  if (!dispute) {
+  if (!disputeLoaded) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#F8FAFC]">
         <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
       </div>
     );
+  }
+
+  if (!dispute) {
+     return (
+       <div className="h-screen flex items-center justify-center bg-[#F8FAFC]">
+         <EmptyState
+           title="Dispute not found"
+           description="This dispute may have been removed, or the link is incorrect."
+           className="border-0"
+         />
+       </div>
+     );
   }
 
   return (

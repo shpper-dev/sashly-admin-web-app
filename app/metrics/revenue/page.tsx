@@ -20,6 +20,7 @@ import { presetToRange } from "@/lib/date-presets";
 import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
 import { fmtSAR } from "@/lib/utils";
 import PurpleTopBar from "@/components/metrics/PurpleTopBar";
+import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 
 type ChartMetric = "grossRevenue" | "realizedRevenue" | "cancelledRevenue" | "netProfit" | "refundedAmount";
 
@@ -35,6 +36,7 @@ const ISSUE_TYPE_LABELS: Record<string, string> = {
 
 export default function MetricsRevenuePage() {
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const [chartMetric, setChartMetric] = useState<ChartMetric>("realizedRevenue");
   const [metrics, setMetrics] = useState<RevenueMetrics | null>(null);
@@ -44,11 +46,13 @@ export default function MetricsRevenuePage() {
 
   const fetchData = async (startMs: number, endMs: number, currentPeriod: "daily" | "weekly" | "monthly") => {
     setLoading(true);
+    setFetchError(false);
     try {
       const data = await getRevenueMetrics(startMs, endMs, currentPeriod);
       setMetrics(data);
     } catch (err) {
       console.error(err);
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -97,12 +101,16 @@ export default function MetricsRevenuePage() {
             <DateRangePicker defaultPreset="30d" onRangeChange={handleRangeChange} />
           </section>
 
-          {loading || !metrics || !netProfit ? (
-            <div className="flex flex-col justify-center items-center py-40 gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-              <p className="text-xs text-slate-400 font-medium tracking-wide">Compiling revenue ledger...</p>
-            </div>
-          ) : (
+          {loading ? (
+             <LoadingState title="Compiling revenue ledger" className="h-[50vh] border-0 shadow-none" />
+           ) : fetchError || !metrics || !netProfit ? (
+             <div className="px-8 py-10">
+               <ErrorState
+                 description="We couldn't load revenue metrics."
+                 onRetry={() => fetchData(currentRange.startMs, currentRange.endMs, period)}
+               />
+             </div>
+           ) : (
             <div className="flex flex-col gap-8 px-8 py-6">
 
               {/* Row 1: Core revenue KPIs */}
@@ -203,7 +211,7 @@ export default function MetricsRevenuePage() {
                     <div className="bg-rose-50 p-1 rounded-md"><AlertTriangle className="h-3.5 w-3.5 text-rose-500" /></div>
                   </div>
                   {metrics.refunds.byIssueType.length === 0 ? (
-                    <p className="text-xs text-slate-400 py-2">No refunds or credits in this period.</p>
+                    <EmptyState title="No refunds or credits" description="Nothing to show for this period." className="h-24 border-0" />
                   ) : (
                     <div className="flex flex-col gap-2">
                       {metrics.refunds.byIssueType.map((r) => (
@@ -391,7 +399,7 @@ export default function MetricsRevenuePage() {
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-slate-700">
                         {metrics.reportRows.length === 0 ? (
-                          <tr><td colSpan={8} className="px-6 py-10 text-center text-slate-400 font-medium">No records for this period.</td></tr>
+                          <tr><td colSpan={8} className="p-0"><EmptyState title="No revenue records" description="No records for this period." className="border-0 rounded-none" /></td></tr>
                         ) : (
                           metrics.reportRows.map((r) => (
                             <tr key={r.rawSortKey} className="hover:bg-slate-50/60 transition-colors">

@@ -15,6 +15,7 @@ import { deleteBusiness, duplicateBusiness, getBusinesses, regenerateBusinessJoi
 import { useToast } from "@/lib/providers/ToastProvider";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { businessHeadings } from "@/constants/headings";
+import { EmptyState, ErrorState } from "@/components/states";
 
 const PAGE_SIZE = 50;
 
@@ -23,6 +24,7 @@ const STATUS_FILTERS = ["All", "Active", "Inactive"] as const;
 export default function BusinessAccounts() {
   const [businesses,    setBusinesses]    = useState<Business[]>([]);
   const [loading,       setLoading]       = useState(true);
+  const [fetchError,    setFetchError]    = useState(false);
   const [searchTerm,    setSearchTerm]    = useState("");
   const [statusFilter,  setStatusFilter]  = useState<string>("All");
   const [currentPage,   setCurrentPage]   = useState(1);
@@ -34,10 +36,12 @@ export default function BusinessAccounts() {
   const loadBusinesses = async () => {
     try {
       setLoading(true);
+      setFetchError(false);
       setBusinesses(await getBusinesses());
     } catch (e) {
       console.error("Failed to load businesses", e);
       showToast("Failed to load businesses", "error");
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -292,6 +296,8 @@ export default function BusinessAccounts() {
         <section className="px-8 py-6">
           {loading ? (
             <TableSkeleton tableHeadings={businessHeadings} />
+            ) : fetchError ? (
+             <ErrorState description="Couldn't load business accounts." onRetry={loadBusinesses} />
           ) : (
             <table className="w-full">
               <thead className="bg-slate-100">
@@ -306,9 +312,15 @@ export default function BusinessAccounts() {
               <tbody className="bg-white divide-y divide-slate-200">
                 {paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={businessHeadings.length} className="px-5 py-12 text-center text-sm text-slate-500">
-                      No businesses found
-                    </td>
+                   <td colSpan={businessHeadings.length} className="p-0">
+                     <EmptyState
+                       title="No businesses found"
+                       description={searchTerm || statusFilter !== "All"
+                         ? "Try adjusting your search or filters."
+                         : "Add your first business partner to get started."}
+                       className="border-0 rounded-none"
+                     />
+                   </td>
                   </tr>
                 ) : (
                   paginated.map((row, i) => (

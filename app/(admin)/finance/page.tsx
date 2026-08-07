@@ -15,6 +15,7 @@ import { getUsersDisplayInfo } from '@/lib/firebase/user';
 import { WalletTransaction } from '@/lib/models/wallet.model';
 import { useToast } from '@/lib/providers/ToastProvider';
 import { payoutHeadings, transactionHeadings } from '@/constants/headings';
+import { TableEmptyState, TableLoadingState } from '@/components/states';
 
 // Collapsed vs. expanded ("View all") heights for the scrollable table bodies
 const TABLE_BODY_HEIGHT_COLLAPSED = "max-h-[380px]";
@@ -371,32 +372,28 @@ export default function Finance() {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {loadingPayouts ? (
-                    <tr>
-                      <td colSpan={payoutHeadings.length} className="px-6 py-10 text-center text-sm text-slate-400">
-                        Loading requests…
-                      </td>
-                    </tr>
+                 {loadingPayouts ? (
+                    <TableLoadingState colSpan={payoutHeadings.length} title="Loading requests" />
                   ) : activeRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={payoutHeadings.length} className="px-6 py-10 text-center text-sm text-slate-400">
-                        No requests
-                      </td>
-                    </tr>
+                    <TableEmptyState
+                      colSpan={payoutHeadings.length}
+                      title={activeTab === "payout" ? "No withdrawal requests" : "No top-up requests"}
+                      description="New requests will appear here as they come in."
+                    />
                   ) : (
-                    activeRows.map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-50 transition-colors">
-                        {payoutHeadings.map((heading) => (
-                          <td key={heading.id} className="px-6 py-4 text-sm">
-                            {renderPayoutCell(heading, row)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {activeRows.map((row) => (
+                        <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                          {payoutHeadings.map((heading) => (
+                            <td key={heading.id} className="px-6 py-4 text-sm">
+                              {renderPayoutCell(heading, row)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
                   )}
-                </tbody>
-              </table>
+                  </table>
             </div>
 
             {/* Footer */}
@@ -435,7 +432,7 @@ export default function Finance() {
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  {/* <tbody className="divide-y divide-slate-100 bg-white">
                     {loadingTransactions ? (
                       <tr>
                         <td colSpan={transactionHeadings.length} className="px-6 py-10 text-center text-sm text-slate-400">
@@ -459,7 +456,28 @@ export default function Finance() {
                         </tr>
                       ))
                     )}
-                  </tbody>
+                  </tbody> */}
+                   {loadingTransactions ? (
+                     <TableLoadingState colSpan={transactionHeadings.length} title="Loading transactions" />
+                   ) : transactionRows.length === 0 ? (
+                     <TableEmptyState
+                       colSpan={transactionHeadings.length}
+                       title={activeTab === "payout" ? "No withdrawal requests" : "No top-up requests"}
+                       description="New transactions will appear here as they come in."
+                     />
+                   ) : (
+                     <tbody className="divide-y divide-slate-100 bg-white">
+                       {transactionRows.map((row) => (
+                         <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                           {transactionHeadings.map((heading) => (
+                             <td key={heading.id} className="px-6 py-4 text-sm">
+                               {renderTransactionCell(heading, row)}
+                             </td>
+                           ))}
+                         </tr>
+                       ))}
+                     </tbody>
+                   )}
                 </table>
               </div>
 

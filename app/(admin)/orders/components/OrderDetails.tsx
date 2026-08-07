@@ -12,6 +12,7 @@ import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
 import { getOrderById } from "@/lib/firebase/order";
 import { useOrderSearch } from "@/hooks/useOrderSearch";
+import { ErrorState } from "@/components/states";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -36,12 +37,12 @@ const STATUS_STYLE: Record<string, string> = {
 const DETAIL_TAB_FILTER =
   "(latestStatus.status = pickedUp OR latestStatus.status = sorting OR latestStatus.status = detailing) AND isCancelled != true AND isDelivered != true";
 
-export default function OrderDetails({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize, autoOpenOrderId }: OrderTabProps) {
+export default function OrderDetails({ orders, loading, error, onRetry, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize, autoOpenOrderId }: OrderTabProps) {
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
 
   const {
-    search, setSearch, isSearchActive, searchLoading,
+    search, setSearch, isSearchActive, searchLoading,searchError,
     searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,refresh
   } = useOrderSearch({ filter: DETAIL_TAB_FILTER, pageSize });
 
@@ -66,6 +67,8 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
   const filtered = isSearchActive ? searchResults : orders;
 
   const effectiveLoading = isSearchActive ? searchLoading : loading;
+  const effectiveError = isSearchActive ? searchError : error;
+  const effectiveOnRetry = isSearchActive ? refresh : onRetry;
   const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
   const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
   const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
@@ -222,6 +225,11 @@ export default function OrderDetails({ orders, loading, onStatusUpdate, currentP
 
       {effectiveLoading && filtered.length === 0 ? (
         <TableSkeleton tableHeadings={orderHeadings} />
+        ) : effectiveError ? (
+         <ErrorState
+           description={isSearchActive ? "Search failed. Please try again." : "Couldn't load orders."}
+           onRetry={effectiveOnRetry}
+         />
       ) : (
         <div className={effectiveLoading ? "opacity-50 pointer-events-none" : ""}>
           <OrderTable

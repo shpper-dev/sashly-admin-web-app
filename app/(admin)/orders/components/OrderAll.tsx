@@ -13,6 +13,7 @@ import { useToast } from "@/lib/providers/ToastProvider";
 import { getOrderById } from "@/lib/firebase/order";
 import { useOrderSearch } from "@/hooks/useOrderSearch";
 import { ORDER_STATUS_OPTIONS } from "@/constants/options_and_filters";
+import { ErrorState } from "@/components/states";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -40,7 +41,7 @@ const STATUS_CONFIG: Record<string, {label:string, style:string}> = {
   cancelled:       {label:"Cancelled", style:"bg-red-50 text-red-600"},    
 };
 
-export default function OrderAll({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize, autoOpenOrderId }: OrderTabProps) {
+export default function OrderAll({ orders, loading, error, onRetry, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize, autoOpenOrderId }: OrderTabProps) {
   const [statusFilter, setStatusFilter] = useState<string>(""); // "" = no filter applied
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
@@ -55,6 +56,7 @@ const {
   setSearch,
   isSearchActive,
   searchLoading,
+  searchError,
   searchResults,
   searchPage,
   searchHasNextPage,
@@ -84,6 +86,8 @@ const {
 
   const filtered = isSearchActive ? searchResults: orders;
   const effectiveLoading = isSearchActive ? searchLoading : loading;
+  const effectiveError = isSearchActive ? searchError : error;
+  const effectiveOnRetry = isSearchActive ? refresh : onRetry;
   const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
   const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
   const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
@@ -135,14 +139,6 @@ const {
          />
           
         );
-
-      // case "customer":
-      //   return (
-      //     <div className="flex flex-col gap-0.5">
-      //       <span className="text-xs font-semibold text-slate-800">{row.userName}</span>
-      //       <span className="text-[10px] text-slate-400">{row.userPhone}</span>
-      //     </div>
-      //   );
 
       case "order_details": {
         const visibleCount = 3;
@@ -250,6 +246,11 @@ const {
 
       {effectiveLoading && filtered.length === 0 ? (
         <TableSkeleton tableHeadings={orderHeadings} />
+        ) : effectiveError ? (
+        <ErrorState
+          description={isSearchActive ? "Search failed. Please try again." : "Couldn't load orders."}
+          onRetry={effectiveOnRetry}
+        />
       ) : (
         <div className={effectiveLoading ? "opacity-50 pointer-events-none" : ""}>
           <OrderTable

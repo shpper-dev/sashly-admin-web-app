@@ -6,6 +6,8 @@ import { Printer, Pencil, TextSearch, Pencil as PencilIcon, X, SquarePen, Chevro
 import { useState } from "react"
 import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog"
 import OrderInvoiceDialog from "@/components/orders/OrderInvoiceDialog"
+import { fmtDate } from "@/lib/utils"
+import { EmptyState, LoadingState } from "../states"
 
 const filterLabels: Record<keyof SearchFilters, string> = {
   name: "Name",
@@ -39,11 +41,6 @@ const STATUS_CONFIG: Record<string, { label: string; color: string;}> = {
   cancelled:      { label: "Cancelled",        color: "text-red-600 bg-red-50"    },
 };
 
-function fmt(ts?: number | null) {
-  if (!ts) return "—";
-  return new Date(ts).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-}
-
 interface SearchResultsProps {
   orders: Order[]
   activeFilters: SearchFilters
@@ -55,6 +52,7 @@ interface SearchResultsProps {
   currentPage: number
   hasNext: boolean
   onPageChange: (page: number) => void
+  loading?: boolean
 }
 
 const PAGE_SIZE = 10
@@ -93,8 +91,8 @@ function renderCellContent(
       return (
         <div className="flex flex-col">
           <span className="text-slate-400">PLACED</span>
-          <span className="text-slate-700">{fmt(order.createdAt)}</span>
-          <span className="text-blue-500 font-semibold">READY {fmt(order.expectedDeliveryTime)}</span>
+          <span className="text-slate-700">{fmtDate(order.createdAt)}</span>
+          <span className="text-blue-500 font-semibold">READY {fmtDate(order.expectedDeliveryTime)}</span>
         </div>
       )
 
@@ -155,9 +153,7 @@ function renderCellContent(
           <span className="font-semibold text-slate-800">SAR {order.totalPrice}</span>
           <span className="text-[11px] text-slate-500">{order.isPaid ? "Paid" : "Unpaid"}</span>
           <div className="flex gap-2">
-            {/* Print invoice — reuses the same OrderInvoiceDialog the full
-                order details view uses in its footer, so the printed
-                receipt is identical either way it's triggered. */}
+            {/* Print invoice  */}
             <OrderInvoiceDialog order={order}>
               <button
                 className="p-1 rounded bg-slate-100 hover:bg-slate-200 transition-colors"
@@ -167,9 +163,7 @@ function renderCellContent(
               </button>
             </OrderInvoiceDialog>
 
-            {/* Edit — opens the full order details dialog, same as clicking
-                an order's ID from any of the tab tables. onStatusUpdate
-                re-fetches this page of search results after a change. */}
+            {/* Edit */}
             <OrderDetailsDialog order={order} onStatusUpdate={onStatusUpdate}>
               <button
                 className="p-1 rounded bg-slate-100 hover:bg-slate-200 transition-colors"
@@ -187,11 +181,9 @@ function renderCellContent(
   }
 }
 
-export default function SearchResults({ orders, activeFilters, onEditSearch, onRemoveFilter, onStatusUpdate, currentPage, hasNext, onPageChange }: SearchResultsProps) {
+export default function SearchResults({ orders, activeFilters, onEditSearch, onRemoveFilter, onStatusUpdate, currentPage, hasNext, onPageChange, loading }: SearchResultsProps) {
   const paginatedOrders = orders;
 
-  // Keyed by order id — same pattern as the order tab components — so
-  // expanding one row's item list doesn't affect any other row's.
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const toggleItems = (id: string) => {
     setExpandedItems((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -242,17 +234,15 @@ export default function SearchResults({ orders, activeFilters, onEditSearch, onR
       </div>
 
       {/* No results state */}
-      {orders.length === 0 ? (
-        <div className='flex flex-col items-center justify-center gap-2 py-10 bg-white rounded-xl border border-slate-200'>
-          <div className='bg-red-50 rounded-full p-5'>
-            <TextSearch className='h-5 w-5 text-red-400' strokeWidth={3} />
-          </div>
-          <h2 className='text-slate-900 text-sm font-semibold'>No Results Found</h2>
-          <p className='text-slate-500 text-xs text-center max-w-xs'>
-            No orders matched your search criteria. Try adjusting your filters and searching again.
-          </p>
-        </div>
-      ) : (
+      {loading ? (
+         <LoadingState title="Searching orders" description="Applying your filters…" />
+       ) : orders.length === 0 ? (
+         <EmptyState
+           icon={TextSearch}
+           title="No results found"
+           description="No orders matched your search criteria. Try adjusting your filters and searching again."
+         />
+       ) : (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
           <table className="w-full text-xs border-collapse">
 
@@ -296,7 +286,7 @@ export default function SearchResults({ orders, activeFilters, onEditSearch, onR
                     <div className="flex items-center  gap-1">
                       <button
                         onClick={() => onPageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
+                        disabled={currentPage === 1 || loading}
                         className="p-1.5 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-slate-600"
                       >
                         <ChevronLeft size={14} />
@@ -308,7 +298,7 @@ export default function SearchResults({ orders, activeFilters, onEditSearch, onR
 
                       <button
                         onClick={() => onPageChange(currentPage + 1)}
-                        disabled={!hasNext}
+                        disabled={!hasNext || loading}
                         className="p-1.5 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-slate-600"
                       >
                         <ChevronRight size={14} />

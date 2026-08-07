@@ -11,20 +11,24 @@ import ConfirmActionDialog from '@/components/ConfirmActionDialog';
 import { useToast } from '@/lib/providers/ToastProvider';
 import { deleteImage } from '@/lib/utils';
 import { categoryHeadings } from '@/constants/headings';
+import { EmptyState, ErrorState } from '@/components/states';
 
 export default function Categories() {
   const [loading , setLoading] = useState<boolean>(false);
+  const [fetchError, setFetchError] = useState(false);
   const [data, setData] = useState<Category[]>([]);
   const {showToast} = useToast();
 
   const fetchCategories = async () => {
   setLoading(true);
+  setFetchError(false);
   try {
     const rows = await getCategories();
     setData(rows);
   } catch (e) {
     console.error("Failed to fetch categories:", e);
     showToast(`Failed to load categories`, "error");
+    setFetchError(true);
   } finally {
     setLoading(false);
   }
@@ -141,6 +145,8 @@ export default function Categories() {
               <div className='px-8 pb-6'>
                    {loading ? (
                     <TableSkeleton tableHeadings={categoryHeadings} />
+                    ) : fetchError ? (
+                     <ErrorState description="Couldn't load categories." onRetry={fetchCategories} />
                    ):(
                     <table className='w-full'>
                         <thead className='bg-slate-100'>
@@ -153,10 +159,13 @@ export default function Categories() {
                         <tbody className="bg-white divide-y divide-slate-200">
                             {data.length === 0 ? (
                                     <tr>
-                                        <td colSpan={categoryHeadings.length}
-                                        className="px-6 py-12 text-center text-sm text-slate-500 ">
-                                            No data available
-                                        </td>
+                                         <td colSpan={categoryHeadings.length} className="p-0">
+                                             <EmptyState
+                                               title="No categories yet"
+                                               description="Add your first category to organize your products."
+                                               className="border-0 rounded-none"
+                                             />
+                                         </td>
                                     </tr>
                                 ):(
                                     data.map((row,index)=>(

@@ -10,19 +10,24 @@ import { Service } from "@/lib/models/product.model";
 import ConfirmActionDialog from "@/components/ConfirmActionDialog";
 import { useToast } from "@/lib/providers/ToastProvider";
 import { serviceHeadings } from "@/constants/headings";
+import { EmptyState, ErrorState } from "@/components/states";
 
 export default function Services() {
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const [data, setData] = useState<Service[]>([]);
   const {showToast} = useToast();
 
   const fetchServices = async () => {
     setLoading(true);
+    setFetchError(false);
     try {
       const rows = await getServices();
       setData(rows);
     } catch (e) {
       console.error("Failed to fetch services:", e);
+      showToast("Failed to load services.", "error");
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -62,11 +67,6 @@ export default function Services() {
             ))}
           </div>
         );
-
-      // case "createdAt":
-      //   return (
-      //     <span>{new Date(row.createdAt).toLocaleDateString()}</span>
-      //   );
 
       case "actions":
         return (
@@ -126,6 +126,8 @@ export default function Services() {
           <div className="px-8 pb-6">
             {loading ? (
               <TableSkeleton tableHeadings={serviceHeadings} />
+              ) : fetchError ? (
+               <ErrorState description="Couldn't load services." onRetry={fetchServices} />
             ) : (
               <table className="w-full">
                 <thead className="bg-slate-100">
@@ -144,12 +146,13 @@ export default function Services() {
                 <tbody className="bg-white divide-y divide-slate-200">
                   {data.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={serviceHeadings.length}
-                        className="px-6 py-12 text-center text-sm text-slate-500"
-                      >
-                        No services available
-                      </td>
+                      <td colSpan={serviceHeadings.length} className="p-0">
+                         <EmptyState
+                           title="No services available"
+                           description="Add your first service to get started."
+                           className="border-0 rounded-none"
+                         />
+                       </td>
                     </tr>
                   ) : (
                     data.map((row, index) => (

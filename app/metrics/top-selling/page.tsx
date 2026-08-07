@@ -11,6 +11,7 @@ import {
 import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
 import { presetToRange } from "@/lib/date-presets";
 import { StatCard } from "@/components/metrics/MetricStatCard";
+import { LoadingState, ErrorState, EmptyState } from "@/components/states";
 
 export default function MetricsTopSellingPage() {
   const [showAvgPrice, setShowAvgPrice] = useState(false);
@@ -19,16 +20,23 @@ export default function MetricsTopSellingPage() {
   const [services,     setServices]     = useState<ServiceStats[]>([]);
   const [matrix,       setMatrix]       = useState<MatrixData>(new Map());
   const [loading,      setLoading]      = useState(true);
+  const [fetchError,   setFetchError]   = useState(false);
   const [searchQuery,  setSearchQuery]  = useState("");
   const [rangeLabel,   setRangeLabel]   = useState("Last 30 days");
+  const [lastRange, setLastRange] = useState(() => presetToRange("30d"));
 
   const fetchData = useCallback(async (startMs: number, endMs: number) => {
     setLoading(true);
+    setFetchError(false);
+    setLastRange({ startMs, endMs });
     try {
       const result = await getTopSellingStats(startMs, endMs);
       setProducts(result.products);
       setServices(result.services);
       setMatrix(result.matrix);
+    } catch (e) {
+      console.error("Failed to load top-selling stats:", e);
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -89,10 +97,12 @@ export default function MetricsTopSellingPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-          </div>
-        ) : (
+          <LoadingState title="Loading top-selling data" className="h-[50vh] border-0 shadow-none" />
+         ) : fetchError ? (
+           <div className="px-6 py-10">
+             <ErrorState description="We couldn't load top-selling data." onRetry={() => fetchData(lastRange.startMs, lastRange.endMs)} />
+           </div>
+         ) : (
           <>
             {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-6">
@@ -132,7 +142,7 @@ export default function MetricsTopSellingPage() {
                   </span>
                 </div>
                 {matrixItems.length === 0 ? (
-                  <div className="text-center py-10 text-slate-400 text-sm">No data available</div>
+                  <EmptyState title="No matrix data" description="No items or services recorded for this period." className="h-40 border-0" />
                 ) : (
                   <div className="space-y-5">
                     {matrixItems.map((item) => {
@@ -325,7 +335,13 @@ export default function MetricsTopSellingPage() {
                   </table>
 
                   {(activeMode === "items" ? filteredProducts : filteredServices).length === 0 && (
-                    <div className="text-center py-10 text-slate-400 text-sm">No results found</div>
+                    <div className="py-4">
+                       <EmptyState
+                         title="No results found"
+                         description={searchQuery ? "Try a different search term." : "No data for this period."}
+                         className="h-40 border-0"
+                       />
+                     </div>
                   )}
                 </div>
               </div>

@@ -15,6 +15,7 @@ interface UseOrderSearchResult {
   setSearch: (v: string) => void;
   isSearchActive: boolean;
   searchLoading: boolean;
+  searchError: boolean;
   searchResults: Order[];
   searchPage: number;
   searchHasNextPage: boolean;
@@ -37,6 +38,7 @@ export function useOrderSearch({
 
   const [results, setResults] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [hasNextPage, setHasNextPage] = useState(false);
 
   // used only to force a re-fetch
@@ -67,13 +69,12 @@ export function useOrderSearch({
     if (!isSearchActive) {
       setResults([]);
       setHasNextPage(false);
+      setSearchError(false);
       return;
     }
-
     let cancelled = false;
-
     setLoading(true);
-
+    setSearchError(false);
     const offset = (page - 1) * pageSize;
 
     const combinedFilter = [filter, extraFilter]
@@ -114,6 +115,7 @@ export function useOrderSearch({
 
         setResults([]);
         setHasNextPage(false);
+        setSearchError(true);
       })
       .finally(() => {
         if (!cancelled) {
@@ -140,6 +142,7 @@ export function useOrderSearch({
 
     isSearchActive,
     searchLoading: loading,
+    searchError,
     searchResults: results,
 
     searchPage: page,

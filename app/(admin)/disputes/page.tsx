@@ -3,6 +3,7 @@ import StatusBadge from "@/components/disputes/StatusBadge";
 import WaitTimeBadge from "@/components/disputes/WaitTimeBadge";
 import Header from "@/components/Header";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
+import { EmptyState, ErrorState } from "@/components/states";
 import { ISSUE_TYPE_CONFIG } from "@/constants/configs";
 import { QUEUE_HEADINGS, RESOLVED_HEADINGS } from "@/constants/headings";
 import { useAdminName } from "@/hooks/useAdminName";
@@ -112,17 +113,29 @@ export default function Disputes() {
   const [loadingResolved, setLoadingResolved] = useState(true);
   const [activeDisputes,   setActiveDisputes]   = useState<Dispute[]>([]);
   const [resolvedDisputes, setResolvedDisputes] = useState<Dispute[]>([]);
+  const [activeError,   setActiveError]   = useState(false);
+  const [resolvedError, setResolvedError] = useState(false);
+  const loadActive = () => {
+  setLoadingActive(true);
+  setActiveError(false);
+  getDisputes(true)
+    .then(setActiveDisputes)
+    .catch((e) => { console.error(e); setActiveError(true); })
+    .finally(() => setLoadingActive(false));
+};
 
-  useEffect(() => {
-    getDisputes(true)
-      .then(setActiveDisputes)
-      .catch(console.error)
-      .finally(() => setLoadingActive(false));
-
+  const loadResolved = () => {
+    setLoadingResolved(true);
+    setResolvedError(false);
     getDisputes(false)
       .then(setResolvedDisputes)
-      .catch(console.error)
+      .catch((e) => { console.error(e); setResolvedError(true); })
       .finally(() => setLoadingResolved(false));
+  };
+
+  useEffect(() => {
+      loadActive();
+      loadResolved();
   }, []);
 
   return (
@@ -140,7 +153,7 @@ export default function Disputes() {
                   Review and resolve open disputes to maintain marketplace trust
                 </p>
               </div>
-              <div className="flex gap-2 items-center">
+              {/* <div className="flex gap-2 items-center">
                 <button className="flex gap-2 items-center bg-white border border-slate-200 px-3 py-2 text-sm rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
                   <ListFilter className="h-3.5 w-3.5" />
                   Filter
@@ -149,10 +162,12 @@ export default function Disputes() {
                   <Download className="h-3.5 w-3.5" />
                   Export Report
                 </button>
-              </div>
+              </div> */}
             </div>
             {loadingActive ? (
               <TableSkeleton tableHeadings={QUEUE_HEADINGS} />
+              ) : activeError ? (
+              <ErrorState description="Couldn't load the resolution queue." onRetry={loadActive} />
             ) : (
               <DisputeTable
                 headings={QUEUE_HEADINGS}
@@ -173,6 +188,8 @@ export default function Disputes() {
             </div>
             {loadingResolved ? (
               <TableSkeleton tableHeadings={RESOLVED_HEADINGS} />
+              ) : resolvedError ? (
+               <ErrorState description="Couldn't load the resolved queue." onRetry={loadResolved} />
             ) : (
               <DisputeTable
                 headings={RESOLVED_HEADINGS}
@@ -306,11 +323,8 @@ function DisputeTable({
         <tbody className="divide-y divide-slate-100">
           {paginated.length === 0 ? (
             <tr>
-              <td
-                colSpan={headings.length}
-                className="px-6 py-12 text-center text-sm text-slate-400"
-              >
-                No disputes found
+              <td colSpan={headings.length} className="p-0">
+                 <EmptyState title="No disputes" description="Nothing here right now." className="border-0 rounded-none" />
               </td>
             </tr>
           ) : (

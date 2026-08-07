@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { Order, OrderStatuses } from "@/lib/models/order.model";
 import { TableHeading } from "@/lib/types";
 import { OrderTabProps } from "./OrdersPageClient";
-import FilterButton from "@/components/buttons/FilterDropdown";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { OrderSearchInput } from "@/components/orders/OrderSearchInput";
 import { OrderTable } from "@/components/orders/OrderTable";
@@ -14,6 +13,7 @@ import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
 import { useOrderSearch } from "@/hooks/useOrderSearch";
 import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog";
+import { ErrorState } from "@/components/states";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -31,18 +31,21 @@ const orderHeadings: TableHeading[] = [
 
 const READY_TAB_FILTER = "latestStatus.status = readyToDeliver";
 
-export default function OrderReady({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
+export default function OrderReady({ orders, loading, error, onRetry, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
 
   const {
-    search, setSearch, isSearchActive, searchLoading,
+    search, setSearch, isSearchActive, searchLoading, searchError,
     searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,refresh
   } = useOrderSearch({ filter: READY_TAB_FILTER, pageSize });
 
   const filtered = isSearchActive ? searchResults : orders;
 
   const effectiveLoading = isSearchActive ? searchLoading : loading;
+  const effectiveError = isSearchActive ? searchError : error;
+  const effectiveOnRetry = isSearchActive ? refresh : onRetry;
+
   const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
   const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
   const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
@@ -231,7 +234,12 @@ export default function OrderReady({ orders, loading, onStatusUpdate, currentPag
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>
 
-      {effectiveLoading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
+      {effectiveLoading ? <TableSkeleton tableHeadings={orderHeadings} /> : effectiveError ? (
+         <ErrorState
+           description={isSearchActive ? "Search failed. Please try again." : "Couldn't load orders."}
+           onRetry={effectiveOnRetry}
+         />
+       ) : (
         <OrderTable
           headings={orderHeadings}
           rows={filtered}

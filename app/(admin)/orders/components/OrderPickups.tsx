@@ -14,6 +14,7 @@ import CustomerCell from "@/components/orders/CustomerCell";
 import { useToast } from "@/lib/providers/ToastProvider";
 import { useOrderSearch } from "@/hooks/useOrderSearch";
 import OrderDetailsDialog from "@/components/orders/OrderDetailsDialog";
+import { ErrorState } from "@/components/states";
 
 const orderHeadings: TableHeading[] = [
   { id: "id",           title: "ID"           },
@@ -32,18 +33,20 @@ const orderHeadings: TableHeading[] = [
 
 const PICKUPS_TAB_FILTER = "latestStatus.status = confirmed AND hasDriver = true";
 
-export default function OrderPickups({ orders, loading, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
+export default function OrderPickups({ orders, loading, error, onRetry, onStatusUpdate, currentPage, hasNextPage, onNext, onPrev, pageSize }: OrderTabProps) {
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
 
   const {
-    search, setSearch, isSearchActive, searchLoading,
+    search, setSearch, isSearchActive, searchLoading,searchError,
     searchResults, searchPage, searchHasNextPage, onSearchNext, onSearchPrev,refresh
   } = useOrderSearch({ filter: PICKUPS_TAB_FILTER, pageSize });
 
   const filtered = isSearchActive ? searchResults : orders;
 
   const effectiveLoading = isSearchActive ? searchLoading : loading;
+  const effectiveError = isSearchActive ? searchError : error;
+  const effectiveOnRetry = isSearchActive ? refresh : onRetry;
   const effectiveCurrentPage = isSearchActive ? searchPage : currentPage;
   const effectiveHasNextPage = isSearchActive ? searchHasNextPage : hasNextPage;
   const effectiveOnNext = isSearchActive ? onSearchNext : onNext;
@@ -207,7 +210,12 @@ export default function OrderPickups({ orders, loading, onStatusUpdate, currentP
         <OrderSearchInput value={search} onChange={setSearch} />
       </div>
 
-      {effectiveLoading ? <TableSkeleton tableHeadings={orderHeadings} /> : (
+      {effectiveLoading ? <TableSkeleton tableHeadings={orderHeadings} /> : effectiveError ? (
+        <ErrorState
+          description={isSearchActive ? "Search failed. Please try again." : "Couldn't load orders."}
+          onRetry={effectiveOnRetry}
+        />
+      ) : (
         <OrderTable
           headings={orderHeadings}
           rows={filtered}
