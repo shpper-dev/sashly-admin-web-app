@@ -8,6 +8,7 @@ import { db } from "@/lib/firebase/config";
 import { Item, Service } from "@/lib/models/product.model";
 import { useToast } from "@/lib/providers/ToastProvider";
 import ItemDialog from "@/components/products/ItemDialog";
+import { EmptyState, ErrorState } from "@/components/states";
 
 export default function Products() {
   const [activeFilter, setActiveFilter] = useState("All Items");
@@ -15,16 +16,26 @@ export default function Products() {
   const [items, setItems]               = useState<Item[]>([]);
   const [services, setServices]         = useState<Service[]>([]);
   const [loading, setLoading]           = useState(true);
+  const [fetchError, setFetchError]     = useState(false);
   const {showToast}                     = useToast();
 
   // fetch items + services 
   const fetchData = async () =>{
+    setFetchError(false);
+    try {
     const [itemsSnap, servicesSnap] = await Promise.all([
           getDocs(collection(db, "Items")),
           getDocs(collection(db, "Services")),
         ]);
         setItems(itemsSnap.docs.map((d) => d.data() as Item));
         setServices(servicesSnap.docs.map((d) => d.data() as Service));
+    } catch (e) {
+     console.error("Failed to fetch products data:", e);
+     showToast("Failed to load products.", "error");
+     setFetchError(true);
+     throw e; // preserve existing catch in initalMount below
+   }
+    
   }
   useEffect(() => {
       setLoading(true);
@@ -124,6 +135,8 @@ export default function Products() {
               <Loader2 size={18} className="animate-spin" />
               <span className="text-sm font-medium">Loading products…</span>
             </div>
+          ) : fetchError ? (
+             <ErrorState description="Couldn't load products." onRetry={fetchData} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-4">
               {filteredItems.length > 0 ? (
@@ -131,9 +144,15 @@ export default function Products() {
                   <ProductCard key={item.id} product={item} onDeleted={() => { showToast(`Deleted ${item.name}`, "error"); fetchData(); }} onUpdated={ fetchData} />
                 ))
               ) : (
-                <div className="col-span-full text-center py-10 text-slate-400 font-semibold">
-                  No products found.
-                </div>
+                <div className="col-span-full">
+                   <EmptyState
+                     title="No products found"
+                     description={searchTerm || activeFilter !== "All Items"
+                       ? "Try adjusting your search or filter."
+                       : "Add your first product to get started."}
+                     className="border-0"
+                   />
+                 </div>
               )}
             </div>
           )}

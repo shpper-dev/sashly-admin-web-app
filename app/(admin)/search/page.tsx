@@ -1,8 +1,7 @@
 "use client";
-
 import FilterDropdown from '@/components/buttons/FilterDropdown'
 import Header from '@/components/Header'
-import { SearchIcon, TextSearch } from 'lucide-react'
+import { Loader2, SearchIcon, TextSearch } from 'lucide-react'
 import React, { useState } from 'react'
 import {
   Select,
@@ -15,6 +14,7 @@ import SearchResults from '@/components/search/SearchResults';
 import { Order } from '@/lib/models/order.model';
 import { searchOrders } from '@/lib/firebase/order';
 import { ORDER_STATUS_OPTIONS } from '@/constants/options_and_filters';
+import { ErrorState } from '@/components/states';
 
 export interface SearchFilters {
   name: string;
@@ -72,6 +72,9 @@ export default function SearchPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasNext, setHasNext] = useState(true);
 
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState(false);
+
   const handleChange = (field: keyof SearchFilters, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
@@ -87,6 +90,9 @@ export default function SearchPage() {
 
  
   const runSearch = async (f: SearchFilters, page: number, status: string, type: string) => {
+    setSearching(true);
+    setSearchError(false);
+    try {
     const res = await searchOrders({
       filters: f,
       pageSize: PAGE_SIZE,
@@ -97,6 +103,12 @@ export default function SearchPage() {
 
     setResults(res.orders);
     setHasNext(res.hasMore);
+    } catch (e) {
+      console.error("Search failed:", e);
+      setSearchError(true);
+    } finally {
+      setSearching(false);
+    }
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -298,10 +310,13 @@ export default function SearchPage() {
                 <div className='flex items-center gap-3 px-5 py-3 bg-slate-50 border-t border-slate-200'>
                   <button
                     type="submit"
-                    className='px-4 py-2 flex items-center gap-1.5 bg-[#02d0ff] hover:bg-[#02b8e6] text-white text-xs rounded-lg font-medium transition-colors shadow-sm'
+                    disabled={searching}
+                    className='px-4 py-2 flex items-center gap-1.5 bg-[#02d0ff] hover:bg-[#02b8e6] text-white text-xs rounded-lg font-medium transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed'
                   >
-                    <SearchIcon className='h-3.5 w-3.5' />
-                    Search
+                    {searching
+                       ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                       : <SearchIcon className="h-3.5 w-3.5" />}
+                     {searching ? "Searching…" : "Search"}
                   </button>
                   <button
                     type="button"
@@ -325,6 +340,14 @@ export default function SearchPage() {
             </section>
           </>
         ) : (
+          searchError ? (
+            <section className="px-8">
+              <ErrorState
+                description="We couldn't run that search. Please try again."
+                onRetry={() => runSearch(activeFilters, currentPage, orderStatus, orderType)}
+              />
+            </section>
+          ) : (
           <SearchResults
             orders={results}
             activeFilters={activeFilters}
@@ -334,7 +357,9 @@ export default function SearchPage() {
             currentPage={currentPage}
             hasNext={hasNext}
             onPageChange={handlePageChange}
+            loading={searching}
           />
+          )
         )}
       </main>
     </div>

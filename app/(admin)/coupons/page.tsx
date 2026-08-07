@@ -13,6 +13,7 @@ import DeleteCouponDialog from "@/components/coupons/DeleteCouponDialog";
 import { useToast } from "@/lib/providers/ToastProvider";
 import CouponDialog from "@/components/coupons/CouponDialog";
 import { couponHeadings } from "@/constants/headings";
+import { EmptyState, ErrorState } from "@/components/states";
 
 export default function CouponsPage() {
   const [loading, setLoading]           = useState(false);
@@ -20,6 +21,7 @@ export default function CouponsPage() {
   const [search, setSearch]             = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "expired">("all");
   const [currentPage, setCurrentPage]   = useState(1);
+  const [fetchError, setFetchError]     = useState(false);
 
   // toast
   const {showToast} = useToast();
@@ -27,9 +29,14 @@ export default function CouponsPage() {
 
   const fetchCoupons = async () => {
     setLoading(true);
+    setFetchError(false);
     try {
       const rows = await getCoupons();
       setCoupons(rows);
+    } catch (e) {
+       console.error("Failed to fetch coupons:", e);
+       showToast("Failed to load coupons.", "error");
+       setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -215,6 +222,8 @@ export default function CouponsPage() {
         <section className="px-8 pb-8">
           {loading ? (
             <TableSkeleton tableHeadings={couponHeadings} />
+            ) : fetchError ? (
+             <ErrorState description="Couldn't load your coupons." onRetry={fetchCoupons} />
           ) : (
             <table className="w-full">
               <thead className="bg-slate-100">
@@ -229,9 +238,15 @@ export default function CouponsPage() {
               <tbody className="bg-white divide-y divide-slate-200">
                 {paginatedCoupons.length === 0 ? (
                   <tr>
-                    <td colSpan={couponHeadings.length} className="px-6 py-12 text-center text-sm text-slate-400">
-                      No coupons found
-                    </td>
+                     <td colSpan={couponHeadings.length} className="p-0">
+                       <EmptyState
+                         title="No coupons found"
+                         description={search || statusFilter !== "all"
+                           ? "Try adjusting your search or filter."
+                           : "Create your first coupon to get started."}
+                         className="border-0 rounded-none"
+                       />
+                     </td>
                   </tr>
                 ) : (
                   paginatedCoupons.map((row) => (

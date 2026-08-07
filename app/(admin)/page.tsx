@@ -12,10 +12,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import WaitTimeBadge from "@/components/disputes/WaitTimeBadge";
 import { ISSUE_TYPE_CONFIG } from "@/constants/configs";
+import { EmptyState, ErrorState } from "@/components/states";
 
 
 export default function Dashboard() {
   const [loading, setLoading] = useState<boolean>(false);
+  const [fetchError, setFetchError] = useState(false);
   const [data, setData] = useState<any[]>([]);
   const [activeOrdersCount, setActiveOrdersCount] = useState<number>(0);
   const [disputesCount, setDisputesCount] = useState<number>(0);
@@ -24,10 +26,10 @@ export default function Dashboard() {
     orderCount: 0, totalValue: 0, totalDiscounts: 0, totalCreditsUsed: 0,
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
       setLoading(true);
-
+      setFetchError(false);
+     try {
       const [activeCount, openDisputes, ordersToday, pendingPayouts] = await Promise.all([
         getActiveOrdersCount(),
         getDisputes(true),
@@ -53,11 +55,15 @@ export default function Dashboard() {
         }));
 
       setData(highPriority);
-      setLoading(false);
+       } catch (e) {
+        console.error("Failed to load dashboard data:", e);
+        setFetchError(true);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    fetchData();
-  }, []);
+   useEffect(() => { fetchData(); }, [fetchData]);
 
   const renderCellContent = (heading: TableHeading, value: any) => {
     if (value === null || value === undefined || value === "") {
@@ -107,6 +113,15 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-50">
       <Header />
       <main className="flex flex-col pt-12 pl-60 min-h-screen gap-3">
+         {fetchError ? (
+         <section className="p-6">
+           <ErrorState
+             description="We couldn't load the dashboard. Please try refreshing the page."
+             onRetry={fetchData}
+           />
+         </section>
+       ) : (
+       <>
         {/* Stats Cards */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
           <StatsCard title="ACTIVE ORDERS" value={activeOrdersCount} change={0} />
@@ -163,8 +178,12 @@ export default function Dashboard() {
                   <tbody className="bg-white divide-y divide-slate-200">
                     {data.length === 0 ? (
                       <tr>
-                        <td colSpan={dashboardHeadings.length} className="px-6 py-12 text-center text-sm text-slate-500">
-                          No high priority disputes
+                        <td colSpan={dashboardHeadings.length} className="p-0">
+                          <EmptyState
+                            title="No high priority disputes"
+                            description="Nothing urgent needs review right now."
+                            className="border-0 rounded-none"
+                          />
                         </td>
                       </tr>
                     ) : (
@@ -220,6 +239,8 @@ export default function Dashboard() {
             </div>
           </div>
         </section>
+         </>
+        )}
       </main>
     </div>
   );

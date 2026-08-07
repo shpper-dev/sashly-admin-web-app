@@ -10,6 +10,7 @@ import { getUsers, getUsersNextPage, UserFilters, getUsersCount, searchUsers } f
 import { User } from '@/lib/models/user.model';
 import { useToast } from '@/lib/providers/ToastProvider';
 import { userHeadings } from '@/constants/headings';
+import { EmptyState, ErrorState } from '@/components/states';
 const PAGE_SIZE = 50;
 
 // Server-side filter
@@ -29,6 +30,7 @@ const CLIENT_FILTERS: { label: string; field: keyof User; value: any }[] = [
 
 export default function Users() {
   const [loading, setLoading]           = useState(false);
+  const [fetchError, setFetchError]     = useState(false);
   const [data, setData]                 = useState<any[]>([]);
   const [searchTerm, setSearchTerm]     = useState("");
   const [serverFilter, setServerFilter] = useState<UserFilters>({});
@@ -43,7 +45,7 @@ export default function Users() {
 
   // Search
   const [debouncedTerm, setDebouncedTerm]   = useState("");
-  const [searchResults, setSearchResults]   = useState<User[] | null>(null); // null = not in search mode
+  const [searchResults, setSearchResults]   = useState<User[] | null>(null); 
   const [searching, setSearching]           = useState(false);
   // Search-mode (in-memory) pagination — separate page counter from browse mode,
   // since searchResults is a bounded array, not a cursor stream.
@@ -135,6 +137,7 @@ useEffect(() => {
   //  Data fetching (browse mode only)
  const fetchPage = async (cursor: any, filtersToUse: UserFilters = serverFilter) => {
   setLoading(true);
+  setFetchError(false);
   try {
     const result = cursor
       ? await getUsersNextPage(cursor, PAGE_SIZE, filtersToUse)
@@ -144,6 +147,8 @@ useEffect(() => {
     setHasNextPage(result.rows.length === PAGE_SIZE);
   } catch (e) {
     console.error("Failed to fetch users:", e);
+    showToast("Failed to load users.", "error");
+    setFetchError(true);
   } finally {
     setLoading(false);
   }
@@ -355,6 +360,8 @@ useEffect(() => {
         <section className="px-8 py-6">
           {pageIsLoading ? (
             <TableSkeleton tableHeadings={userHeadings} />
+            ) : (!isSearchMode && fetchError) ? (
+             <ErrorState description="Couldn't load users." onRetry={refetch} />
           ) : (
             <table className="w-full">
               <thead className="bg-slate-100">
@@ -369,9 +376,19 @@ useEffect(() => {
               <tbody className="bg-white divide-y divide-slate-200">
                 {filteredData.length === 0 ? (
                   <tr>
-                    <td colSpan={userHeadings.length} className="px-6 py-12 text-center text-sm text-slate-500">
-                      No users found
-                    </td>
+                    <td colSpan={userHeadings.length} className="p-0">
+                     <EmptyState
+                       title="No users found"
+                       description={
+                         isSearchMode
+                           ? `No users match "${debouncedTerm}".`
+                           : activeClients.length > 0
+                           ? "Try adjusting your filters."
+                           : "No users to display."
+                       }
+                       className="border-0 rounded-none"
+                     />
+                   </td>
                   </tr>
                 ) : (
                   filteredData.map((row, index) => (

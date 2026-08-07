@@ -2,27 +2,30 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Header from "@/components/Header";
 import { getGeographyReport, AreaStats } from "@/lib/firebase/metrics-geography";
-import {
-  CalendarDays, ChevronDown, Download, FileText,
-  Loader2, MapPin, ArrowLeft,
-} from "lucide-react";
+import { Download,  MapPin, ArrowLeft,} from "lucide-react";
 import Link from "next/link";
-import { exportToCsv, fmtSAR, fmtTimestamp } from "@/lib/utils";
+import { exportToCsv, fmtDate, fmtSAR, fmtTimestamp } from "@/lib/utils";
 import { presetToRange } from "@/lib/date-presets";
 import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
+import { LoadingState, ErrorState, EmptyState } from "@/components/states";
 
 
 export default function GeographyReportPage() {
   const [stats,       setStats]       = useState<AreaStats[]>([]);
   const [loading,     setLoading]     = useState(true);
-
+  const [fetchError,  setFetchError]  = useState(false);
   const [rangeLabel, setRangeLabel] = useState("Last 30 days");
-
+  const [lastRange, setLastRange] = useState(() => presetToRange("30d"));
 
   const fetchData = useCallback(async (startMs: number, endMs: number) => {
     setLoading(true);
+    setFetchError(false);
+    setLastRange({ startMs, endMs });
     try {
       setStats(await getGeographyReport(startMs, endMs));
+    } catch (e) {
+      console.error("Failed to load geography report:", e);
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -116,10 +119,12 @@ export default function GeographyReportPage() {
         </section>
 
         {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-          </div>
-        ) : (
+          <LoadingState title="Loading geography report" className="h-[50vh] border-0 shadow-none" />
+         ) : fetchError ? (
+           <div className="px-8 py-10">
+             <ErrorState description="We couldn't load the geography report." onRetry={() => fetchData(lastRange.startMs, lastRange.endMs)} />
+           </div>
+         ) : (
           <>
             {/* Summary stat cards */}
             <section className="grid grid-cols-3 md:grid-cols-6 gap-4 px-8 py-5 border-b border-slate-100">
@@ -153,7 +158,9 @@ export default function GeographyReportPage() {
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {stats.length === 0 ? (
                     <tr>
-                      <td colSpan={12} className="px-5 py-12 text-center text-slate-400">No data for this period.</td>
+                      <td colSpan={12} className="p-0">
+                         <EmptyState title="No areas found" description="No orders recorded for this period." className="border-0 rounded-none" />
+                       </td>
                     </tr>
                   ) : stats.map((row, i) => (
                     <tr key={`${row.city}::${row.area}`} className="hover:bg-slate-50 transition-colors">
@@ -166,8 +173,8 @@ export default function GeographyReportPage() {
                       <td className="px-5 py-3 text-slate-600 text-center">{row.registeredCustomers}</td>
                       <td className="px-5 py-3 text-indigo-600 font-semibold text-center">{row.activeCustomers}</td>
                       <td className="px-5 py-3 font-bold text-slate-800 text-center">{row.totalOrders}</td>
-                      <td className="px-5 py-3 text-slate-500">{fmtTimestamp(row.firstOrderDate as any)}</td>
-                      <td className="px-5 py-3 text-slate-500">{fmtTimestamp(row.lastOrderDate as any)}</td>
+                      <td className="px-5 py-3 text-slate-500">{fmtDate(row.firstOrderDate as any)}</td>
+                      <td className="px-5 py-3 text-slate-500">{fmtDate(row.lastOrderDate as any)}</td>
                       <td className="px-5 py-3 text-purple-600 font-semibold text-center">{row.expressOrders}</td>
                       <td className="px-5 py-3 text-slate-600 text-center">{row.ordinaryOrders}</td>
                       <td className="px-5 py-3 font-bold text-slate-800">{fmtSAR(row.totalRevenue)}</td>

@@ -12,21 +12,25 @@ import BannerDialog from "@/components/banners/BannerDialog";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { TableHeading } from "@/lib/types";
 import { bannerHeadings } from "@/constants/headings";
+import { EmptyState, ErrorState } from "@/components/states";
 
 export default function Banners() {
   const [banners,    setBanners]    = useState<Banner[]>([]);
   const [loading,    setLoading]    = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const { showToast } = useToast();
 
   const fetchBanners = async () => {
     setLoading(true);
+    setFetchError(false);
     try {
       const data = await getBanners();
       setBanners(data);
     } catch (e) {
       console.error("Failed to fetch banners:", e);
       showToast("Failed to load banners", "error");
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -206,6 +210,8 @@ export default function Banners() {
         <section className="px-8 py-6">
           {loading ? (
             <TableSkeleton tableHeadings={bannerHeadings} />
+            ) : fetchError ? (
+             <ErrorState description="Couldn't load banners." onRetry={fetchBanners} />
           ) : (
             <table className="w-full">
               <thead className="bg-slate-100">
@@ -220,9 +226,13 @@ export default function Banners() {
               <tbody className="bg-white divide-y divide-slate-200">
                 {banners.length === 0 ? (
                   <tr>
-                    <td colSpan={bannerHeadings.length} className="px-6 py-12 text-center text-sm text-slate-400">
-                      No banners yet — add your first one above
-                    </td>
+                    <td colSpan={bannerHeadings.length} className="p-0">
+                     <EmptyState
+                       title="No banners yet"
+                       description="Add your first banner to start showing promotions in the app."
+                       className="border-0 rounded-none"
+                     />
+                   </td>
                   </tr>
                 ) : (
                   banners.map((row, i) => (

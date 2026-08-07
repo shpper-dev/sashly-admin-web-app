@@ -12,18 +12,26 @@ import Link from "next/link";
 import { exportToCsv, fmtSAR } from "@/lib/utils";
 import DateRangePicker, { DateRangeChangePayload } from "@/components/metrics/DateRangePicker";
 import { presetToRange } from "@/lib/date-presets";
+import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 
 export default function CustomerReportPage() {
   const [rows,        setRows]        = useState<CustomerReportRow[]>([]);
   const [loading,     setLoading]     = useState(true);
+  const [fetchError,  setFetchError]  = useState(false);
   const [search,      setSearch]      = useState("");
   const [rangeLabel, setRangeLabel] = useState("Last 30 days");
+  const [lastRange, setLastRange] = useState(() => presetToRange("30d"));
 
   const fetchData = useCallback(async (startMs: number, endMs: number) => {
     setLoading(true);
+    setFetchError(false);
+    setLastRange({ startMs, endMs });
     try {
       const stats = await getCustomerMetrics(startMs, endMs);
       setRows(buildCustomerReportRows(stats.customers));
+      } catch (e) {
+      console.error("Failed to load customer report:", e);
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -104,10 +112,12 @@ export default function CustomerReportPage() {
         </section>
 
         {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-          </div>
-        ) : (
+          <LoadingState title="Loading customer report" className="h-[50vh] border-0 shadow-none" />
+         ) : fetchError ? (
+           <div className="px-8 py-10">
+             <ErrorState description="We couldn't load the customer report." onRetry={() => fetchData(lastRange.startMs, lastRange.endMs)} />
+           </div>
+         ) : (
           <section className="overflow-x-auto overflow-y-auto max-h-[70vh]">
             <table className="w-full text-xs border-collapse">
               <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
@@ -122,7 +132,13 @@ export default function CustomerReportPage() {
               <tbody className="divide-y divide-slate-100 bg-white">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={12} className="px-5 py-12 text-center text-slate-400">No data for this period.</td>
+                    <td colSpan={12} className="p-0">
+                       <EmptyState
+                         title="No customers found"
+                         description={search ? "Try a different search term." : "No customer data for this period."}
+                         className="border-0 rounded-none"
+                       />
+                     </td>
                   </tr>
                 ) : filtered.map((r, i) => (
                   <tr key={i} className="hover:bg-slate-50 transition-colors">

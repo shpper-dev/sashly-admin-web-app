@@ -1,11 +1,13 @@
 "use client";
 import Header from "@/components/Header";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
+import { EmptyState, ErrorState } from "@/components/states";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { broadcastHeadings } from "@/constants/headings";
 import { getAdminById } from "@/lib/firebase/admin.auth";
 import {  getBroadcasts, sendBroadcast } from "@/lib/firebase/broadcast";
 import { Broadcast, BroadcastPriority, BroadcastTarget } from "@/lib/models/broadcast.model";
+import { useToast } from "@/lib/providers/ToastProvider";
 import { TableHeading } from "@/lib/types";
 import { fmtDate } from "@/lib/utils";
 import {
@@ -45,15 +47,22 @@ export default function BroadcastClient({ initialTarget }: BroadcastClientProps)
   const [sending,      setSending]      = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [history,      setHistory]      = useState<Broadcast[]>([]);
+  const [historyError, setHistoryError] = useState(false);
   const [page,         setPage]         = useState(1);
+
+  const {showToast} = useToast();
 
  
 
   const loadHistory = async () => {
     setHistoryLoading(true);
+    setHistoryError(false);
     try {
       const records = await getBroadcasts(100);
       setHistory(records);
+    } catch (e) {
+      console.error("Failed to load broadcast history:", e);
+      setHistoryError(true);
     } finally {
       setHistoryLoading(false);
     }
@@ -68,7 +77,7 @@ export default function BroadcastClient({ initialTarget }: BroadcastClientProps)
 
   const handleSend = async () => {
     if (!heading.trim() || !body.trim()) {
-      alert("Please fill in both the heading and body before sending.");
+      showToast("Please fill in both the heading and body before sending.", "error");
       return;
     }
     setSending(true);
@@ -80,7 +89,7 @@ export default function BroadcastClient({ initialTarget }: BroadcastClientProps)
       await loadHistory(); 
     } catch (err) {
       console.error("Broadcast failed:", err);
-      alert("Failed to send broadcast. Please try again.");
+      showToast("Failed to send broadcast. Please try again.", "error");
     } finally {
       setSending(false);
     }
@@ -267,6 +276,8 @@ export default function BroadcastClient({ initialTarget }: BroadcastClientProps)
 
           {historyLoading ? (
             <TableSkeleton tableHeadings={broadcastHeadings} />
+            ) : historyError ? (
+             <ErrorState description="Couldn't load broadcast history." onRetry={loadHistory} />
           ) : (
             <table className="w-full">
               <thead className="bg-slate-200/50">
@@ -281,9 +292,13 @@ export default function BroadcastClient({ initialTarget }: BroadcastClientProps)
               <tbody className="bg-white divide-y divide-slate-200">
                 {visibleRows.length === 0 ? (
                   <tr>
-                    <td colSpan={broadcastHeadings.length} className="px-6 py-12 text-center text-sm text-slate-500">
-                      No broadcasts sent yet
-                    </td>
+                    <td colSpan={broadcastHeadings.length} className="p-0">
+                     <EmptyState
+                       title="No broadcasts sent yet"
+                       description="Compose your first broadcast above."
+                       className="border-0 rounded-none"
+                     />
+                   </td>
                   </tr>
                 ) : (
                   visibleRows.map((row) => (
