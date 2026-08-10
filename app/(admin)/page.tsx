@@ -9,7 +9,7 @@ import { Dispute } from "@/lib/models/dispute.model";
 import { TableHeading } from "@/lib/types";
 import { Banknote, ChevronRight, Flag, HelpCircle, Radio } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import WaitTimeBadge from "@/components/disputes/WaitTimeBadge";
 import { ISSUE_TYPE_CONFIG } from "@/constants/configs";
 import { EmptyState, ErrorState } from "@/components/states";
@@ -26,7 +26,7 @@ export default function Dashboard() {
     orderCount: 0, totalValue: 0, totalDiscounts: 0, totalCreditsUsed: 0,
   });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
       setLoading(true);
       setFetchError(false);
      try {
@@ -61,7 +61,7 @@ export default function Dashboard() {
       } finally {
         setLoading(false);
       }
-    };
+    }, []);
 
    useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -134,7 +134,7 @@ export default function Dashboard() {
             hasAlerts={data.length > 0}
           />
           <StatsCard
-            title="PENDING PAYOUTS"
+            title="UNPAID AMOUNT"
             value={`SAR ${payoutsTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             change={0}
             icon={Banknote}
