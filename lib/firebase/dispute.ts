@@ -60,13 +60,6 @@ export function subscribeToDispute(
   });
 }
 
-
-
-// ─── Cloud functions (default region) ──────────────────────────────────────
-// Every one of these enforces users/{uid}.isAdmin == true server-side.
-
-
-
 type ResolveAction = "full_refund" | "partial_refund" | "wallet_credit" | "reattempt" | "no_action";
 
 interface ResolveDisputeInput {
