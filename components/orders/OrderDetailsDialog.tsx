@@ -194,7 +194,6 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
 
               <UpdateOrderDialog
                 orderId={order.id}
-                userId={order.userId} //for dispute message creation, might change to adminId later
                 currentStatus={order.latestStatus.status as OrderStatuses}
                 onSuccess={() => onStatusUpdate()}
               >
@@ -266,10 +265,7 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
                 <OrderPriceSection order={order} onSuccess={onStatusUpdate} />
               </Section>
 
-               {/* Dispute & Resolution — separate from Price Breakdown above
-                   by design: the pricing section always shows the original
-                   as-charged breakdown untouched; this shows dispute
-                   lifecycle + any refund/credit issued afterward. */}
+               {/* Dispute & Resolution */}
                {order.disputeId && (
                  <Section title="Dispute & Resolution">
                    <DisputeResolutionCard disputeId={order.disputeId} orderTotalPrice={order.totalPrice} />
@@ -292,9 +288,7 @@ export default function OrderDetailsDialog({  order, children, onStatusUpdate, o
                 </Section>
               )}
 
-              {/* Pickup & Delivery — addresses only; timing now lives in the
-                  Timeline section (middle column) to avoid showing the same
-                  timestamps twice in two different formats. */}
+              {/* Pickup & Delivery — addresses only; */}
               <Section title="Pickup & Delivery">
                 <div className="flex flex-col gap-3">
                   <AddressCard
