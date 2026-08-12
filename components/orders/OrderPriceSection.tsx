@@ -4,7 +4,7 @@ import { createMessage } from "@/lib/firebase/message";
 import { getCurrentUser } from "@/lib/firebase/admin.auth";
 import { Order } from "@/lib/models/order.model";
 import { useToast } from "@/lib/providers/ToastProvider";
-import { ChevronDown, ChevronUp, Pencil, Tag, Wallet } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, Tag, Wallet, PackageOpen } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 interface OrderPriceSectionProps {
@@ -20,21 +20,23 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps) 
   const [reason, setReason]       = useState("");
   const { showToast } = useToast();
 
-  // Live subtotal from the CURRENT items array 
+  // Live subtotal from the CURRENT items array.
   const itemsSubtotal = useMemo(
     () => order.items.reduce((sum, item) => sum + item.servicePrice * item.count, 0),
     [order.items]
   );
 
-  const discount = order.discountAmount ?? 0;
+  const discount   = order.discountAmount ?? 0;
   const walletUsed = order.walletAmountUsed ?? 0;
   const couponCode = order.appliedCoupon?.code;
 
-  const itemsEditedSinceCheckout =
-    order.preDiscountTotal != null && Math.abs(order.preDiscountTotal - itemsSubtotal) > 0.001;
+  const basisAtCheckout = order.preDiscountTotal ?? itemsSubtotal;
+  const itemsEditedSinceCheckout = Math.abs(itemsSubtotal - basisAtCheckout) > 0.001;
+  const itemsDelta = itemsSubtotal - basisAtCheckout;
 
-  const expectedTotal = itemsSubtotal - discount - walletUsed;
-  const manualAdjustment = order.totalPrice - expectedTotal;
+  const expectedAtCheckout = basisAtCheckout - discount - walletUsed;
+
+  const manualAdjustment = order.totalPrice - expectedAtCheckout - itemsDelta;
   const hasManualAdjustment = Math.abs(manualAdjustment) > 0.001;
 
   const [adjustmentInput, setAdjustmentInput] = useState(manualAdjustment);
@@ -43,7 +45,8 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps) 
     if (!adjusting) setAdjustmentInput(manualAdjustment);
   }, [manualAdjustment, adjusting]);
 
-  const previewTotal = expectedTotal + adjustmentInput;
+  const previewTotal = expectedAtCheckout + itemsDelta + adjustmentInput;
+
   const showRemainingBalance = !order.isPaid && order.remainingAmountToPay != null;
 
   const handleSave = async () => {
@@ -110,17 +113,11 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps) 
             /* READ ONLY VIEW */
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-slate-600">
-                <span>Items Subtotal ({order.items.length} item{order.items.length !== 1 ? "s" : ""})</span>
-                <span className="font-medium">SAR {itemsSubtotal.toFixed(2)}</span>
+                <span>
+                  Items Subtotal{order.preDiscountTotal != null ? " (at Checkout)" : ""} ({order.items.length} item{order.items.length !== 1 ? "s" : ""})
+                </span>
+                <span className="font-medium">SAR {basisAtCheckout.toFixed(2)}</span>
               </div>
-
-              {itemsEditedSinceCheckout && (
-                <p className="text-[10px] text-amber-600 italic pl-1">
-                  Subtotal at original checkout was SAR {order.preDiscountTotal!.toFixed(2)} — items
-                  have been modified since, so any discount/credit below may no longer be
-                  reflected in the current total.
-                </p>
-              )}
 
               {discount > 0 && (
                 <div className="flex justify-between text-xs text-emerald-600">
@@ -137,6 +134,17 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps) 
                     <Wallet size={11} /> Wallet Credit Used (at Checkout)
                   </span>
                   <span className="font-medium">− SAR {walletUsed.toFixed(2)}</span>
+                </div>
+              )}
+
+              {itemsEditedSinceCheckout && (
+                <div className={`flex justify-between text-xs ${itemsDelta > 0 ? "text-slate-600" : "text-emerald-600"}`}>
+                  <span className="flex items-center gap-1">
+                    <PackageOpen size={11} /> Items Changed Since Checkout
+                  </span>
+                  <span className="font-medium">
+                    {itemsDelta > 0 ? "+ " : "− "}SAR {Math.abs(itemsDelta).toFixed(2)}
+                  </span>
                 </div>
               )}
 
@@ -161,7 +169,6 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps) 
                 </div>
               )}
 
-              {/* only for unpaid orders : change in the future as needed */}
               {!order.isPaid && (
                 <button
                   onClick={() => setAdjusting(true)}
@@ -175,8 +182,8 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps) 
             /* EDITABLE VIEW */
             <div className="flex flex-col gap-3">
               <div className="flex justify-between text-xs text-slate-500">
-                <span>Items Subtotal</span>
-                <span>SAR {itemsSubtotal.toFixed(2)}</span>
+                <span>Items Subtotal{order.preDiscountTotal != null ? " (at Checkout)" : ""}</span>
+                <span>SAR {basisAtCheckout.toFixed(2)}</span>
               </div>
 
               {discount > 0 && (
@@ -190,6 +197,13 @@ export function OrderPriceSection({ order, onSuccess }: OrderPriceSectionProps) 
                 <div className="flex justify-between text-xs text-cyan-600">
                   <span>Wallet Credit Used</span>
                   <span>− SAR {walletUsed.toFixed(2)}</span>
+                </div>
+              )}
+
+              {itemsEditedSinceCheckout && (
+                <div className={`flex justify-between text-xs ${itemsDelta > 0 ? "text-slate-500" : "text-emerald-600"}`}>
+                  <span>Items Changed Since Checkout</span>
+                  <span>{itemsDelta > 0 ? "+ " : "− "}SAR {Math.abs(itemsDelta).toFixed(2)}</span>
                 </div>
               )}
 
