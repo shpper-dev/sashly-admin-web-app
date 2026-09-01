@@ -13,6 +13,7 @@ import DriverInfoDialog from '@/components/drivers/DriverInfoDialog';
 import AddDriverDialog from '@/components/drivers/AddDriverDialog';
 import { driverHeadings } from '@/constants/headings';
 import { EmptyState, ErrorState } from '@/components/states';
+import Link from 'next/link';
 
 const PAGE_SIZE = 50;
 
@@ -238,6 +239,9 @@ useEffect(() => { fetchDrivers(); }, []);
             <p className="text-sm text-slate-500">Manage your delivery drivers</p>
           </div>
           <div className="flex gap-3 items-center">
+            <Link href="/drivers/shifts" className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm hover:bg-slate-50">
+             Shifts
+           </Link>
 {/*             
             <button className="flex gap-2 items-center bg-white px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg shadow-sm">
               <Download className="h-3.5 w-3.5" /> Export CSV

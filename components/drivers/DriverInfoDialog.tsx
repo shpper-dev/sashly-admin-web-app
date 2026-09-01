@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
-import { Calendar, Mail, PencilLine, Phone, Route, ShoppingBag, LucideIcon } from 'lucide-react';
+import { Calendar, Mail, PencilLine, Phone, Route, ShoppingBag, LucideIcon, Clock } from 'lucide-react';
 import DriversOrders from './DriversOrders';
 import DriversEditProfile from './DriversEditProfile';
 import { DesignatedArea, Driver } from '@/lib/models/driver.model';
@@ -9,8 +9,9 @@ import DriversRoutes from './DriversRoutes';
 import { Order } from '@/lib/models/order.model';
 import {  subscribeToAllOrdersByDriverId } from '@/lib/firebase/driver';
 import { fmtTimestamp } from '@/lib/utils';
+import DriversShiftHistory from './DriversShiftHistory';
 
-type TabName = "orders" | "stats" | "edit profile" | "routes" | "payouts" | "messages" | "photos";
+type TabName = "orders" | "stats" | "edit profile" | "routes" | "shifts";
 
 interface HeaderTabDef {
   name: string;
@@ -20,8 +21,10 @@ interface HeaderTabDef {
 
 const HEADER_TABS: HeaderTabDef[] = [
   { name: "Orders", key: "orders", icon: ShoppingBag },
+  { name: "Shifts", key: "shifts", icon: Clock },
   { name: "Edit Profile", key: "edit profile", icon: PencilLine },
   { name: "Routes", key: "routes", icon: Route },
+  
 ];
 
 interface DriverInfoDialogProps {
@@ -156,7 +159,7 @@ export default function DriverInfoDialog({ children, driver, onDelete, onSuccess
               </div>
             </div>
 
-            {/* ── Main Content ── */}
+            {/*  Main Content  */}
             <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
               <div className="flex items-center border-b border-slate-100 px-4 overflow-x-auto shrink-0">
                 {HEADER_TABS.map((tab) => (
@@ -172,6 +175,7 @@ export default function DriverInfoDialog({ children, driver, onDelete, onSuccess
 
               <div className="flex-1 overflow-y-auto">
                 {activeTab === "orders" && <DriversOrders orders={orders} loading={loadingOrders} />}
+                {activeTab === "shifts" && <DriversShiftHistory driverId={driver.id} />}
                 {activeTab === "edit profile" && <DriversEditProfile driver={driver} onSuccess={onSuccess}  />}
                 {activeTab === "routes" && <DriversRoutes driverId={driver.id} currentArea={driver?.designatedArea ?? null} onSuccess={onSuccess} />}
                 {/* Add other tab components here as needed */}
